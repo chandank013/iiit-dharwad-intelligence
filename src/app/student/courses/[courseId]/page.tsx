@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -33,10 +32,14 @@ import {
   AlertCircle, 
   FolderOpen,
   User,
-  Users,
   CheckCircle,
-  ExternalLink,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  Github,
+  HardDrive,
+  CheckCircle2,
+  RefreshCcw,
+  Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +80,54 @@ const subjectStrengthData = [
   { subject: 'OS', A: 0, fullMark: 100 },
 ];
 
+const scoreHistoryData = [
+  { val: 70 }, { val: 75 }, { val: 72 }, { val: 80 }, { val: 78 }, { val: 84 }, { val: 84 }
+];
+
+const mySubmissionsMock = [
+  {
+    title: 'DBMS Lab — SQL Queries',
+    subject: 'Database Systems',
+    type: 'File',
+    status: 'approved',
+    score: 91,
+    date: 'Feb 28, 2024',
+    feedback: 'Excellent query optimization! Minor improvements possible in indexing.',
+    color: 'emerald'
+  },
+  {
+    title: 'ML Assignment 2 — Classification',
+    subject: 'Machine Learning',
+    type: 'ZIP',
+    status: 'approved',
+    version: 'v2',
+    score: 88,
+    date: 'Mar 5, 2024',
+    feedback: 'Good feature engineering, improve model selection rationale.',
+    color: 'emerald'
+  },
+  {
+    title: 'DSA Assignment 3 — Sorting',
+    subject: 'Data Structures',
+    type: 'GitHub',
+    status: 'approved',
+    score: 76,
+    date: 'Feb 20, 2024',
+    feedback: 'Time complexity analysis needs more depth.',
+    color: 'amber'
+  },
+  {
+    title: 'OS Lab Report',
+    subject: 'Operating Systems',
+    type: 'Drive',
+    status: 'graded',
+    score: 84,
+    date: 'Jan 30, 2024',
+    feedback: 'Well written. Include more diagrams for scheduling algorithms.',
+    color: 'emerald'
+  }
+];
+
 export default function StudentCoursePage() {
   const { courseId } = useParams();
   const router = useRouter();
@@ -102,7 +153,6 @@ export default function StudentCoursePage() {
   }, [firestore, courseId]);
   const { data: assignments } = useCollection(assignmentsQuery);
 
-  // In a real app, we'd fetch actual submissions. For this UI mock-up, we'll simulate them.
   const submittedAssignmentIds = useMemo(() => [], []); 
 
   if (isUserLoading || isCourseLoading || !user) {
@@ -170,9 +220,6 @@ export default function StudentCoursePage() {
               <Input placeholder="Search..." className="h-9 w-64 bg-accent/50 border-input text-xs pl-9 focus-visible:ring-primary/20" />
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-muted-foreground hover:text-foreground transition-colors relative">
-                <Bell className="h-4 w-4" />
-              </button>
               <ThemeToggle />
             </div>
           </div>
@@ -345,7 +392,6 @@ export default function StudentCoursePage() {
                 </div>
               </div>
 
-              {/* Pending Submissions */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-orange-500">
                   <AlertCircle className="h-4 w-4" /> Pending Submissions
@@ -400,7 +446,6 @@ export default function StudentCoursePage() {
                 </div>
               </div>
 
-              {/* Submitted */}
               <div className="space-y-6">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-500">
                   <CheckCircle className="h-4 w-4" /> Submitted
@@ -447,13 +492,107 @@ export default function StudentCoursePage() {
           )}
 
           {activeTab === 'submissions' && (
-            <div className="p-10 space-y-8 animate-in fade-in duration-500">
-              <h1 className="text-3xl font-bold tracking-tight">My Submissions</h1>
-              <Card className="border-border">
-                <CardContent className="p-12 text-center text-muted-foreground italic font-medium">
-                  Centralized history of your evaluated work will appear here.
-                </CardContent>
-              </Card>
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-4xl font-bold tracking-tight">My Submissions</h1>
+                <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                  <span>5 total submissions</span>
+                  <span className="h-1 w-1 rounded-full bg-border" />
+                  <span>Average score: <span className="text-emerald-500 font-bold">84%</span></span>
+                </div>
+              </div>
+
+              {/* Stats Row */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
+                  <div className="text-3xl font-bold text-primary">5</div>
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Submitted</div>
+                </Card>
+                <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
+                  <div className="text-3xl font-bold text-emerald-500">84%</div>
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Average Score</div>
+                </Card>
+                <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
+                  <div className="text-3xl font-bold text-primary">4</div>
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Approved</div>
+                </Card>
+                <Card className="p-4 border-border shadow-sm">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Score History</div>
+                  <div className="h-12 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={scoreHistoryData}>
+                        <Line 
+                          type="monotone" 
+                          dataKey="val" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2} 
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Submissions List */}
+              <div className="space-y-6">
+                {mySubmissionsMock.map((sub, i) => (
+                  <Card key={i} className="border-border shadow-sm hover:shadow-md transition-all overflow-hidden bg-card">
+                    <CardContent className="p-8">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                        <div className="space-y-3">
+                          <h3 className="text-xl font-bold tracking-tight">{sub.title}</h3>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold">{sub.subject}</Badge>
+                            <Badge variant="outline" className="bg-muted text-muted-foreground border-none flex items-center gap-1.5 font-bold">
+                              {sub.type === 'GitHub' ? <Github className="h-3 w-3" /> : sub.type === 'Drive' ? <HardDrive className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+                              {sub.type}
+                            </Badge>
+                            <Badge className={cn(
+                              "font-bold flex items-center gap-1.5 border-none",
+                              sub.status === 'approved' ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"
+                            )}>
+                              {sub.status === 'approved' && <CheckCircle2 className="h-3 w-3" />}
+                              {sub.status}
+                            </Badge>
+                            {sub.version && <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-none font-bold">{sub.version}</Badge>}
+                          </div>
+                        </div>
+                        <div className="text-right space-y-1">
+                          <div className="flex items-end justify-end gap-1">
+                            <span className={cn("text-4xl font-black", sub.color === 'emerald' ? 'text-emerald-500' : 'text-amber-500')}>{sub.score}</span>
+                            <span className="text-muted-foreground text-sm font-bold pb-2">/ 100</span>
+                          </div>
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{sub.date}</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={cn("h-full transition-all duration-1000", sub.color === 'emerald' ? 'bg-emerald-500' : 'bg-amber-500')} 
+                            style={{ width: `${sub.score}%` }}
+                          />
+                        </div>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <p className="text-sm text-muted-foreground leading-relaxed flex-1 italic">
+                            <span className="font-bold text-foreground not-italic mr-2">AI Feedback:</span>
+                            {sub.feedback}
+                          </p>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="rounded-lg font-bold gap-2 text-xs h-9 border-primary/20 text-primary hover:bg-primary/5">
+                              <Eye className="h-3.5 w-3.5" /> View Report
+                            </Button>
+                            <Button variant="outline" size="sm" className="rounded-lg font-bold gap-2 text-xs h-9 hover:bg-muted transition-colors">
+                              <RefreshCcw className="h-3.5 w-3.5" /> Resubmit
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
 
