@@ -14,7 +14,10 @@ import {
   collection, 
   query, 
   orderBy,
-  where
+  where,
+  addDoc,
+  serverTimestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -44,7 +47,15 @@ import {
   FileJson,
   HardDrive,
   Github,
-  AlertCircle
+  AlertCircle,
+  Megaphone,
+  File as FileIcon,
+  Link as LinkIcon,
+  Download,
+  Heart,
+  MessageCircle,
+  Paperclip,
+  Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,8 +103,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
-// --- Data for Analytics (All zeroed out) ---
+// --- Data for Analytics (Baseline Zeroed) ---
 const weeklyTrendData = [
   { name: 'Wk1', avg: 0 },
   { name: 'Wk2', avg: 0 },
@@ -140,8 +163,19 @@ export default function CoursePortalPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const auth = useFirebaseAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [assignmentFilter, setAssignmentFilter] = useState('all');
+
+  // Course Content State
+  const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
+  const [isPostingContent, setIsPostingContent] = useState(false);
+  const [contentFormData, setContentFormData] = useState({
+    title: '',
+    type: 'announcement',
+    body: '',
+    url: '',
+  });
 
   const courseRef = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
@@ -167,9 +201,55 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: submissions } = useCollection(submissionsQuery);
 
+  const contentQuery = useMemoFirebase(() => {
+    if (!firestore || !courseId) return null;
+    return query(collection(firestore, 'courses', courseId as string, 'content'), orderBy('postedAt', 'desc'));
+  }, [firestore, courseId]);
+  const { data: courseContent } = useCollection(contentQuery);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
+  };
+
+  const handlePostContent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firestore || !user || !courseId) return;
+
+    setIsPostingContent(true);
+    const contentData = {
+      courseId,
+      professorId: user.uid,
+      title: contentFormData.title,
+      contentType: contentFormData.type,
+      content: contentFormData.body,
+      attachmentUrl: contentFormData.type === 'file' || contentFormData.type === 'link' ? contentFormData.url : '',
+      postedAt: serverTimestamp(),
+      isPinned: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    try {
+      await addDoc(collection(firestore, 'courses', courseId as string, 'content'), contentData);
+      toast({ title: "Content Shared", description: "Your post has been shared with the class." });
+      setIsContentDialogOpen(false);
+      setContentFormData({ title: '', type: 'announcement', body: '', url: '' });
+    } catch (error) {
+      toast({ title: "Failed to share", description: "Something went wrong.", variant: "destructive" });
+    } finally {
+      setIsPostingContent(false);
+    }
+  };
+
+  const handleDeleteContent = async (contentId: string) => {
+    if (!firestore || !courseId) return;
+    try {
+      await deleteDoc(doc(firestore, 'courses', courseId as string, 'content', contentId));
+      toast({ title: "Post Deleted" });
+    } catch (error) {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    }
   };
 
   if (isUserLoading || isCourseLoading || !user) {
@@ -203,13 +283,6 @@ export default function CoursePortalPage() {
     { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Submissions', value: 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-  ];
-
-  const submissionStats = [
-    { label: 'Total', value: 0, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Pending', value: 0, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { label: 'AI Graded', value: 0, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Flagged', value: 0, color: 'text-rose-500', bg: 'bg-rose-500/10' },
   ];
 
   const analyticsOverview = [
@@ -267,7 +340,7 @@ export default function CoursePortalPage() {
         {/* Header */}
         <header className="h-20 border-b border-border flex items-center justify-between px-10 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-bold tracking-tight capitalize">{activeTab}</h2>
+            <h2 className="text-lg font-bold tracking-tight capitalize">{activeTab.replace('-', ' ')}</h2>
             <Badge variant="outline" className="border-border text-muted-foreground font-mono text-[10px]">
               ID: {course.joinCode}
             </Badge>
@@ -277,7 +350,7 @@ export default function CoursePortalPage() {
             <div className="relative group hidden lg:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input 
-                placeholder="Search resources..." 
+                placeholder="Search portal..." 
                 className="bg-accent/50 border border-border rounded-full py-2.5 pl-11 pr-6 text-sm w-[360px] focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-muted-foreground/50"
               />
             </div>
@@ -330,7 +403,7 @@ export default function CoursePortalPage() {
 
             {/* Main Content Area */}
             <div className="grid grid-cols-12 gap-8">
-              {/* Left: Performance Visuals */}
+              {/* Performance Visuals */}
               <div className="col-span-12 lg:col-span-8 space-y-8">
                 <Card className="bg-card border-border overflow-hidden">
                   <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-border">
@@ -368,7 +441,6 @@ export default function CoursePortalPage() {
                           stroke="hsl(var(--primary))" 
                           strokeWidth={4} 
                           dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 5, stroke: 'hsl(var(--background))' }}
-                          activeDot={{ r: 8, strokeWidth: 0, fill: 'hsl(var(--primary))' }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -384,18 +456,9 @@ export default function CoursePortalPage() {
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={assignmentAvgData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.05} vertical={false} />
-                          <XAxis 
-                            dataKey="name" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }}
-                            dy={10}
-                          />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }} dy={10} />
                           <YAxis hide domain={[0, 100]} />
-                          <Tooltip 
-                            cursor={{ fill: 'currentColor', opacity: 0.05 }}
-                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '11px' }}
-                          />
+                          <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} />
                           <Bar dataKey="avg" radius={[6, 6, 0, 0]} barSize={28}>
                             {assignmentAvgData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={'hsl(var(--primary) / 0.4)'} />
@@ -418,14 +481,11 @@ export default function CoursePortalPage() {
                         Insights will be generated once your students begin submitting their assignments.
                       </p>
                     </div>
-                    <Button variant="secondary" className="w-fit gap-2 font-bold rounded-full relative z-10" disabled>
-                      Processing <ArrowRight className="h-4 w-4" />
-                    </Button>
                   </Card>
                 </div>
               </div>
 
-              {/* Right: Assignments & Submissions Tracker */}
+              {/* Assignments & Submissions Tracker */}
               <div className="col-span-12 lg:col-span-4 space-y-8">
                 <Card className="bg-card border-border">
                   <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
@@ -440,32 +500,12 @@ export default function CoursePortalPage() {
                             <div className="text-sm font-bold group-hover:text-primary transition-colors">{task.title}</div>
                             <div className="text-[10px] font-bold text-muted-foreground uppercase">Active</div>
                           </div>
-                          <Progress value={0} className="h-1.5 bg-accent">
-                            <div className={cn("h-full transition-all bg-primary")} />
-                          </Progress>
-                          <div className="flex justify-between text-[10px] font-bold text-muted-foreground/60">
-                            <span>0% Completion</span>
-                            <span>0 / {enrollments?.length || 0} Students</span>
-                          </div>
+                          <Progress value={0} className="h-1.5 bg-accent" />
                         </div>
                       ))
                     ) : (
-                      <div className="py-10 text-center space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">No assignments yet</p>
-                        {isProfessor && (
-                          <Link href={`/dashboard/professor/assignment/create`}>
-                            <Button variant="link" className="text-xs font-bold text-primary p-0">Create one now</Button>
-                          </Link>
-                        )}
-                      </div>
+                      <div className="py-10 text-center text-sm text-muted-foreground">No active assignments.</div>
                     )}
-                    <Button 
-                      variant="outline" 
-                      className="w-full border-border rounded-xl font-bold text-xs h-12 hover:bg-accent transition-all"
-                      onClick={() => setActiveTab('assignments')}
-                    >
-                      View All Assignments
-                    </Button>
                   </CardContent>
                 </Card>
 
@@ -475,16 +515,9 @@ export default function CoursePortalPage() {
                       <History className="h-4 w-4" /> System Readiness
                     </CardTitle>
                   </CardHeader>
-                  <div className="divide-y divide-border">
-                    <div className="p-10 text-center">
-                      <p className="text-sm font-medium text-muted-foreground">No activity logs to display.</p>
-                    </div>
+                  <div className="p-10 text-center">
+                    <p className="text-sm font-medium text-muted-foreground">Monitoring active sessions.</p>
                   </div>
-                  <CardContent className="p-6 bg-accent/10">
-                    <Button variant="link" className="w-full text-xs font-bold text-primary group uppercase tracking-widest h-auto p-0" disabled>
-                      Monitoring Active <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </CardContent>
                 </Card>
               </div>
             </div>
@@ -493,142 +526,51 @@ export default function CoursePortalPage() {
 
         {activeTab === 'assignments' && (
           <div className="p-10 space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-500">
-            {/* Assignments Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1">
                 <h1 className="text-3xl font-bold tracking-tighter">Assignments</h1>
-                <p className="text-muted-foreground text-sm font-medium">{assignments?.length || 0} active · 0 closed</p>
+                <p className="text-muted-foreground text-sm font-medium">{assignments?.length || 0} active assignments</p>
               </div>
               {isProfessor && (
                 <Link href={`/dashboard/professor/assignment/create`}>
-                  <Button className="rounded-2xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <Button className="rounded-2xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20">
                     <Plus className="h-5 w-5" /> New Assignment
                   </Button>
                 </Link>
               )}
             </div>
 
-            {/* Filters & Search */}
             <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-card p-2 rounded-2xl border border-border shadow-sm">
               <div className="relative w-full lg:max-w-md group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input 
-                  placeholder="Search assignments..." 
-                  className="bg-transparent border-none h-11 pl-11 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 text-sm"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-accent/30 rounded-xl">
-                {['All', 'Active', 'Closed', 'Group', 'Individual'].map((filter) => (
-                  <Button
-                    key={filter}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAssignmentFilter(filter.toLowerCase())}
-                    className={cn(
-                      "px-4 h-9 rounded-lg text-xs font-bold transition-all",
-                      assignmentFilter === filter.toLowerCase() 
-                        ? "bg-white dark:bg-background text-primary shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {filter}
-                  </Button>
-                ))}
+                <Input placeholder="Search assignments..." className="bg-transparent border-none h-11 pl-11 focus-visible:ring-0" />
               </div>
             </div>
 
-            {/* Assignments List / Empty State */}
             <div className="space-y-6">
               {assignments && assignments.length > 0 ? (
                 assignments.map((assignment) => (
-                  <Card key={assignment.id} className="bg-card border-border hover:border-primary/30 transition-all group relative overflow-hidden rounded-3xl">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
-                    <CardContent className="p-8">
-                      <div className="flex flex-col lg:flex-row gap-8 items-start justify-between">
-                        <div className="space-y-4 flex-1">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-xl font-bold tracking-tight">{assignment.title}</h3>
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold tracking-widest uppercase">
-                              Active
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="rounded-full bg-blue-500/5 text-blue-500 border-blue-500/10 px-3 py-1 text-[10px] font-bold">
-                              {course.code}
-                            </Badge>
-                            <Badge variant="outline" className="rounded-full bg-purple-500/5 text-purple-500 border-purple-500/10 px-3 py-1 text-[10px] font-bold flex items-center gap-1.5">
-                              {assignment.isGroupProject ? <Users className="h-3 w-3" /> : <User className="h-3 w-3" />}
-                              {assignment.isGroupProject ? 'group' : 'individual'}
-                            </Badge>
-                            <Badge variant="outline" className="rounded-full bg-amber-500/5 text-amber-500 border-amber-500/10 px-3 py-1 text-[10px] font-bold flex items-center gap-1.5">
-                              <Clock className="h-3 w-3" /> No deadline
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 pt-4">
-                            <div className="space-y-2">
-                              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Submissions</div>
-                              <div className="flex items-center gap-3">
-                                <Progress value={0} className="h-1.5 flex-1 bg-accent" />
-                                <span className="text-xs font-bold tabular-nums">0/0</span>
-                              </div>
-                            </div>
-                            <div className="space-y-1 text-center sm:text-left">
-                              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Avg Score</div>
-                              <div className="text-lg font-bold text-emerald-500">0%</div>
-                            </div>
-                            <div className="space-y-1 text-center sm:text-left">
-                              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Marks</div>
-                              <div className="text-lg font-bold">100</div>
-                            </div>
-                            <div className="space-y-1 flex items-center justify-center sm:justify-start">
-                              <Badge variant="outline" className="h-7 gap-1.5 text-muted-foreground border-border px-3 rounded-full text-[10px] font-bold">
-                                <TrendingUp className="h-3 w-3" /> Leaderboard
-                              </Badge>
-                            </div>
-                          </div>
+                  <Card key={assignment.id} className="bg-card border-border hover:border-primary/30 transition-all group overflow-hidden rounded-3xl">
+                    <CardContent className="p-8 flex flex-col lg:flex-row gap-8 items-start justify-between">
+                      <div className="space-y-4 flex-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-bold tracking-tight">{assignment.title}</h3>
+                          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-bold">Active</Badge>
                         </div>
-
-                        <div className="flex items-center gap-2 w-full lg:w-auto lg:self-start">
-                          <Button variant="outline" size="sm" className="flex-1 lg:flex-none h-10 rounded-xl gap-2 text-primary border-primary/20 hover:bg-primary/10 font-bold px-4">
-                            <Eye className="h-4 w-4" /> View
-                          </Button>
-                          {isProfessor && (
-                            <>
-                              <Button variant="outline" size="sm" className="flex-1 lg:flex-none h-10 rounded-xl gap-2 border-border hover:bg-accent font-bold px-4">
-                                <Edit2 className="h-4 w-4" /> Edit
-                              </Button>
-                              <Button variant="outline" size="sm" className="h-10 w-10 rounded-xl border-border text-destructive hover:bg-destructive/10">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+                        <div className="flex gap-2">
+                          <Badge variant="outline" className="text-[10px] font-bold">{course.code}</Badge>
+                          <Badge variant="outline" className="text-[10px] font-bold">{assignment.submissionType}</Badge>
                         </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="h-10 rounded-xl font-bold">View</Button>
                       </div>
                     </CardContent>
                   </Card>
                 ))
               ) : (
-                <div className="py-24 text-center space-y-6 bg-card/50 border-2 border-dashed border-border rounded-[2.5rem] animate-in zoom-in-95 duration-700">
-                  <div className="bg-primary/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto ring-1 ring-primary/10">
-                    <BookOpen className="h-10 w-10 text-primary/40" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-2xl font-bold tracking-tight">No assignments yet</h3>
-                    <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
-                      {isProfessor 
-                        ? "Start your academic cycle by launching your first assignment. You can use AI to help you generate rubrics and instructions."
-                        : "Your professor hasn't posted any assignments for this course yet. Check back soon for updates."}
-                    </p>
-                  </div>
-                  {isProfessor && (
-                    <Link href={`/dashboard/professor/assignment/create`}>
-                      <Button className="font-bold px-10 h-12 rounded-full shadow-xl shadow-primary/20">
-                        Launch First Assignment
-                      </Button>
-                    </Link>
-                  )}
+                <div className="py-24 text-center border-2 border-dashed border-border rounded-[2.5rem]">
+                  <p className="text-muted-foreground font-medium">No assignments posted yet.</p>
                 </div>
               )}
             </div>
@@ -636,151 +578,43 @@ export default function CoursePortalPage() {
         )}
 
         {activeTab === 'submissions' && (
-          <div className="p-10 space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
-            {/* Submissions Header */}
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
-              <p className="text-muted-foreground text-sm font-medium">{submissions?.length || 0} total submissions</p>
-            </div>
-
-            {/* Submissions Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {submissionStats.map((stat, i) => (
-                <Card key={i} className="bg-card border-border shadow-sm">
-                  <CardContent className="p-6 flex flex-col items-center justify-center text-center">
-                    <div className="text-2xl font-bold mb-1">{stat.value}</div>
-                    <div className={cn("text-[10px] font-bold uppercase tracking-widest", stat.color)}>{stat.label}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Submissions Filters */}
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-card p-2 rounded-2xl border border-border shadow-sm">
-              <div className="relative w-full lg:max-w-md group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input 
-                  placeholder="Search by name or roll..." 
-                  className="bg-transparent border-none h-11 pl-11 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 text-sm"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Select defaultValue="all-assignments">
-                  <SelectTrigger className="w-[180px] bg-accent/30 border-none rounded-xl h-11 text-xs font-bold">
-                    <SelectValue placeholder="All Assignments" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border">
-                    <SelectItem value="all-assignments">All Assignments</SelectItem>
-                    {assignments?.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select defaultValue="all-status">
-                  <SelectTrigger className="w-[140px] bg-accent/30 border-none rounded-xl h-11 text-xs font-bold">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border">
-                    <SelectItem value="all-status">All Status</SelectItem>
-                    <SelectItem value="graded">Graded</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="flagged">Flagged</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Submissions Table */}
+          <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
             <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
               <Table>
                 <TableHeader className="bg-accent/30">
-                  <TableRow className="hover:bg-transparent border-border">
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Student</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Assignment</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Type</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5 text-center">AI Score</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Confidence</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Status</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Flag</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Time</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5 text-right">Actions</TableHead>
+                  <TableRow>
+                    <TableHead className="px-6 py-5">Student</TableHead>
+                    <TableHead className="px-6 py-5">Assignment</TableHead>
+                    <TableHead className="px-6 py-5">Type</TableHead>
+                    <TableHead className="px-6 py-5 text-center">Score</TableHead>
+                    <TableHead className="px-6 py-5 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {submissions && submissions.length > 0 ? (
                     submissions.map((sub) => (
-                      <TableRow key={sub.id} className="border-border hover:bg-accent/10 group transition-colors">
+                      <TableRow key={sub.id} className="border-border hover:bg-accent/10 transition-colors">
                         <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8 border border-border">
-                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
-                                {sub.submitterId.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="text-sm font-bold">Student Name</div>
-                              <div className="text-[10px] font-medium text-muted-foreground tabular-nums uppercase">21BCS000</div>
-                            </div>
-                          </div>
+                          <div className="text-sm font-bold">Student Name</div>
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div className="text-xs font-medium text-muted-foreground">
-                            {assignments?.find(a => a.id === sub.assignmentId)?.title || 'Assignment'}
-                          </div>
+                          <div className="text-xs text-muted-foreground">Assignment</div>
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                            {sub.submissionType === 'github' ? <Github className="h-3.5 w-3.5" /> : 
-                             sub.submissionType === 'zip' ? <FileJson className="h-3.5 w-3.5" /> : 
-                             <HardDrive className="h-3.5 w-3.5" />}
-                            <span className="uppercase">{sub.submissionType}</span>
-                          </div>
+                          <div className="text-xs uppercase font-medium">{sub.submissionType}</div>
                         </TableCell>
                         <TableCell className="px-6 py-4 text-center">
                           <div className="text-sm font-bold text-emerald-500">0%</div>
                         </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="w-[80px] space-y-1">
-                            <Progress value={0} className="h-1 bg-accent" />
-                            <div className="text-[8px] font-bold text-muted-foreground text-right">0%</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Badge className="bg-blue-500/10 text-blue-500 border-none px-2 py-0.5 text-[10px] font-bold rounded-lg">
-                            Pending
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="text-xs text-muted-foreground">—</div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="text-[10px] font-bold text-muted-foreground whitespace-nowrap">Just now</div>
-                        </TableCell>
                         <TableCell className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="sm" className="h-8 rounded-lg gap-1.5 text-[10px] font-bold text-primary hover:bg-primary/10">
-                              <Eye className="h-3 w-3" /> View
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-8 rounded-lg gap-1.5 text-[10px] font-bold text-emerald-500 hover:bg-emerald-500/10">
-                              <CheckCircle2 className="h-3 w-3" /> Approve
-                            </Button>
-                          </div>
+                          <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[10px] font-bold">View</Button>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-[300px] text-center">
-                        <div className="flex flex-col items-center justify-center space-y-4">
-                          <div className="bg-accent/50 p-4 rounded-full">
-                            <Users className="h-8 w-8 text-muted-foreground/40" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-bold">No submissions yet</p>
-                            <p className="text-xs text-muted-foreground">Once students submit their work, it will appear here for evaluation.</p>
-                          </div>
-                        </div>
-                      </TableCell>
+                      <TableCell colSpan={5} className="h-64 text-center text-muted-foreground">No submissions yet.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -790,163 +624,220 @@ export default function CoursePortalPage() {
         )}
 
         {activeTab === 'analytics' && (
-          <div className="p-10 space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
-            {/* Analytics Header */}
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tighter">Class Analytics</h1>
-              <p className="text-muted-foreground text-sm font-medium">Performance insights for your course portal.</p>
-            </div>
-
-            {/* Top Stat Cards */}
+          <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <h1 className="text-3xl font-bold tracking-tighter">Class Analytics</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {analyticsOverview.map((item, i) => (
                 <Card key={i} className="bg-card border-border shadow-sm">
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 text-center">
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">{item.label}</div>
-                    <div className={cn("text-3xl font-bold tracking-tighter mb-1", item.color)}>{item.value}</div>
-                    <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[10px] font-bold text-muted-foreground">
-                        {item.change}
-                      </span>
-                    </div>
+                    <div className={cn("text-3xl font-bold tracking-tighter", item.color)}>{item.value}</div>
                   </CardContent>
                 </Card>
               ))}
             </div>
+          </div>
+        )}
 
-            {/* Row 1: Weekly Trend & Grade Distribution */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="bg-card border-border">
-                <CardHeader className="px-8 pt-8 pb-4">
-                  <CardTitle className="text-lg font-bold">Weekly Average Trend</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[320px] px-4 pb-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weeklyTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dx={-10} domain={[0, 100]} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
-                      />
-                      <Line type="monotone" dataKey="avg" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ fill: 'hsl(var(--primary))', r: 4 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-card border-border">
-                <CardHeader className="px-8 pt-8 pb-4">
-                  <CardTitle className="text-lg font-bold">Grade Distribution</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[320px] px-8 pb-8 flex flex-col items-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={gradeDistributionData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {gradeDistributionData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} opacity={0.8} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+        {activeTab === 'content' && (
+          <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h1 className="text-4xl font-bold tracking-tighter">Course Content</h1>
+                <p className="text-muted-foreground text-sm font-medium">{courseContent?.length || 0} posts shared</p>
+              </div>
+              {isProfessor && (
+                <Dialog open={isContentDialogOpen} onOpenChange={setIsContentDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                      <Plus className="h-5 w-5" /> Share Content
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px] rounded-3xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold tracking-tight">Post Content</DialogTitle>
+                      <DialogDescription className="text-sm font-medium">Share updates, lecture notes, or resources with the class.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handlePostContent} className="space-y-6 pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Title</Label>
+                        <Input 
+                          id="title" 
+                          placeholder="e.g. Lecture 1: Introduction to React" 
+                          className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                          value={contentFormData.title}
+                          onChange={(e) => setContentFormData({ ...contentFormData, title: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Content Type</Label>
+                        <Select 
+                          value={contentFormData.type} 
+                          onValueChange={(val) => setContentFormData({ ...contentFormData, type: val })}
+                        >
+                          <SelectTrigger className="h-11 rounded-xl bg-accent/30 border-none">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-border">
+                            <SelectItem value="announcement">Announcement</SelectItem>
+                            <SelectItem value="file">File (PDF / ZIP)</SelectItem>
+                            <SelectItem value="link">External Link</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="body" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Description</Label>
+                        <Textarea 
+                          id="body" 
+                          placeholder="Write your message here..." 
+                          className="min-h-[120px] rounded-2xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                          value={contentFormData.body}
+                          onChange={(e) => setContentFormData({ ...contentFormData, body: e.target.value })}
+                        />
+                      </div>
+                      {(contentFormData.type === 'file' || contentFormData.type === 'link') && (
+                        <div className="space-y-2">
+                          <Label htmlFor="url" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">URL</Label>
+                          <Input 
+                            id="url" 
+                            placeholder="https://..." 
+                            className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                            value={contentFormData.url}
+                            onChange={(e) => setContentFormData({ ...contentFormData, url: e.target.value })}
+                            required
+                          />
+                        </div>
+                      )}
+                      <DialogFooter>
+                        <Button 
+                          type="submit" 
+                          className="w-full h-12 rounded-xl font-bold shadow-lg" 
+                          disabled={isPostingContent}
+                        >
+                          {isPostingContent ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Publish Now'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
 
-            {/* Row 2: Assignment Averages & Submission Behaviour */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="bg-card border-border">
-                <CardHeader className="px-8 pt-8 pb-4">
-                  <CardTitle className="text-lg font-bold">Assignment Averages</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[320px] px-4 pb-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={assignmentAvgData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dx={-10} domain={[0, 100]} />
-                      <Tooltip 
-                        cursor={{ fill: 'hsl(var(--primary) / 0.05)' }}
-                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
-                      />
-                      <Bar dataKey="avg" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+            <div className="max-w-4xl space-y-8 mx-auto lg:mx-0">
+              {courseContent && courseContent.length > 0 ? (
+                courseContent.map((post) => (
+                  <Card key={post.id} className="bg-card border-border shadow-sm hover:shadow-md transition-shadow rounded-[2rem] overflow-hidden group">
+                    <CardContent className="p-10 space-y-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "p-3 rounded-2xl border transition-colors",
+                            post.contentType === 'announcement' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                            post.contentType === 'file' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                            "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          )}>
+                            {post.contentType === 'announcement' && <Megaphone className="h-5 w-5" />}
+                            {post.contentType === 'file' && <FileIcon className="h-5 w-5" />}
+                            {post.contentType === 'link' && <LinkIcon className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <div className={cn(
+                              "text-[10px] font-bold uppercase tracking-widest mb-1",
+                              post.contentType === 'announcement' ? "text-blue-500" :
+                              post.contentType === 'file' ? "text-orange-500" :
+                              "text-emerald-500"
+                            )}>
+                              {post.contentType}
+                            </div>
+                            <h3 className="text-xl font-bold tracking-tight">{post.title}</h3>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                            {post.postedAt?.toDate().toLocaleDateString('en-CA')}
+                          </div>
+                          {isProfessor && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                              onClick={() => handleDeleteContent(post.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
 
-              <Card className="bg-card border-border">
-                <CardHeader className="px-8 pt-8 pb-4">
-                  <CardTitle className="text-lg font-bold">Submission Behaviour</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[320px] px-4 pb-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={submissionBehaviourData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dx={-10} />
-                      <Tooltip 
-                        cursor={{ fill: 'hsl(var(--secondary) / 0.1)' }}
-                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
-                      />
-                      <Bar dataKey="count" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
+                      <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl font-medium">
+                        {post.content}
+                      </p>
 
-            {/* Row 3: Strength Heatmap & Attention List */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="bg-card border-border">
-                <CardHeader className="px-8 pt-8 pb-4">
-                  <CardTitle className="text-lg font-bold">Subject Strength Heatmap</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[400px] flex items-center justify-center pb-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={subjectStrengthData}>
-                      <PolarGrid stroke="hsl(var(--border))" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 700 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
-                      <Radar
-                        name="Class Performance"
-                        dataKey="value"
-                        stroke="hsl(var(--primary))"
-                        fill="hsl(var(--primary))"
-                        fillOpacity={0.3}
-                      />
-                      <Tooltip />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+                      {post.contentType === 'file' && (
+                        <div className="bg-accent/30 rounded-2xl p-6 border border-border flex items-center justify-between group/file">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 bg-card rounded-xl border border-border flex items-center justify-center text-orange-500">
+                              <FileIcon className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold truncate max-w-[200px]">{post.attachmentUrl.split('/').pop()}</div>
+                              <div className="text-[10px] font-bold text-muted-foreground uppercase">PDF • 2.4 MB</div>
+                            </div>
+                          </div>
+                          <Button variant="outline" className="h-10 rounded-xl gap-2 font-bold border-border bg-card group-hover/file:bg-orange-500 group-hover/file:text-white transition-all">
+                            <Download className="h-4 w-4" /> Download
+                          </Button>
+                        </div>
+                      )}
 
-              <Card className="bg-card border-border">
-                <CardHeader className="px-8 pt-8 pb-4">
-                  <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-rose-500" /> Academic Risk Registry
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-8 pb-8 space-y-4">
-                  <div className="py-20 text-center text-muted-foreground italic text-sm">
-                    No students currently flagged for academic risk.
+                      {post.contentType === 'link' && (
+                        <a 
+                          href={post.attachmentUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block bg-emerald-500/5 rounded-2xl p-6 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors group/link"
+                        >
+                          <div className="flex items-center gap-4 text-emerald-500">
+                            <LinkIcon className="h-5 w-5" />
+                            <span className="text-sm font-bold truncate">{post.attachmentUrl}</span>
+                          </div>
+                        </a>
+                      )}
+
+                      <div className="flex items-center justify-between pt-6 border-t border-border">
+                        <div className="flex items-center gap-6">
+                          <button className="flex items-center gap-2 text-muted-foreground hover:text-rose-500 transition-colors">
+                            <Heart className="h-4 w-4" />
+                            <span className="text-[10px] font-bold">0</span>
+                          </button>
+                          <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
+                            <MessageCircle className="h-4 w-4" />
+                            <span className="text-[10px] font-bold">0 comments</span>
+                          </button>
+                        </div>
+                        <div className="text-[10px] font-bold text-muted-foreground italic">
+                          by {isProfessor ? 'You' : 'Dr. Rajesh Kumar'}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="py-24 text-center space-y-6 bg-card/50 border-2 border-dashed border-border rounded-[3rem]">
+                  <div className="bg-primary/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto ring-1 ring-primary/10">
+                    <Share2 className="h-10 w-10 text-primary/40" />
                   </div>
-                  <Button variant="ghost" className="w-full text-xs font-bold text-muted-foreground hover:text-primary h-12 rounded-xl group" disabled>
-                    Risk Registry Baseline <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </CardContent>
-              </Card>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold tracking-tight">No content shared yet</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
+                      {isProfessor 
+                        ? "Start sharing lecture notes, files, and important announcements with your students."
+                        : "Your professor hasn't shared any content for this course yet."}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
