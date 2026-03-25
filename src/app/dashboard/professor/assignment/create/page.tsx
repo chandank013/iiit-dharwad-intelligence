@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -15,7 +14,8 @@ import { professorAIRubricGenerator } from '@/ai/flows/professor-ai-rubric-gener
 import { Sparkles, Trash2, Plus, Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
 
 export default function CreateAssignmentPage() {
@@ -71,7 +71,7 @@ export default function CreateAssignmentPage() {
     setRubric(newRubric);
   };
 
-  const handlePublish = async (isDraft: boolean = false) => {
+  const handlePublish = (isDraft: boolean = false) => {
     if (!firestore || !user || !courseId) {
       toast({ title: "Error", description: "Missing course context or authentication.", variant: "destructive" });
       return;
@@ -83,62 +83,72 @@ export default function CreateAssignmentPage() {
     }
 
     setPublishing(true);
-    try {
-      // 1. Create Assignment
-      const assignmentRef = collection(firestore, 'courses', courseId, 'assignments');
-      const assignmentDoc = await addDoc(assignmentRef, {
-        courseId,
-        title,
-        description,
-        deadline: deadline || null,
-        submissionType,
-        lateSubmissionPolicy: "none",
-        allowResubmissions: allowResubmission,
-        maxResubmissions: 3,
-        enableLeaderboard,
-        professorId: user.uid,
-        status: isDraft ? 'draft' : 'published',
+
+    // 1. Generate IDs client-side to ensure atomicity and avoid deep awaiting
+    const assignmentRef = doc(collection(firestore, 'courses', courseId, 'assignments'));
+    const assignmentId = assignmentRef.id;
+
+    // 2. Prepare Assignment Data
+    const assignmentData = {
+      id: assignmentId,
+      courseId,
+      title,
+      description,
+      deadline: deadline || null,
+      submissionType,
+      lateSubmissionPolicy: "none",
+      allowResubmissions: allowResubmission,
+      maxResubmissions: 3,
+      enableLeaderboard,
+      professorId: user.uid,
+      status: isDraft ? 'draft' : 'published',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    // 3. Queue Assignment Write
+    setDocumentNonBlocking(assignmentRef, assignmentData, { merge: true });
+
+    // 4. Handle Rubric and Criteria if they exist
+    if (rubric.length > 0) {
+      const rubricRef = doc(collection(firestore, 'courses', courseId, 'assignments', assignmentId, 'rubrics'));
+      const rubricId = rubricRef.id;
+
+      const rubricData = {
+        id: rubricId,
+        assignmentId,
+        professorId: user.uid, // Denormalized for rules
+        name: `Rubric for ${title}`,
+        description: `Grading criteria for ${title}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
 
-      // 2. Create Rubric
-      if (rubric.length > 0) {
-        const rubricRef = collection(firestore, 'courses', courseId, 'assignments', assignmentDoc.id, 'rubrics');
-        const rubricDoc = await addDoc(rubricRef, {
-          assignmentId: assignmentDoc.id,
-          name: `Rubric for ${title}`,
-          description: `Grading criteria for ${title}`,
+      setDocumentNonBlocking(rubricRef, rubricData, { merge: true });
+
+      rubric.forEach((item, i) => {
+        const criterionRef = doc(collection(firestore, 'courses', courseId, 'assignments', assignmentId, 'rubrics', rubricId, 'criteria'));
+        const criterionData = {
+          id: criterionRef.id,
+          rubricId,
+          professorId: user.uid, // Denormalized for rules
+          description: `${item.criterion}: ${item.description}`,
+          maxScore: item.maxPoints,
+          order: i,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        });
-
-        // 3. Create Criteria
-        for (let i = 0; i < rubric.length; i++) {
-          const criterion = rubric[i];
-          const criteriaRef = collection(firestore, 'courses', courseId, 'assignments', assignmentDoc.id, 'rubrics', rubricDoc.id, 'criteria');
-          await addDoc(criteriaRef, {
-            rubricId: rubricDoc.id,
-            description: criterion.criterion + ": " + criterion.description,
-            maxScore: criterion.maxPoints,
-            order: i,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
-      }
-
-      toast({ 
-        title: isDraft ? "Draft Saved" : "Assignment Published", 
-        description: `Successfully ${isDraft ? 'saved' : 'published'} the assignment.` 
+        };
+        setDocumentNonBlocking(criterionRef, criterionData, { merge: true });
       });
-      router.push(`/courses/${courseId}`);
-    } catch (error) {
-      console.error("Failed to publish assignment:", error);
-      toast({ title: "Failed to publish", description: "Something went wrong. Please try again.", variant: "destructive" });
-    } finally {
-      setPublishing(false);
     }
+
+    toast({ 
+      title: isDraft ? "Draft Saved" : "Assignment Published", 
+      description: `Successfully initiated the ${isDraft ? 'save' : 'publish'} of your assignment.` 
+    });
+
+    // Navigate immediately to reflect optimistic UI state
+    router.push(`/courses/${courseId}`);
   };
 
   return (
@@ -224,7 +234,7 @@ export default function CreateAssignmentPage() {
                               type="number"
                               placeholder="Points"
                               value={item.maxPoints}
-                              onChange={(e) => updateRubricItem(index, 'maxPoints', parseInt(e.target.value))}
+                              onChange={(e) => updateRubricItem(index, 'maxPoints', parseInt(e.target.value) || 0)}
                             />
                             <Button variant="ghost" size="icon" className="text-destructive w-full" onClick={() => removeRubricItem(index)}>
                               <Trash2 className="h-4 w-4" />

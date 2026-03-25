@@ -1,11 +1,10 @@
-
 "use client";
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { GraduationCap, LayoutDashboard, ChevronDown, User as UserIcon, Mail, IdCard } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, ChevronDown, User as UserIcon, Mail, IdCard, LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -30,8 +29,16 @@ export function Navbar() {
   const displayName = user.displayName || user.email?.split('@')[0] || 'User';
   const firstName = displayName.split(' ')[0];
   
-  // Prefix "Dr." for professors as seen in reference
   const nameDisplay = !isStudent ? `Dr. ${firstName}` : firstName;
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Sign out failed", error);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -44,21 +51,19 @@ export function Navbar() {
             <span className="font-headline text-xl font-bold tracking-tight text-primary">IIIT Dharwad</span>
           </Link>
           <div className="hidden md:flex ml-8 items-center gap-6 text-sm font-medium">
-            <Link href="/" className="text-foreground transition-colors hover:text-primary flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4" /> Dashboard
+            <Link href="/" className="text-foreground transition-colors hover:text-primary flex items-center gap-2 font-bold uppercase tracking-widest text-[10px]">
+              <LayoutDashboard className="h-3 w-3" /> Dashboard
             </Link>
-            <Link href="/courses" className="text-muted-foreground transition-colors hover:text-primary">Courses</Link>
+            <Link href="/courses" className="text-muted-foreground transition-colors hover:text-primary font-bold uppercase tracking-widest text-[10px]">Courses</Link>
             {isStudent && (
-              <Link href="/portfolio" className="text-muted-foreground transition-colors hover:text-primary">Portfolio</Link>
+              <Link href="/portfolio" className="text-muted-foreground transition-colors hover:text-primary font-bold uppercase tracking-widest text-[10px]">Portfolio</Link>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 border-r pr-4 border-border/50">
-            <ThemeToggle />
-          </div>
-
+          <ThemeToggle />
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full hover:bg-accent/50 transition-all outline-none group border border-transparent hover:border-border">
@@ -93,6 +98,15 @@ export function Navbar() {
                   <UserIcon className="h-4 w-4 text-muted-foreground group-focus:text-primary" />
                   <span className="text-xs font-bold">My Profile</span>
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="p-3 cursor-pointer rounded-xl focus:bg-destructive/5 focus:text-destructive group"
+                onClick={handleSignOut}
+              >
+                <div className="flex items-center gap-3">
+                  <LogOut className="h-4 w-4 text-muted-foreground group-focus:text-destructive" />
+                  <span className="text-xs font-bold">Sign Out</span>
+                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,10 +1,7 @@
 /**
  * IIIT Dharwad Portal - Security Rules Configuration
  *
- * CORE PHILOSOPHY:
- * This ruleset implements a robust, role-based access control (RBAC) model.
- * It uses both Sentinel Collections and JWT Token email pattern matching for 
- * redundant and reliable authorization.
+ * RBAC model with denormalized authorization context for high performance and reliability.
  */
 
 rules_version = '2';
@@ -13,17 +10,14 @@ service cloud.firestore {
 
     // --- Helper Functions ---
 
-    /** @description Checks if the user is authenticated. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the user's UID matches the provided ID. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the user is a Professor (Sentinel or Email pattern). */
     function isProfessor() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/professor_roles/$(request.auth.uid)) ||
@@ -31,7 +25,6 @@ service cloud.firestore {
       );
     }
 
-    /** @description Checks if the user is a Student (Sentinel or Email pattern). */
     function isStudent() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/student_roles/$(request.auth.uid)) ||
@@ -59,13 +52,11 @@ service cloud.firestore {
     match /professor_roles/{userId} {
       allow get: if isSignedIn();
       allow create, update: if isOwner(userId);
-      allow list, delete: if false;
     }
 
     match /student_roles/{userId} {
       allow get: if isSignedIn();
       allow create, update: if isOwner(userId);
-      allow list, delete: if false;
     }
 
     match /courses/{courseId} {
@@ -75,14 +66,33 @@ service cloud.firestore {
 
       match /assignments/{assignmentId} {
         allow get, list: if isSignedIn();
-        allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
-      }
+        allow create, update, delete: if isProfessor() && (
+          (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
+          (resource != null && resource.data.professorId == request.auth.uid)
+        );
 
-      match /submissions/{submissionId} {
-        allow list: if isSignedIn();
-        allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
-        allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
-        allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+        match /rubrics/{rubricId} {
+          allow get, list: if isSignedIn();
+          allow create, update, delete: if isProfessor() && (
+            (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
+            (resource != null && resource.data.professorId == request.auth.uid)
+          );
+
+          match /criteria/{criterionId} {
+            allow get, list: if isSignedIn();
+            allow create, update, delete: if isProfessor() && (
+              (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
+              (resource != null && resource.data.professorId == request.auth.uid)
+            );
+          }
+        }
+
+        match /submissions/{submissionId} {
+          allow list: if isSignedIn();
+          allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+          allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
+          allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+        }
       }
 
       match /content/{contentId} {
@@ -91,7 +101,6 @@ service cloud.firestore {
           (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
           (resource != null && resource.data.professorId == request.auth.uid)
         );
-        // Allow updating for likes counter
         allow update: if isSignedIn();
 
         match /comments/{commentId} {
@@ -121,13 +130,11 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow get, list: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
       allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId);
-      allow delete: if false;
     }
 
     match /audit_logs/{logId} {
       allow list, get: if isProfessor();
       allow create: if isSignedIn();
-      allow update, delete: if false;
     }
   }
 }
