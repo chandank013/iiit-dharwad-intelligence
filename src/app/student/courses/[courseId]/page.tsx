@@ -21,9 +21,6 @@ import {
   LayoutDashboard, 
   BookOpen, 
   FileCheck, 
-  Trophy, 
-  User as UserIcon, 
-  FolderRoot, 
   ChevronLeft,
   Clock,
   TrendingUp,
@@ -35,7 +32,6 @@ import {
   Target,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -51,7 +47,6 @@ import {
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis,
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -59,21 +54,21 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
 
 const scoreProgressData = [
-  { name: 'Aug', score: 65 },
-  { name: 'Sep', score: 68 },
-  { name: 'Oct', score: 75 },
-  { name: 'Nov', score: 72 },
-  { name: 'Dec', score: 82 },
-  { name: 'Jan', score: 80 },
+  { name: 'Aug', score: 0 },
+  { name: 'Sep', score: 0 },
+  { name: 'Oct', score: 0 },
+  { name: 'Nov', score: 0 },
+  { name: 'Dec', score: 0 },
+  { name: 'Jan', score: 0 },
 ];
 
 const subjectStrengthData = [
-  { subject: 'Algorithms', A: 85, fullMark: 100 },
-  { subject: 'Databases', A: 90, fullMark: 100 },
-  { subject: 'Web Dev', A: 95, fullMark: 100 },
-  { subject: 'ML/AI', A: 65, fullMark: 100 },
-  { subject: 'Networks', A: 70, fullMark: 100 },
-  { subject: 'OS', A: 75, fullMark: 100 },
+  { subject: 'Algorithms', A: 0, fullMark: 100 },
+  { subject: 'Databases', A: 0, fullMark: 100 },
+  { subject: 'Web Dev', A: 0, fullMark: 100 },
+  { subject: 'ML/AI', A: 0, fullMark: 100 },
+  { subject: 'Networks', A: 0, fullMark: 100 },
+  { subject: 'OS', A: 0, fullMark: 100 },
 ];
 
 export default function StudentCoursePage() {
@@ -83,10 +78,9 @@ export default function StudentCoursePage() {
   const firestore = useFirestore();
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Security Guard: Prevent non-students or non-enrolled students (ideally)
   useEffect(() => {
     if (!isUserLoading && user && !user.email?.startsWith('24bds')) {
-      router.push(`/courses/${courseId}`); // Send professors to their portal
+      router.push(`/courses/${courseId}`);
     }
   }, [user, isUserLoading, router, courseId]);
 
@@ -118,6 +112,9 @@ export default function StudentCoursePage() {
     { id: 'submissions', label: 'My Submissions', icon: FileCheck },
     { id: 'content', label: 'Content', icon: FolderRoot },
   ];
+
+  // Manual check for FolderRoot icon which was used in sidebarLinks
+  const FolderRoot = BookOpen; // Using BookOpen as a fallback if FolderRoot is missing in some environments
 
   return (
     <div className="flex min-h-screen bg-[#0B0E14] text-slate-200">
@@ -166,7 +163,6 @@ export default function StudentCoursePage() {
             <div className="flex items-center gap-4">
               <button className="text-slate-500 hover:text-white transition-colors relative">
                 <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-rose-500 rounded-full border-2 border-[#0B0E14]" />
               </button>
               <ThemeToggle />
             </div>
@@ -193,7 +189,7 @@ export default function StudentCoursePage() {
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">3</div>
+                <div className="text-2xl font-bold text-white">1</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pending</div>
               </div>
             </Card>
@@ -202,7 +198,7 @@ export default function StudentCoursePage() {
                 <FileCheck className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">18</div>
+                <div className="text-2xl font-bold text-white">0</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Submitted</div>
               </div>
             </Card>
@@ -211,7 +207,7 @@ export default function StudentCoursePage() {
                 <TrendingUp className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">84%</div>
+                <div className="text-2xl font-bold text-white">0%</div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Avg Score</div>
               </div>
             </Card>
@@ -221,28 +217,28 @@ export default function StudentCoursePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card className="bg-[#141820] border-slate-800/50 overflow-hidden">
               <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-slate-800/30">
-                <CardTitle className="text-sm font-bold text-white">Pending</CardTitle>
+                <CardTitle className="text-sm font-bold text-white">Pending Assignments</CardTitle>
                 <Link href="#" className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">View all <ArrowRight className="h-3 w-3" /></Link>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-800/30">
                   {assignments && assignments.length > 0 ? (
-                    assignments.slice(0, 3).map((task, i) => (
+                    assignments.slice(0, 1).map((task, i) => (
                       <div key={i} className="p-5 flex items-center justify-between hover:bg-white/5 transition-colors group cursor-pointer">
                         <div className="space-y-2">
                           <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{task.title}</div>
                           <div className="flex gap-2">
                             <Badge variant="outline" className="text-[8px] bg-primary/5 text-primary border-primary/20">{course.name}</Badge>
-                            <Badge variant="outline" className="text-[8px] bg-emerald-500/5 text-emerald-500 border-emerald-500/20">{task.isGroup ? 'Group' : 'Individual'}</Badge>
+                            <Badge variant="outline" className="text-[8px] bg-emerald-500/5 text-emerald-500 border-emerald-500/20">Individual</Badge>
                           </div>
                         </div>
                         <div className="text-[9px] font-bold text-orange-500 bg-orange-500/10 px-2 py-1 rounded border border-orange-500/10">
-                          Due {new Date(task.deadline).toLocaleDateString()}
+                          Due Soon
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="p-10 text-center text-xs text-slate-500">No pending assignments.</div>
+                    <div className="p-10 text-center text-xs text-slate-500 italic">No pending assignments found.</div>
                   )}
                 </div>
               </CardContent>
@@ -251,40 +247,10 @@ export default function StudentCoursePage() {
             <Card className="bg-[#141820] border-slate-800/50 overflow-hidden">
               <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-slate-800/30">
                 <CardTitle className="text-sm font-bold text-white">Recent Grades</CardTitle>
-                <Link href="#" className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">View all <ArrowRight className="h-3 w-3" /></Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-slate-800/30">
-                  <div className="p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-white">ML Assignment 2</div>
-                        <div className="text-[10px] text-slate-500 font-medium">Good feature engineering, improve model selection.</div>
-                      </div>
-                      <div className="text-sm font-bold text-emerald-500">88<span className="text-[10px] text-slate-500">/100</span></div>
-                    </div>
-                    <Progress value={88} className="h-1 bg-slate-800" />
-                  </div>
-                  <div className="p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-white">DSA Assignment 3</div>
-                        <div className="text-[10px] text-slate-500 font-medium">Time complexity analysis needs more depth.</div>
-                      </div>
-                      <div className="text-sm font-bold text-amber-500">76<span className="text-[10px] text-slate-500">/100</span></div>
-                    </div>
-                    <Progress value={76} className="h-1 bg-slate-800" />
-                  </div>
-                  <div className="p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-white">DBMS Lab</div>
-                        <div className="text-[10px] text-slate-500 font-medium">Excellent query optimization!</div>
-                      </div>
-                      <div className="text-sm font-bold text-emerald-500">91<span className="text-[10px] text-slate-500">/100</span></div>
-                    </div>
-                    <Progress value={91} className="h-1 bg-slate-800" />
-                  </div>
+                <div className="p-10 text-center text-xs text-slate-500 italic">
+                  No graded submissions yet.
                 </div>
               </CardContent>
             </Card>
@@ -309,7 +275,7 @@ export default function StudentCoursePage() {
                       axisLine={false} 
                       tickLine={false} 
                       tick={{ fill: '#64748B', fontSize: 9, fontWeight: 700 }}
-                      domain={[50, 100]}
+                      domain={[0, 100]}
                       dx={-10}
                     />
                     <Tooltip 
@@ -348,25 +314,17 @@ export default function StudentCoursePage() {
 
             <Card className="bg-[#141820] border-slate-800/50 p-6 space-y-6">
               <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
-                <Target className="h-4 w-4 text-orange-500" /> Improve
+                <Target className="h-4 w-4 text-orange-500" /> Focus Areas
               </div>
               <div className="space-y-3">
                 <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center gap-3">
                   <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="text-[10px] font-bold text-slate-300">Machine Learning Model Selection</span>
-                </div>
-                <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center gap-3">
-                  <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="text-[10px] font-bold text-slate-300">Time Complexity Analysis</span>
-                </div>
-                <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center gap-3">
-                  <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="text-[10px] font-bold text-slate-300">Network Protocol Design</span>
+                  <span className="text-[10px] font-bold text-slate-300">Start your first assignment to see insights.</span>
                 </div>
                 <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-                    <span className="text-[10px] font-bold text-emerald-500">Best: Databases (90%)</span>
+                    <span className="text-[10px] font-bold text-emerald-500">Welcome to {course.name}</span>
                   </div>
                 </div>
               </div>
