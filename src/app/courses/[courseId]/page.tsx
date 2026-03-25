@@ -13,7 +13,6 @@ import {
   doc, 
   collection, 
   query, 
-  where, 
   orderBy 
 } from 'firebase/firestore';
 import { 
@@ -26,7 +25,6 @@ import {
   LogOut, 
   Search, 
   Bell, 
-  Sun, 
   ChevronLeft,
   Clock,
   CheckCircle2,
@@ -46,20 +44,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
   Radar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis,
+  ResponsiveContainer,
   AreaChart,
-  Area
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Line
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -121,14 +117,13 @@ export default function CoursePortalPage() {
   const sidebarLinks = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
-    { id: 'resources', label: 'Course Library', icon: FolderRoot },
+    { id: 'resources', label: 'Library', icon: FolderRoot },
     { id: 'discussions', label: 'Discussions', icon: MessageSquare },
-    { id: 'grades', label: 'Gradebook', icon: Trophy },
+    { id: 'grades', label: 'Performance', icon: Trophy },
   ];
 
   return (
     <div className="flex min-h-screen bg-background text-foreground overflow-hidden">
-      {/* Sidebar Navigation */}
       <aside className="w-64 border-r border-white/5 flex flex-col shrink-0 bg-card/20 backdrop-blur-xl">
         <div className="p-6">
           <Link href="/courses" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all text-[10px] font-bold uppercase tracking-widest mb-10 group">
@@ -137,7 +132,7 @@ export default function CoursePortalPage() {
           
           <div className="space-y-8">
             <div className="px-2">
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 opacity-50 px-3">Main Menu</h3>
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 opacity-50 px-3">Main</h3>
               <nav className="space-y-1">
                 {sidebarLinks.map((link) => (
                   <button
@@ -158,13 +153,13 @@ export default function CoursePortalPage() {
             </div>
 
             <div className="px-2">
-              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 opacity-50 px-3">Intelligence</h3>
+              <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4 opacity-50 px-3">Tools</h3>
               <nav className="space-y-1">
                 <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground transition-all font-bold">
-                  <Zap className="h-4 w-4" /> AI Companion
+                  <Zap className="h-4 w-4" /> Assistant
                 </button>
                 <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground transition-all font-bold">
-                  <Calendar className="h-4 w-4" /> Course Timeline
+                  <Calendar className="h-4 w-4" /> Timeline
                 </button>
               </nav>
             </div>
@@ -172,32 +167,25 @@ export default function CoursePortalPage() {
         </div>
         
         <div className="mt-auto p-6">
-          <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10 mb-6">
-            <div className="text-[10px] font-bold text-primary uppercase tracking-widest mb-2 flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3" /> AIS Tip
-            </div>
-            <p className="text-[10px] text-muted-foreground leading-relaxed font-medium">Complete Module 3 to unlock your midterm prediction.</p>
-          </div>
           <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-[10px] font-bold uppercase tracking-widest" onClick={() => router.push('/')}>
-            <LogOut className="h-4 w-4" /> Terminate Session
+            <LogOut className="h-4 w-4" /> EXIT PORTAL
           </Button>
         </div>
       </aside>
 
-      {/* Main Experience */}
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-background">
         <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-1.5 rounded-lg border border-primary/20">
               <GraduationCap className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-xs font-bold tracking-tight uppercase tracking-[0.2em] opacity-80">Academic Intelligence System</span>
+            <span className="text-xs font-bold tracking-tight uppercase tracking-[0.2em] opacity-80">Portal Dashboard</span>
           </div>
           <div className="flex items-center gap-5">
             <div className="relative hidden lg:block group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input 
-                placeholder="Query course knowledge base..." 
+                placeholder="Search resources..." 
                 className="bg-card/30 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-[11px] w-64 focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all font-medium"
               />
             </div>
@@ -216,7 +204,6 @@ export default function CoursePortalPage() {
         </header>
 
         <div className="flex-1 p-8 space-y-8 max-w-[1400px] mx-auto w-full">
-          {/* Banner */}
           <div className="relative rounded-[2.5rem] overflow-hidden bg-card/30 border border-white/5 shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent" />
             <div className="relative p-12 flex flex-col md:flex-row items-center justify-between gap-10">
@@ -234,17 +221,17 @@ export default function CoursePortalPage() {
                   {course.description}
                 </p>
                 <div className="flex items-center gap-4 pt-4">
-                  <Button className="rounded-full px-8 font-bold shadow-xl shadow-primary/20 h-12">Resume Journey</Button>
-                  <Button variant="outline" className="rounded-full px-8 border-white/10 hover:bg-white/5 font-bold h-12">Portal Docs</Button>
+                  <Button className="rounded-full px-8 font-bold shadow-xl shadow-primary/20 h-12">Resume</Button>
+                  <Button variant="outline" className="rounded-full px-8 border-white/10 hover:bg-white/5 font-bold h-12">Resources</Button>
                 </div>
               </div>
               
               <div className="hidden lg:grid grid-cols-2 gap-4 shrink-0">
                 {[
-                  { label: 'Active Learners', val: '124', detail: '+5% Growth', color: 'text-green-500' },
-                  { label: 'System Accuracy', val: '94%', detail: 'High Confidence', color: 'text-primary' },
-                  { label: 'Critical Tasks', val: '04', detail: 'Deadline Alert', color: 'text-orange-500' },
-                  { label: 'AI Index', val: '0.96', detail: 'Optimal Performance', color: 'text-blue-400' },
+                  { label: 'Learners', val: '124', detail: '+5% Growth', color: 'text-green-500' },
+                  { label: 'Progress', val: '94%', detail: 'Excellent', color: 'text-primary' },
+                  { label: 'Deadlines', val: '04', detail: 'Upcoming', color: 'text-orange-500' },
+                  { label: 'Activity', val: '0.96', detail: 'High', color: 'text-blue-400' },
                 ].map((stat, i) => (
                   <div key={i} className="bg-white/[0.02] backdrop-blur-md p-6 rounded-3xl border border-white/5 w-44 hover:bg-white/[0.04] transition-colors">
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 opacity-50">{stat.label}</div>
@@ -258,7 +245,6 @@ export default function CoursePortalPage() {
 
           <div className="grid grid-cols-12 gap-8">
             <div className="col-span-12 lg:col-span-8 space-y-8">
-              {/* Task Hub */}
               <Card className="bg-card/30 border-white/5 shadow-2xl rounded-[2rem] overflow-hidden backdrop-blur-xl">
                 <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 py-6 px-8">
                   <div className="flex items-center gap-4">
@@ -266,17 +252,17 @@ export default function CoursePortalPage() {
                       <BookOpen className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg font-bold">Academic Pipeline</CardTitle>
-                      <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Current assignments and labs</CardDescription>
+                      <CardTitle className="text-lg font-bold">Academic Path</CardTitle>
+                      <CardDescription className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Current assignments</CardDescription>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary">Manage all</Button>
+                  <Button variant="ghost" size="sm" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary">View all</Button>
                 </CardHeader>
                 <CardContent className="p-0">
                   {assignments?.length === 0 ? (
                     <div className="py-24 flex flex-col items-center justify-center text-muted-foreground opacity-30">
                       <CheckCircle2 className="h-12 w-12 mb-4" />
-                      <p className="text-xs font-bold uppercase tracking-widest">Pipeline Clear</p>
+                      <p className="text-xs font-bold uppercase tracking-widest">No pending tasks</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-white/5">
@@ -312,19 +298,18 @@ export default function CoursePortalPage() {
                 </CardContent>
               </Card>
 
-              {/* Module Progress Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="bg-card/30 border-white/5 shadow-2xl rounded-[2rem] backdrop-blur-xl">
                   <CardHeader className="py-6 px-8">
                     <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] opacity-50 flex items-center gap-2">
-                      <TrendingUp className="h-3.5 w-3.5" /> Syllabus Mastery
+                      <TrendingUp className="h-3.5 w-3.5" /> Performance Trends
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-8 pb-8 space-y-8">
                     <div className="space-y-3">
                       <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                        <span>Course Velocity</span>
-                        <span className="text-primary">64% Mastery</span>
+                        <span>Completion Rate</span>
+                        <span className="text-primary">64%</span>
                       </div>
                       <Progress value={64} className="h-2.5 bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-primary" />
@@ -332,10 +317,10 @@ export default function CoursePortalPage() {
                     </div>
                     <div className="space-y-4">
                       {[
-                        { label: 'M1: Architecture Foundations', done: true },
-                        { label: 'M2: Distributed Systems Logic', done: true },
-                        { label: 'M3: Network Optimization', done: false },
-                        { label: 'M4: Final AIS Integration', done: false },
+                        { label: 'Architecture Foundations', done: true },
+                        { label: 'Distributed Systems Logic', done: true },
+                        { label: 'Network Optimization', done: false },
+                        { label: 'Final Integration', done: false },
                       ].map((mod, i) => (
                         <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                           <span className={cn("text-[11px] font-bold", mod.done ? "text-muted-foreground line-through opacity-50" : "text-foreground")}>{mod.label}</span>
@@ -349,15 +334,15 @@ export default function CoursePortalPage() {
                 <Card className="bg-card/30 border-white/5 shadow-2xl rounded-[2rem] backdrop-blur-xl">
                   <CardHeader className="py-6 px-8 flex flex-row items-center justify-between">
                     <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] opacity-50 flex items-center gap-2">
-                      <Bell className="h-3.5 w-3.5" /> Intelligence Feed
+                      <Bell className="h-3.5 w-3.5" /> Updates
                     </CardTitle>
-                    <Button variant="link" className="text-[10px] h-auto p-0 text-primary font-bold uppercase tracking-widest">View Archive</Button>
+                    <Button variant="link" className="text-[10px] h-auto p-0 text-primary font-bold uppercase tracking-widest">History</Button>
                   </CardHeader>
                   <CardContent className="px-8 pb-8 space-y-6">
                     {[
-                      { type: 'Update', text: 'New Module 3 Resources Released', time: '2h ago', urgent: true },
-                      { type: 'Grade', text: 'Assignment 2 Evaluation Finalized', time: '5h ago', urgent: false },
-                      { type: 'Peer', text: '3 New Discussion Replies', time: '1d ago', urgent: false },
+                      { type: 'Update', text: 'New module resources released', time: '2h ago', urgent: true },
+                      { type: 'Grade', text: 'Evaluation finalized', time: '5h ago', urgent: false },
+                      { type: 'Peer', text: 'New discussion replies', time: '1d ago', urgent: false },
                     ].map((item, i) => (
                       <div key={i} className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 group hover:bg-white/[0.08] transition-all cursor-pointer">
                         <div className={cn("h-2 w-2 mt-2 rounded-full shrink-0", item.urgent ? "bg-primary animate-pulse" : "bg-muted-foreground/30")} />
@@ -373,7 +358,6 @@ export default function CoursePortalPage() {
             </div>
 
             <div className="col-span-12 lg:col-span-4 space-y-8">
-              {/* AI Insights Card */}
               <Card className="bg-gradient-to-br from-primary/20 via-card to-card border-primary/20 shadow-2xl relative overflow-hidden rounded-[2.5rem] backdrop-blur-xl">
                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                   <Sparkles className="h-24 w-24 text-primary" />
@@ -381,13 +365,13 @@ export default function CoursePortalPage() {
                 <CardHeader className="p-8">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-[0.3em]">AI Intelligence</span>
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-[0.3em]">Insights</span>
                   </div>
-                  <CardTitle className="text-2xl font-bold tracking-tighter">Growth Insights</CardTitle>
+                  <CardTitle className="text-2xl font-bold tracking-tighter">Performance Metrics</CardTitle>
                 </CardHeader>
                 <CardContent className="px-8 pb-8 space-y-6">
                   <div className="p-5 rounded-2xl bg-primary/10 border border-primary/20 text-[12px] leading-relaxed italic text-muted-foreground font-medium shadow-inner">
-                    "System telemetry indicates your <strong>Concurrent Logic</strong> scores are peaking. Recommended focus: <strong>Asynchronous Error Handling</strong> in the upcoming lab."
+                    "Telemetrics indicate peaking mastery in <strong>Concurrent Logic</strong>. Recommended focus: <strong>Asynchronous Patterns</strong>."
                   </div>
                   <div className="space-y-3">
                     {[
@@ -404,15 +388,14 @@ export default function CoursePortalPage() {
                 </CardContent>
                 <CardFooter className="px-8 pb-8 pt-0">
                   <Button className="w-full text-xs font-bold gap-2 py-6 rounded-2xl" variant="secondary shadow-lg">
-                    Launch AI Tutor Session <ArrowRight className="h-3 w-3" />
+                    Launch Assistant <ArrowRight className="h-3 w-3" />
                   </Button>
                 </CardFooter>
               </Card>
 
-              {/* Performance Charts */}
               <Card className="bg-card/30 border-white/5 shadow-2xl rounded-[2rem] backdrop-blur-xl overflow-hidden">
                 <CardHeader className="py-6 px-8">
-                  <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Cognitive Radar</CardTitle>
+                  <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Skill Analysis</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[280px] p-4">
                   <ResponsiveContainer width="100%" height="100%">
@@ -430,35 +413,6 @@ export default function CoursePortalPage() {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-
-              <Card className="bg-card/30 border-white/5 shadow-2xl rounded-[2rem] backdrop-blur-xl overflow-hidden">
-                <CardHeader className="py-6 px-8">
-                  <CardTitle className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">Velocity Trends</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[220px] p-0 pb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={performanceData}>
-                      <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3A7CA5" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#3A7CA5" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
-                      <XAxis dataKey="name" tick={{ fill: '#666', fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', fontSize: '10px', fontWeight: 'bold' }}
-                        itemStyle={{ color: '#3A7CA5' }}
-                        cursor={{ stroke: '#3A7CA5', strokeWidth: 1, strokeDasharray: '4 4' }}
-                      />
-                      <Area type="monotone" dataKey="score" stroke="#3A7CA5" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
-                      <Line type="monotone" dataKey="avg" stroke="#ffffff10" strokeWidth={1} strokeDasharray="5 5" dot={false} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
             </div>
           </div>
         </div>

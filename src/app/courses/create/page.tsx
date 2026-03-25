@@ -108,7 +108,7 @@ export default function CreateCoursePage() {
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tighter">Launch New Course</h1>
             <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> AIS Course Builder
+              <Sparkles className="h-4 w-4 text-primary" /> Course Builder
             </p>
           </div>
 

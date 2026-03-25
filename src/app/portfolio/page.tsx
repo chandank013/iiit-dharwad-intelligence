@@ -104,7 +104,7 @@ export default function PortfolioPage() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground font-medium">AIS Credential</span>
+                      <span className="text-xs text-muted-foreground font-medium">Academic Credential</span>
                       <span className="text-xs font-bold">48/120 Credits</span>
                     </div>
                   </div>
@@ -113,7 +113,7 @@ export default function PortfolioPage() {
 
               <Card className="bg-card/50 border-white/5 backdrop-blur-sm rounded-2xl">
                 <CardHeader>
-                  <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">AI-Verified Skills</CardTitle>
+                  <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Verified Skills</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
@@ -151,7 +151,7 @@ export default function PortfolioPage() {
                           <div className="flex items-center gap-4 bg-primary/5 px-6 py-3 rounded-2xl border border-primary/10">
                             <div className="text-right">
                               <div className="text-3xl font-bold text-primary">{sub.evaluation?.totalScore}%</div>
-                              <div className="text-[10px] font-bold uppercase text-muted-foreground">AIS Score</div>
+                              <div className="text-[10px] font-bold uppercase text-muted-foreground">Verification Score</div>
                             </div>
                           </div>
                         </div>

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, Loader2, Mail, Lock, Sparkles } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, Mail, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -85,7 +85,7 @@ export default function LoginPage() {
 
       toast({
         title: isSignUp ? "Account Created" : "Login Successful",
-        description: `Welcome back to IIIT Dharwad AIS.`,
+        description: `Welcome back to IIIT Dharwad Portal.`,
       });
       
       router.push('/');
@@ -118,7 +118,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Visual background elements */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-10 left-10 w-64 h-64 bg-primary rounded-full blur-[120px]" />
         <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary rounded-full blur-[120px]" />
@@ -129,11 +128,7 @@ export default function LoginPage() {
           <div className="bg-primary/10 p-4 rounded-3xl text-primary shadow-xl border border-primary/20">
             <GraduationCap className="h-12 w-12" />
           </div>
-          <h1 className="text-4xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad AIS</h1>
-          <div className="flex items-center gap-2 text-muted-foreground font-medium uppercase tracking-widest text-[10px]">
-            <Sparkles className="h-3 w-3 text-primary" />
-            Academic Intelligence System
-          </div>
+          <h1 className="text-4xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
         </div>
 
         <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl">
@@ -174,9 +169,6 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground px-1">
-                  Students: 24bdsXXX... | Professors: name@iiitdwd.ac.in
-                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>

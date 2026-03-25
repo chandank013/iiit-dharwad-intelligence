@@ -41,7 +41,7 @@ export function Navbar() {
             <div className="bg-primary p-1.5 rounded-lg text-primary-foreground group-hover:scale-110 transition-transform">
               < GraduationCap className="h-6 w-6" />
             </div>
-            <span className="font-headline text-xl font-bold tracking-tight text-primary">IIIT Dharwad AIS</span>
+            <span className="font-headline text-xl font-bold tracking-tight text-primary">IIIT Dharwad</span>
           </Link>
           <div className="hidden md:flex ml-8 items-center gap-6 text-sm font-medium">
             <Link href="/" className="text-foreground transition-colors hover:text-primary flex items-center gap-2">

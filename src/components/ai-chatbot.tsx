@@ -17,7 +17,7 @@ type ChatMessage = {
 export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', content: 'Hello! I am your IIITDWD Academic Assistant. How can I help you today?' }
+    { role: 'model', content: 'Hello! I am your IIIT Dharwad Assistant. How can I help you today?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +40,6 @@ export function AIChatbot() {
     setIsLoading(true);
 
     try {
-      // We pass the history (excluding the most recent user message we just added)
       const history = messages.slice(0).map(m => ({
         role: m.role,
         content: m.content
@@ -59,7 +58,7 @@ export function AIChatbot() {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
         role: 'model',
-        content: "I'm having trouble connecting to my brain right now. Please try again in a moment."
+        content: "I'm having trouble connecting right now. Please try again in a moment."
       }]);
     } finally {
       setIsLoading(false);
@@ -81,7 +80,7 @@ export function AIChatbot() {
         <Card className="w-[350px] sm:w-[400px] h-[500px] shadow-2xl flex flex-col animate-in slide-in-from-bottom-5">
           <CardHeader className="flex flex-row items-center justify-between py-4 bg-primary text-primary-foreground rounded-t-lg shrink-0">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Bot className="h-4 w-4" /> AI Academic Assistant
+              <Bot className="h-4 w-4" /> Academic Assistant
             </CardTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8 hover:bg-white/10 text-white">
               <X className="h-4 w-4" />
@@ -126,7 +125,7 @@ export function AIChatbot() {
             </form>
           </CardFooter>
           <div className="bg-accent px-4 py-2 text-[10px] text-accent-foreground font-medium flex items-center justify-center gap-1.5 rounded-b-lg shrink-0">
-            <Sparkles className="h-3 w-3" /> Powered by Genkit & Gemini
+            <Sparkles className="h-3 w-3" /> Powered by Gemini
           </div>
         </Card>
       )}

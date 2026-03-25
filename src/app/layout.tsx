@@ -5,8 +5,8 @@ import {ThemeProvider} from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'IIIT Dharwad AIS - Academic Intelligence System',
-  description: 'AI-powered academic management and evaluation platform for IIIT Dharwad.',
+  title: 'IIIT Dharwad Portal',
+  description: 'Academic management and evaluation platform for IIIT Dharwad.',
 };
 
 export default function RootLayout({
@@ -25,8 +25,8 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="dark"
+            enableSystem={false}
             disableTransitionOnChange
           >
             {children}

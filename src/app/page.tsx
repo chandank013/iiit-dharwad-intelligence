@@ -27,7 +27,6 @@ export default function Home() {
     );
   }
 
-  // Simple role check based on email pattern
   const isStudent = user.email?.startsWith('24bds');
 
   return (
@@ -42,7 +41,7 @@ export default function Home() {
       </main>
       <AIChatbot />
       <footer className="py-6 border-t bg-muted/30 text-center text-xs text-muted-foreground">
-        &copy; 2024 IIIT Dharwad Academic Intelligence System. All rights reserved.
+        &copy; 2024 IIIT Dharwad. All rights reserved.
       </footer>
     </div>
   );
