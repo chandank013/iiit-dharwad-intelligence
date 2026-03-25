@@ -13,11 +13,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GraduationCap, LayoutDashboard, UserCircle, LogOut, ChevronDown, Repeat } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function Navbar() {
   const { user, loginAs, logout } = useAuth();
+  const router = useRouter();
 
   if (!user) return null;
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -25,12 +32,12 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-primary p-1.5 rounded-lg text-primary-foreground group-hover:scale-110 transition-transform">
-              <GraduationCap className="h-6 w-6" />
+              < GraduationCap className="h-6 w-6" />
             </div>
             <span className="font-headline text-xl font-bold tracking-tight text-primary">IIIT Dharwad AIS</span>
           </Link>
           <div className="hidden md:flex ml-8 items-center gap-6 text-sm font-medium">
-            <Link href="/dashboard" className="text-foreground transition-colors hover:text-primary flex items-center gap-2">
+            <Link href="/" className="text-foreground transition-colors hover:text-primary flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" /> Dashboard
             </Link>
             <Link href="/courses" className="text-muted-foreground transition-colors hover:text-primary">Courses</Link>
@@ -65,7 +72,7 @@ export function Navbar() {
               <DropdownMenuItem className="cursor-pointer">
                 <UserCircle className="mr-2 h-4 w-4" /> Profile
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={logout}>
+              <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" /> Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -1,15 +1,36 @@
 "use client";
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/store';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MOCK_USERS, MOCK_SUBMISSIONS, MOCK_ASSIGNMENTS } from '@/lib/mock-data';
 import { Badge } from '@/components/ui/badge';
-import { Share2, Download, ExternalLink, Trophy, Star, TrendingUp } from 'lucide-react';
+import { Share2, Download, ExternalLink, Trophy, Star, TrendingUp, Loader2 } from 'lucide-react';
 
 export default function PortfolioPage() {
-  const student = MOCK_USERS[1];
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Use the logged in user or fall back to mock student for UI demo
+  const displayUser = user.role === 'student' ? user : MOCK_USERS[1];
 
   return (
     <div className="min-h-screen bg-[#F6FAFC]">
@@ -21,11 +42,11 @@ export default function PortfolioPage() {
             <CardContent className="relative pt-0 pb-6 px-8">
               <div className="flex flex-col md:flex-row items-end gap-6 -mt-12">
                 <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
-                  <AvatarImage src={student.avatar} />
-                  <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={displayUser.avatar} />
+                  <AvatarFallback>{displayUser.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 pb-2">
-                  <h1 className="text-2xl font-headline font-bold">{student.name}</h1>
+                  <h1 className="text-2xl font-headline font-bold">{displayUser.name}</h1>
                   <p className="text-muted-foreground">Computer Science & Engineering • 2021-25</p>
                 </div>
                 <div className="flex gap-2 pb-2">

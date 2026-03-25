@@ -1,14 +1,34 @@
 "use client";
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/store';
 import { Navbar } from '@/components/layout/Navbar';
 import { MOCK_COURSES } from '@/lib/mock-data';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Search, Plus } from 'lucide-react';
+import { ArrowRight, Search, Plus, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export default function CoursesPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F6FAFC]">
       <Navbar />
