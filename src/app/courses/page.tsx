@@ -100,11 +100,13 @@ export default function CoursesPage() {
                         <span className="font-mono bg-white/5 px-2 py-0.5 rounded text-primary">ID: {course.joinCode}</span>
                       )}
                     </div>
-                    <Link href={`/courses/${course.id}`}>
-                      <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all font-bold">
-                        Portal Entry <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </Link>
+                    {!isStudent && (
+                      <Link href={`/courses/${course.id}`}>
+                        <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all font-bold">
+                          Portal Entry <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                      </Link>
+                    )}
                   </CardContent>
                 </Card>
               ))

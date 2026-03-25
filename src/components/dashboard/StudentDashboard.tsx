@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -305,21 +304,20 @@ export function StudentDashboard() {
           {myCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {myCourses.map((course) => (
-                <Link href={`/courses/${course.id}`} key={course.id}>
-                  <Card className="hover:shadow-md transition-all cursor-pointer h-full border-l-4 border-l-primary group">
+                <div key={course.id}>
+                  <Card className="h-full border-l-4 border-l-primary">
                     <CardHeader>
                       <Badge variant="secondary" className="w-fit mb-1">{course.code}</Badge>
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors">{course.name}</CardTitle>
+                      <CardTitle className="text-lg">{course.name}</CardTitle>
                       <CardDescription className="line-clamp-2">{course.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex justify-between items-center text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                        <span>Portal Active</span>
-                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        <span>Enrollment Verified</span>
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
+                </div>
               ))}
             </div>
           ) : (
@@ -372,11 +370,6 @@ export function StudentDashboard() {
                         {assignment.submissionType}
                       </span>
                     </div>
-                    <Link href={`/courses/${assignment.courseId}`}>
-                      <Button variant="link" className="p-0 h-auto text-[10px] font-bold text-primary">
-                        View Assignment Portal
-                      </Button>
-                    </Link>
                   </CardContent>
                 </Card>
               ))

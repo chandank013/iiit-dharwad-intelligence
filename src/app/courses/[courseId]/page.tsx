@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   useUser, 
@@ -151,6 +150,13 @@ export default function CoursePortalPage() {
 
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // Security Guard: Prevent students from entering the portal
+  useEffect(() => {
+    if (!isUserLoading && user && user.email?.startsWith('24bds')) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, router]);
 
   const courseRef = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
