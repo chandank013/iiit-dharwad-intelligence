@@ -15,11 +15,16 @@ export function useAuth() {
     setLoading(false);
   }, []);
 
-  const login = (email: string) => {
+  const login = (email: string, password?: string) => {
     // Determine role based on email pattern
     let role: Role = 'student';
     let name = email.split('@')[0];
     
+    // In a real app, you would verify the password here with an auth provider
+    if (!password || password.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
+    }
+
     // Specific student email
     if (email === '24bds001@iiitdwd.ac.in') {
       role = 'student';

@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, Loader2, Mail } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, Mail, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
@@ -19,11 +20,11 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !password) return;
 
     setIsLoading(true);
     try {
-      login(email);
+      login(email, password);
       toast({
         title: "Login Successful",
         description: `Welcome back to IIIT Dharwad AIS.`,
@@ -32,7 +33,7 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid email format. Use @iiitdwd.ac.in",
+        description: error.message || "Invalid credentials. Use @iiitdwd.ac.in",
         variant: "destructive",
       });
     } finally {
@@ -55,7 +56,7 @@ export default function LoginPage() {
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
             <CardDescription>
-              Enter your institute email to access your dashboard.
+              Enter your institute credentials to access your dashboard.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
@@ -74,8 +75,26 @@ export default function LoginPage() {
                     required
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Button variant="link" className="p-0 h-auto text-[10px]" type="button">Forgot password?</Button>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
                 <p className="text-[10px] text-muted-foreground px-1">
-                  Students use 24bds001@iiitdwd.ac.in, Professors use name@iiitdwd.ac.in
+                  Students use 24bds001@iiitdwd.ac.in
                 </p>
               </div>
             </CardContent>
