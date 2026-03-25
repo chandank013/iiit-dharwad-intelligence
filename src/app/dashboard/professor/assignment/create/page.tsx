@@ -1,6 +1,8 @@
+
 "use client";
 
 import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,12 +14,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { professorAIRubricGenerator } from '@/ai/flows/professor-ai-rubric-generator';
 import { Sparkles, Trash2, Plus, Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function CreateAssignmentPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const courseId = searchParams.get('courseId');
+
   const [loading, setLoading] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [submissionType, setSubmissionType] = useState('github');
+  const [isGroupProject, setIsGroupProject] = useState(false);
+  const [allowResubmission, setAllowResubmission] = useState(true);
+  const [enableLeaderboard, setEnableLeaderboard] = useState(true);
+  
   const [rubric, setRubric] = useState<{ criterion: string; description: string; maxPoints: number }[]>([]);
 
   const handleGenerateRubric = async () => {
@@ -52,11 +71,81 @@ export default function CreateAssignmentPage() {
     setRubric(newRubric);
   };
 
+  const handlePublish = async (isDraft: boolean = false) => {
+    if (!firestore || !user || !courseId) {
+      toast({ title: "Error", description: "Missing course context or authentication.", variant: "destructive" });
+      return;
+    }
+
+    if (!title || !description || (!isDraft && !deadline)) {
+      toast({ title: "Missing Information", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      // 1. Create Assignment
+      const assignmentRef = collection(firestore, 'courses', courseId, 'assignments');
+      const assignmentDoc = await addDoc(assignmentRef, {
+        courseId,
+        title,
+        description,
+        deadline: deadline || null,
+        submissionType,
+        lateSubmissionPolicy: "none",
+        allowResubmissions: allowResubmission,
+        maxResubmissions: 3,
+        enableLeaderboard,
+        professorId: user.uid,
+        status: isDraft ? 'draft' : 'published',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // 2. Create Rubric
+      if (rubric.length > 0) {
+        const rubricRef = collection(firestore, 'courses', courseId, 'assignments', assignmentDoc.id, 'rubrics');
+        const rubricDoc = await addDoc(rubricRef, {
+          assignmentId: assignmentDoc.id,
+          name: `Rubric for ${title}`,
+          description: `Grading criteria for ${title}`,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // 3. Create Criteria
+        for (let i = 0; i < rubric.length; i++) {
+          const criterion = rubric[i];
+          const criteriaRef = collection(firestore, 'courses', courseId, 'assignments', assignmentDoc.id, 'rubrics', rubricDoc.id, 'criteria');
+          await addDoc(criteriaRef, {
+            rubricId: rubricDoc.id,
+            description: criterion.criterion + ": " + criterion.description,
+            maxScore: criterion.maxPoints,
+            order: i,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+
+      toast({ 
+        title: isDraft ? "Draft Saved" : "Assignment Published", 
+        description: `Successfully ${isDraft ? 'saved' : 'published'} the assignment.` 
+      });
+      router.push(`/courses/${courseId}`);
+    } catch (error) {
+      console.error("Failed to publish assignment:", error);
+      toast({ title: "Failed to publish", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F6FAFC]">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6 transition-colors">
+        <Link href={courseId ? `/courses/${courseId}` : "/courses"} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6 transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to Course
         </Link>
         <div className="max-w-4xl mx-auto space-y-8">
@@ -74,7 +163,12 @@ export default function CreateAssignmentPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Assignment Title</Label>
-                    <Input id="title" placeholder="e.g. Lab 4: Memory Management" />
+                    <Input 
+                      id="title" 
+                      placeholder="e.g. Lab 4: Memory Management" 
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Detailed Description</Label>
@@ -155,7 +249,7 @@ export default function CreateAssignmentPage() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label>Submission Type</Label>
-                    <Select defaultValue="github">
+                    <Select value={submissionType} onValueChange={setSubmissionType}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -169,33 +263,51 @@ export default function CreateAssignmentPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="deadline">Deadline</Label>
-                    <Input id="deadline" type="datetime-local" />
+                    <Input 
+                      id="deadline" 
+                      type="datetime-local" 
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                    />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Group Project</Label>
                       <p className="text-[10px] text-muted-foreground">Enable peer contribution tracking</p>
                     </div>
-                    <Switch />
+                    <Switch checked={isGroupProject} onCheckedChange={setIsGroupProject} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Allow Resubmission</Label>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch checked={allowResubmission} onCheckedChange={setAllowResubmission} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Leaderboard</Label>
                       <p className="text-[10px] text-muted-foreground">Show anonymous rankings</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch checked={enableLeaderboard} onCheckedChange={setEnableLeaderboard} />
                   </div>
                 </CardContent>
               </Card>
 
-              <Button className="w-full h-12 text-lg font-bold shadow-lg">Publish Assignment</Button>
-              <Button variant="outline" className="w-full">Save Draft</Button>
+              <Button 
+                className="w-full h-12 text-lg font-bold shadow-lg" 
+                onClick={() => handlePublish(false)}
+                disabled={publishing}
+              >
+                {publishing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Publish Assignment'}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => handlePublish(true)}
+                disabled={publishing}
+              >
+                {publishing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save Draft'}
+              </Button>
             </div>
           </div>
         </div>

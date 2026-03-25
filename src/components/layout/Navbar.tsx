@@ -1,10 +1,11 @@
+
 "use client";
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { GraduationCap, LayoutDashboard, ChevronDown, LogOut, User as UserIcon, Mail, IdCard } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, ChevronDown, User as UserIcon, Mail, IdCard } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -31,15 +32,6 @@ export function Navbar() {
   
   // Prefix "Dr." for professors as seen in reference
   const nameDisplay = !isStudent ? `Dr. ${firstName}` : firstName;
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -101,14 +93,6 @@ export function Navbar() {
                   <UserIcon className="h-4 w-4 text-muted-foreground group-focus:text-primary" />
                   <span className="text-xs font-bold">My Profile</span>
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="p-3 cursor-pointer rounded-xl focus:bg-destructive/10 focus:text-destructive group" 
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4 text-muted-foreground group-focus:text-destructive" />
-                <span className="text-xs font-bold">Sign Out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

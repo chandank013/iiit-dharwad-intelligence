@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useRef } from 'react';
@@ -412,7 +413,7 @@ export default function CoursePortalPage() {
                 <p className="text-muted-foreground text-sm font-medium">0 active · 0 closed</p>
               </div>
               {isProfessor && (
-                <Link href={`/dashboard/professor/assignment/create`}>
+                <Link href={`/dashboard/professor/assignment/create?courseId=${courseId}`}>
                   <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
                     <Plus className="h-5 w-5" /> New Assignment
                   </Button>
