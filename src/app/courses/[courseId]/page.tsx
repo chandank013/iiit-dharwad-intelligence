@@ -39,7 +39,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
@@ -61,20 +60,20 @@ import { useAuth as useFirebaseAuth } from '@/firebase';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const weeklyTrendData = [
-  { name: 'Wk 1', avg: 65 },
-  { name: 'Wk 2', avg: 72 },
-  { name: 'Wk 3', avg: 68 },
-  { name: 'Wk 4', avg: 74 },
-  { name: 'Wk 5', avg: 71 },
-  { name: 'Wk 6', avg: 82 },
+  { name: 'Wk 1', avg: 0 },
+  { name: 'Wk 2', avg: 0 },
+  { name: 'Wk 3', avg: 0 },
+  { name: 'Wk 4', avg: 0 },
+  { name: 'Wk 5', avg: 0 },
+  { name: 'Wk 6', avg: 0 },
 ];
 
 const assignmentAvgData = [
-  { name: 'Lab 1', avg: 85 },
-  { name: 'Quiz 1', avg: 70 },
-  { name: 'Proj A', avg: 65 },
-  { name: 'Lab 2', avg: 88 },
-  { name: 'Midterm', avg: 76 },
+  { name: 'A1', avg: 0 },
+  { name: 'A2', avg: 0 },
+  { name: 'A3', avg: 0 },
+  { name: 'A4', avg: 0 },
+  { name: 'A5', avg: 0 },
 ];
 
 export default function CoursePortalPage() {
@@ -137,8 +136,8 @@ export default function CoursePortalPage() {
   const stats = [
     { label: 'Total Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Submissions', value: '128', icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-    { label: 'Avg. Score', value: '76%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { label: 'Submissions', value: '0', icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
 
   return (
@@ -275,7 +274,7 @@ export default function CoursePortalPage() {
                         axisLine={false} 
                         tickLine={false} 
                         tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }}
-                        domain={[50, 100]}
+                        domain={[0, 100]}
                         dx={-10}
                       />
                       <Tooltip 
@@ -318,7 +317,7 @@ export default function CoursePortalPage() {
                         />
                         <Bar dataKey="avg" radius={[6, 6, 0, 0]} barSize={28}>
                           {assignmentAvgData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.avg > 80 ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)'} />
+                            <Cell key={`cell-${index}`} fill={'hsl(var(--primary) / 0.4)'} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -331,15 +330,15 @@ export default function CoursePortalPage() {
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-4">
                       <Sparkles className="h-5 w-5 fill-current" />
-                      <span className="text-xs font-bold uppercase tracking-[0.2em]">AI Insights</span>
+                      <span className="text-xs font-bold uppercase tracking-[0.2em]">Insights</span>
                     </div>
-                    <h3 className="text-2xl font-bold leading-tight mb-4">Class Engagement is Up 12%</h3>
+                    <h3 className="text-2xl font-bold leading-tight mb-4">Ready for Submissions</h3>
                     <p className="text-sm opacity-90 leading-relaxed font-medium">
-                      Based on recent submissions, student retention of the "Systems Design" module has significantly improved compared to previous batches.
+                      No student submissions have been recorded for this course yet. Once students begin submitting, you'll see analytics here.
                     </p>
                   </div>
-                  <Button variant="secondary" className="w-fit gap-2 font-bold rounded-full relative z-10">
-                    Generate Report <ArrowRight className="h-4 w-4" />
+                  <Button variant="secondary" className="w-fit gap-2 font-bold rounded-full relative z-10" disabled>
+                    Awaiting Data <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Card>
               </div>
@@ -353,25 +352,30 @@ export default function CoursePortalPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"><MoreVertical className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-6">
-                  {[
-                    { title: 'Database Design', due: 'Tomorrow', progress: 85, color: 'bg-primary' },
-                    { title: 'REST API Implementation', due: 'Oct 24', progress: 42, color: 'bg-emerald-500' },
-                    { title: 'Frontend Components', due: 'Oct 28', progress: 15, color: 'bg-amber-500' },
-                  ].map((task, i) => (
-                    <div key={i} className="space-y-3 group cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-bold group-hover:text-primary transition-colors">{task.title}</div>
-                        <div className="text-[10px] font-bold text-muted-foreground uppercase">Due: {task.due}</div>
+                  {assignments && assignments.length > 0 ? (
+                    assignments.slice(0, 3).map((task, i) => (
+                      <div key={i} className="space-y-3 group cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-bold group-hover:text-primary transition-colors">{task.title}</div>
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase">Active</div>
+                        </div>
+                        <Progress value={0} className="h-1.5 bg-accent">
+                          <div className={cn("h-full transition-all bg-primary")} />
+                        </Progress>
+                        <div className="flex justify-between text-[10px] font-bold text-muted-foreground/60">
+                          <span>0% Completion</span>
+                          <span>0 / {enrollments?.length || 0} Students</span>
+                        </div>
                       </div>
-                      <Progress value={task.progress} className="h-1.5 bg-accent">
-                        <div className={cn("h-full transition-all", task.color)} />
-                      </Progress>
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground/60">
-                        <span>{task.progress}% Completion</span>
-                        <span>{Math.round(task.progress * 0.4)} / 40 Students</span>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="py-10 text-center space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">No assignments yet</p>
+                      <Link href={`/dashboard/professor/assignment/create`}>
+                        <Button variant="link" className="text-xs font-bold text-primary p-0">Create one now</Button>
+                      </Link>
                     </div>
-                  ))}
+                  )}
                   <Button variant="outline" className="w-full border-border rounded-xl font-bold text-xs h-12 hover:bg-accent transition-all">
                     View All Assignments
                   </Button>
@@ -385,35 +389,13 @@ export default function CoursePortalPage() {
                   </CardTitle>
                 </CardHeader>
                 <div className="divide-y divide-border">
-                  {[
-                    { name: 'Arjun S.', action: 'submitted', time: '12m ago', score: null },
-                    { name: 'Priya K.', action: 'graded', time: '45m ago', score: '92%' },
-                    { name: 'Rahul V.', action: 'submitted', time: '1h ago', score: null },
-                    { name: 'Sneha P.', action: 'graded', time: '3h ago', score: '78%' },
-                  ].map((activity, i) => (
-                    <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/20 transition-colors cursor-pointer group">
-                      <div className="flex items-center gap-4">
-                        <div className="h-9 w-9 rounded-full bg-accent flex items-center justify-center text-[10px] font-bold uppercase group-hover:bg-primary/20 group-hover:text-primary transition-colors">
-                          {activity.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold">{activity.name}</div>
-                          <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{activity.action} • {activity.time}</div>
-                        </div>
-                      </div>
-                      {activity.score ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] font-bold px-2.5">
-                          {activity.score}
-                        </Badge>
-                      ) : (
-                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                      )}
-                    </div>
-                  ))}
+                  <div className="p-10 text-center">
+                    <p className="text-sm font-medium text-muted-foreground">No recent activity found.</p>
+                  </div>
                 </div>
                 <CardContent className="p-6 bg-accent/10">
-                  <Button variant="link" className="w-full text-xs font-bold text-primary group uppercase tracking-widest h-auto p-0">
-                    Full Submission Log <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                  <Button variant="link" className="w-full text-xs font-bold text-primary group uppercase tracking-widest h-auto p-0" disabled>
+                    No Activity Log <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </CardContent>
               </Card>
