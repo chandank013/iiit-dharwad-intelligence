@@ -12,16 +12,6 @@
  * - Academic Tree: /courses/{courseId} and its subcollections (Assignments, Submissions, etc.)
  * - Private User Data: Nested under /users/{userId}/... (Portfolio, Chatbot)
  * - Communication: /private_messages/{messageId} (Sender/Receiver shared access)
- *
- * KEY SECURITY DECISIONS:
- * 1. Role-Based Access Control (RBAC): Instead of checking user documents, we use sentinel collections 
- *    (/professor_roles and /student_roles) for atomic, high-performance role verification.
- * 2. Denormalization for Performance: Authorization fields like 'professorId' and 'submitterId' are 
- *    duplicated across subcollections to avoid nested get() calls in rules.
- * 3. Existence Verification: All update and delete operations strictly verify the document's existence 
- *    before processing to prevent orphan operations.
- * 4. Relational Integrity: On creation of scoped documents, we enforce that the document's internal 
- *    ID or owner ID matches the authenticated user.
  */
 
 rules_version = '2';
@@ -64,49 +54,37 @@ service cloud.firestore {
 
     /**
      * @description User profile management. Users can manage their own profile data.
-     * @path /users/{userId}
-     * @allow (create) User 'abc' creates document /users/abc.
-     * @deny (update) User 'abc' attempts to update /users/def.
-     * @principle Path-based ownership.
      */
     match /users/{userId} {
       allow get, list: if isSignedIn();
       allow create: if isOwner(userId);
       allow update: if isExistingOwner(userId);
-      allow delete: if false; // Profiles should not be deleted via client
+      allow delete: if false;
     }
 
     /**
-     * @description Role sentinel collections. Existence determines permissions. Read-only for users.
-     * @path /professor_roles/{userId} | /student_roles/{userId}
-     * @principle DBAC (Database Access Control) using existence over content.
+     * @description Role sentinel collections. 
+     * Users can create their own sentinel on first sign up if it matches their UID.
      */
     match /professor_roles/{userId} {
       allow get: if isSignedIn();
-      allow list, write: if false;
+      allow create: if isOwner(userId);
+      allow list, update, delete: if false;
     }
     match /student_roles/{userId} {
       allow get: if isSignedIn();
-      allow list, write: if false;
+      allow create: if isOwner(userId);
+      allow list, update, delete: if false;
     }
 
     /**
      * @description Course management. Professors create courses; all signed-in users can view.
-     * @path /courses/{courseId}
-     * @allow (create) User with professor role creates course with professorId matching their UID.
-     * @deny (create) Student attempts to create a course.
-     * @principle Role-based creation and ownership-based modification.
      */
     match /courses/{courseId} {
       allow get, list: if isSignedIn();
       allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
       allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
 
-      // Sub-resources under courses
-
-      /**
-       * @description Assignments within a course. Managed by the course professor.
-       */
       match /assignments/{assignmentId} {
         allow get, list: if isSignedIn();
         allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
@@ -156,9 +134,6 @@ service cloud.firestore {
         }
       }
 
-      /**
-       * @description Project groups for collaborative work.
-       */
       match /project_groups/{groupId} {
         allow get: if isSignedIn() && (isMember(resource.data.memberIds) || isOwner(resource.data.professorId));
         allow list: if isSignedIn();
@@ -166,9 +141,6 @@ service cloud.firestore {
         allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
       }
 
-      /**
-       * @description Course content/announcements. Managed by professor.
-       */
       match /content/{contentId} {
         allow get, list: if isSignedIn();
         allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
@@ -176,12 +148,6 @@ service cloud.firestore {
       }
     }
 
-    /**
-     * @description Course enrollments. Links students to courses.
-     * @path /course_enrollments/{enrollmentId}
-     * @allow (create) Student creates an enrollment for themselves.
-     * @principle Ownership based on studentId.
-     */
     match /course_enrollments/{enrollmentId} {
       allow list: if isSignedIn();
       allow get: if isSignedIn() && (isOwner(resource.data.studentId) || isOwner(resource.data.professorId));
@@ -189,23 +155,11 @@ service cloud.firestore {
       allow update, delete: if isExistingOwner(resource.data.studentId) || isExistingOwner(resource.data.professorId);
     }
 
-    /**
-     * @description Global learning resources.
-     * @path /learning_resources/{resourceId}
-     * @allow (get, list) All authenticated users can view resources.
-     * @principle Public read for authenticated users, system-managed writes.
-     */
     match /learning_resources/{resourceId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false; // Resources managed via Admin/Automation
+      allow create, update, delete: if false;
     }
 
-    /**
-     * @description Private messaging. Shared access between sender and receiver.
-     * @path /private_messages/{messageId}
-     * @allow (get) Receiver 'abc' reads message where receiverId is 'abc'.
-     * @principle Multi-party shared access.
-     */
     match /private_messages/{messageId} {
       allow list: if isSignedIn();
       allow get: if isSignedIn() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId));
@@ -214,36 +168,22 @@ service cloud.firestore {
       allow delete: if isExistingOwner(resource.data.senderId);
     }
 
-    /**
-     * @description System audit logs. Only professors or administrators can access.
-     * @path /audit_logs/{logId}
-     * @principle Role-restricted diagnostic data.
-     */
     match /audit_logs/{logId} {
       allow get, list: if isProfessor();
-      allow create: if isSignedIn(); // Allow logging actions
-      allow update, delete: if false; // Logs are immutable
+      allow create: if isSignedIn();
+      allow update, delete: if false;
     }
 
-    /**
-     * @description User's personal portfolio. Owned by the student.
-     * @path /users/{userId}/portfolio/{portfolioId}
-     */
     match /users/{userId}/portfolio/{portfolioId} {
       allow list: if isOwner(userId) || isProfessor();
-      allow get: if true; // Portfolios are often shared via shareableLink
+      allow get: if true;
       allow create: if isOwner(userId);
       allow update, delete: if isExistingOwner(userId);
     }
 
-    /**
-     * @description Chatbot interaction history. Private to the user.
-     * @path /users/{userId}/chatbot_interactions/{interactionId}
-     */
     match /users/{userId}/chatbot_interactions/{interactionId} {
       allow get, list, create: if isOwner(userId);
       allow update, delete: if isExistingOwner(userId);
     }
-
   }
 }

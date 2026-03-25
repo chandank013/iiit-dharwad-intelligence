@@ -1,10 +1,10 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -46,9 +47,38 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+        
         if (name) {
           await updateProfile(userCredential.user, { displayName: name });
         }
+
+        const isStudent = email.startsWith('24bds');
+        const role = isStudent ? 'Student' : 'Professor';
+        const roleCollection = isStudent ? 'student_roles' : 'professor_roles';
+
+        // Prepare User Profile Data
+        const userData = {
+          id: uid,
+          firstName: name.split(' ')[0] || email.split('@')[0],
+          lastName: name.split(' ').slice(1).join(' ') || '',
+          email: email,
+          role: role,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        // Create User Profile in Firestore
+        setDoc(doc(firestore, 'users', uid), userData);
+
+        // Create Sentinel Role Document for Security Rules
+        setDoc(doc(firestore, roleCollection, uid), {
+          id: uid,
+          email: email,
+          role: role,
+          createdAt: serverTimestamp()
+        });
+
         toast({
           title: "Account Created",
           description: `Welcome to IIIT Dharwad AIS, ${name || email.split('@')[0]}.`,
