@@ -14,28 +14,25 @@ import {
   collection, 
   query, 
   orderBy,
-  where,
-  limit
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
   BookOpen, 
   FileCheck, 
-  ChevronLeft,
-  Clock,
-  TrendingUp,
-  Loader2,
-  Search,
-  Bell,
-  Sparkles,
-  ArrowRight,
-  Target,
-  AlertCircle,
-  FolderOpen
+  ChevronLeft, 
+  Clock, 
+  TrendingUp, 
+  Loader2, 
+  Search, 
+  Bell, 
+  Sparkles, 
+  ArrowRight, 
+  Target, 
+  AlertCircle, 
+  FolderOpen 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { 
   LineChart,
   Line,
@@ -99,13 +96,13 @@ export default function StudentCoursePage() {
 
   if (isUserLoading || isCourseLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#0B0E14] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!course) return <div className="min-h-screen bg-[#0B0E14] text-white flex items-center justify-center">Course not found.</div>;
+  if (!course) return <div className="min-h-screen bg-background text-foreground flex items-center justify-center">Course not found.</div>;
 
   const sidebarLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -115,11 +112,11 @@ export default function StudentCoursePage() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#0B0E14] text-slate-200">
+    <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800/50 flex flex-col fixed inset-y-0 left-0 bg-[#0F1219] z-30">
+      <aside className="w-64 border-r border-border flex flex-col fixed inset-y-0 left-0 bg-card z-30">
         <div className="p-6">
-          <Link href="/" className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-[10px] font-bold uppercase tracking-widest mb-8 group">
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-[10px] font-bold uppercase tracking-widest mb-8 group">
             <ChevronLeft className="h-3 w-3 group-hover:-translate-x-1 transition-transform" /> All Courses
           </Link>
 
@@ -136,8 +133,8 @@ export default function StudentCoursePage() {
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs transition-all font-semibold",
                   activeTab === link.id 
-                    ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                    : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <link.icon className="h-4 w-4" />
@@ -150,16 +147,16 @@ export default function StudentCoursePage() {
 
       {/* Main Content */}
       <main className="flex-1 ml-64 min-h-screen flex flex-col relative">
-        <header className="h-16 border-b border-slate-800/50 flex items-center justify-between px-8 sticky top-0 z-20 bg-[#0B0E14]/80 backdrop-blur-xl">
-          <h2 className="text-sm font-bold tracking-widest uppercase text-slate-400">Dashboard</h2>
+        <header className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
+          <h2 className="text-sm font-bold tracking-widest uppercase text-muted-foreground">Dashboard</h2>
           
           <div className="flex items-center gap-6">
             <div className="relative group hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500 group-focus-within:text-primary transition-colors" />
-              <Input placeholder="Search..." className="h-9 w-64 bg-slate-900/50 border-slate-800 text-xs pl-9 focus-visible:ring-primary/20" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Input placeholder="Search..." className="h-9 w-64 bg-accent/50 border-input text-xs pl-9 focus-visible:ring-primary/20" />
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-slate-500 hover:text-white transition-colors relative">
+              <button className="text-muted-foreground hover:text-foreground transition-colors relative">
                 <Bell className="h-4 w-4" />
               </button>
               <ThemeToggle />
@@ -170,61 +167,61 @@ export default function StudentCoursePage() {
         <div className="p-8 space-y-8 max-w-7xl">
           {/* Welcome Section */}
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-white">{course.name} Dashboard</h1>
-            <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{course.name} Dashboard</h1>
+            <div className="flex items-center gap-3 text-xs font-semibold text-muted-foreground">
               <span>Hey, {user.displayName?.split(' ')[0] || 'Student'}</span>
-              <span className="h-1 w-1 rounded-full bg-slate-700" />
+              <span className="h-1 w-1 rounded-full bg-border" />
               <span>{course.code}</span>
-              <span className="h-1 w-1 rounded-full bg-slate-700" />
+              <span className="h-1 w-1 rounded-full bg-border" />
               <span>{course.semester}</span>
             </div>
           </div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-[#141820] border-slate-800/50 p-6 flex items-center gap-6">
+            <Card className="border-border p-6 flex items-center gap-6">
               <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
                 <Clock className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">1</div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pending</div>
+                <div className="text-2xl font-bold text-foreground">1</div>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
               </div>
             </Card>
-            <Card className="bg-[#141820] border-slate-800/50 p-6 flex items-center gap-6">
+            <Card className="border-border p-6 flex items-center gap-6">
               <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
                 <FileCheck className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Submitted</div>
+                <div className="text-2xl font-bold text-foreground">0</div>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Submitted</div>
               </div>
             </Card>
-            <Card className="bg-[#141820] border-slate-800/50 p-6 flex items-center gap-6">
+            <Card className="border-border p-6 flex items-center gap-6">
               <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                 <TrendingUp className="h-6 w-6" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">0%</div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Avg Score</div>
+                <div className="text-2xl font-bold text-foreground">0%</div>
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg Score</div>
               </div>
             </Card>
           </div>
 
           {/* Middle Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="bg-[#141820] border-slate-800/50 overflow-hidden">
-              <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-slate-800/30">
-                <CardTitle className="text-sm font-bold text-white">Pending Assignments</CardTitle>
+            <Card className="border-border overflow-hidden">
+              <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border">
+                <CardTitle className="text-sm font-bold text-foreground">Pending Assignments</CardTitle>
                 <Link href="#" className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">View all <ArrowRight className="h-3 w-3" /></Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-slate-800/30">
+                <div className="divide-y divide-border">
                   {assignments && assignments.length > 0 ? (
                     assignments.slice(0, 1).map((task, i) => (
-                      <div key={i} className="p-5 flex items-center justify-between hover:bg-white/5 transition-colors group cursor-pointer">
+                      <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer">
                         <div className="space-y-2">
-                          <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{task.title}</div>
+                          <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</div>
                           <div className="flex gap-2">
                             <Badge variant="outline" className="text-[8px] bg-primary/5 text-primary border-primary/20">{course.name}</Badge>
                             <Badge variant="outline" className="text-[8px] bg-emerald-500/5 text-emerald-500 border-emerald-500/20">Individual</Badge>
@@ -236,18 +233,18 @@ export default function StudentCoursePage() {
                       </div>
                     ))
                   ) : (
-                    <div className="p-10 text-center text-xs text-slate-500 italic">No pending assignments found.</div>
+                    <div className="p-10 text-center text-xs text-muted-foreground italic">No pending assignments found.</div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-[#141820] border-slate-800/50 overflow-hidden">
-              <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-slate-800/30">
-                <CardTitle className="text-sm font-bold text-white">Recent Grades</CardTitle>
+            <Card className="border-border overflow-hidden">
+              <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border">
+                <CardTitle className="text-sm font-bold text-foreground">Recent Grades</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="p-10 text-center text-xs text-slate-500 italic">
+                <div className="p-10 text-center text-xs text-muted-foreground italic">
                   No graded submissions yet.
                 </div>
               </CardContent>
@@ -256,53 +253,53 @@ export default function StudentCoursePage() {
 
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="bg-[#141820] border-slate-800/50 p-6 space-y-6">
-              <CardTitle className="text-xs font-bold text-white uppercase tracking-widest">Score Progress</CardTitle>
+            <Card className="border-border p-6 space-y-6">
+              <CardTitle className="text-xs font-bold text-foreground uppercase tracking-widest">Score Progress</CardTitle>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={scoreProgressData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
                     <XAxis 
                       dataKey="name" 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{ fill: '#64748B', fontSize: 9, fontWeight: 700 }} 
+                      tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 9, fontWeight: 700 }} 
                       dy={10}
                     />
                     <YAxis 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{ fill: '#64748B', fontSize: 9, fontWeight: 700 }}
+                      tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 9, fontWeight: 700 }}
                       domain={[0, 100]}
                       dx={-10}
                     />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px', fontSize: '10px' }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '10px' }}
                     />
                     <Line 
                       type="monotone" 
                       dataKey="score" 
-                      stroke="#0EA5E9" 
+                      stroke="hsl(var(--primary))" 
                       strokeWidth={3} 
-                      dot={{ fill: '#0EA5E9', r: 4 }}
+                      dot={{ fill: 'hsl(var(--primary))', r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </Card>
 
-            <Card className="bg-[#141820] border-slate-800/50 p-6 space-y-6">
-              <CardTitle className="text-xs font-bold text-white uppercase tracking-widest">Subject Strength</CardTitle>
+            <Card className="border-border p-6 space-y-6">
+              <CardTitle className="text-xs font-bold text-foreground uppercase tracking-widest">Subject Strength</CardTitle>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="80%" data={subjectStrengthData}>
-                    <PolarGrid stroke="#1F2937" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748B', fontSize: 8, fontWeight: 700 }} />
+                    <PolarGrid stroke="currentColor" opacity={0.1} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 8, fontWeight: 700 }} />
                     <Radar
                       name="Strength"
                       dataKey="A"
-                      stroke="#0EA5E9"
-                      fill="#0EA5E9"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
                       fillOpacity={0.4}
                     />
                   </RadarChart>
@@ -310,14 +307,14 @@ export default function StudentCoursePage() {
               </div>
             </Card>
 
-            <Card className="bg-[#141820] border-slate-800/50 p-6 space-y-6">
-              <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-widest">
+            <Card className="border-border p-6 space-y-6">
+              <div className="flex items-center gap-2 text-xs font-bold text-foreground uppercase tracking-widest">
                 <Target className="h-4 w-4 text-orange-500" /> Focus Areas
               </div>
               <div className="space-y-3">
                 <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center gap-3">
                   <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                  <span className="text-[10px] font-bold text-slate-300">Start your first assignment to see insights.</span>
+                  <span className="text-[10px] font-bold text-muted-foreground">Start your first assignment to see insights.</span>
                 </div>
                 <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
