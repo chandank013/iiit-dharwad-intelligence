@@ -12,11 +12,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { GraduationCap, LayoutDashboard, UserCircle, LogOut, ChevronDown, Repeat } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, UserCircle, LogOut, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function Navbar() {
-  const { user, loginAs, logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
 
   if (!user) return null;
@@ -48,10 +48,6 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => loginAs(user.role === 'professor' ? 'student' : 'professor')} className="hidden sm:flex items-center gap-2">
-            <Repeat className="h-4 w-4" /> Switch to {user.role === 'professor' ? 'Student' : 'Professor'}
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 h-10 px-2 rounded-full ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -72,7 +68,8 @@ export function Navbar() {
               <DropdownMenuItem className="cursor-pointer">
                 <UserCircle className="mr-2 h-4 w-4" /> Profile
               </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" /> Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
