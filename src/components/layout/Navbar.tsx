@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -64,6 +63,10 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 border-r pr-4 border-border/50">
+            <ThemeToggle />
+          </div>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full hover:bg-accent/50 transition-all outline-none group border border-transparent hover:border-border">
@@ -109,10 +112,6 @@ export function Navbar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
-          <div className="flex items-center gap-2 border-l pl-4 border-border/50">
-            <ThemeToggle />
-          </div>
         </div>
       </div>
     </nav>
