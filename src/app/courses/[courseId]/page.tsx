@@ -103,54 +103,48 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// --- Mock Data for Analytics ---
+// --- Data for Analytics (Zeroed out as per request for "no assignments") ---
 const weeklyTrendData = [
-  { name: 'Wk1', avg: 68 },
-  { name: 'Wk2', avg: 72 },
-  { name: 'Wk3', avg: 70 },
-  { name: 'Wk4', avg: 76 },
-  { name: 'Wk5', avg: 74 },
-  { name: 'Wk6', avg: 80 },
+  { name: 'Wk1', avg: 0 },
+  { name: 'Wk2', avg: 0 },
+  { name: 'Wk3', avg: 0 },
+  { name: 'Wk4', avg: 0 },
+  { name: 'Wk5', avg: 0 },
+  { name: 'Wk6', avg: 0 },
 ];
 
 const gradeDistributionData = [
-  { name: 'A (90-100)', value: 25, color: '#10b981' },
-  { name: 'B (75-89)', value: 45, color: '#3b82f6' },
-  { name: 'C (60-74)', value: 20, color: '#f59e0b' },
-  { name: 'D (< 60)', value: 10, color: '#ef4444' },
+  { name: 'A (90-100)', value: 0, color: '#10b981' },
+  { name: 'B (75-89)', value: 0, color: '#3b82f6' },
+  { name: 'C (60-74)', value: 0, color: '#f59e0b' },
+  { name: 'D (< 60)', value: 0, color: '#ef4444' },
 ];
 
 const assignmentAvgData = [
-  { name: 'Web Dev', avg: 82 },
-  { name: 'DSA-3', avg: 72 },
-  { name: 'ML Proj', avg: 65 },
-  { name: 'OS Lab', avg: 88 },
-  { name: 'DBMS', avg: 78 },
+  { name: 'Task 1', avg: 0 },
+  { name: 'Task 2', avg: 0 },
+  { name: 'Task 3', avg: 0 },
 ];
 
 const submissionBehaviourData = [
-  { name: 'Day 1', count: 3 },
-  { name: 'Day 2', count: 5 },
-  { name: 'Day 3', count: 8 },
-  { name: 'Day 4', count: 6 },
-  { name: 'Day 5', count: 12 },
-  { name: 'Due Day', count: 25 },
+  { name: 'Day 1', count: 0 },
+  { name: 'Day 2', count: 0 },
+  { name: 'Day 3', count: 0 },
+  { name: 'Day 4', count: 0 },
+  { name: 'Day 5', count: 0 },
+  { name: 'Due Day', count: 0 },
 ];
 
 const subjectStrengthData = [
-  { subject: 'Algorithms', value: 120, fullMark: 150 },
-  { subject: 'Databases', value: 98, fullMark: 150 },
-  { subject: 'Web Dev', value: 86, fullMark: 150 },
-  { subject: 'ML/AI', value: 99, fullMark: 150 },
-  { subject: 'Networks', value: 85, fullMark: 150 },
-  { subject: 'OS', value: 65, fullMark: 150 },
+  { subject: 'Algorithms', value: 0, fullMark: 150 },
+  { subject: 'Databases', value: 0, fullMark: 150 },
+  { subject: 'Web Dev', value: 0, fullMark: 150 },
+  { subject: 'ML/AI', value: 0, fullMark: 150 },
+  { subject: 'Networks', value: 0, fullMark: 150 },
+  { subject: 'OS', value: 0, fullMark: 150 },
 ];
 
-const studentsNeedingAttention = [
-  { name: 'Mohit Sharma', weakArea: 'Algorithms', score: 52, initial: 'M' },
-  { name: 'Ravi Kumar', weakArea: 'ML Concepts', score: 55, initial: 'R' },
-  { name: 'Pooja Iyer', weakArea: 'Database Design', score: 58, initial: 'P' },
-];
+const studentsNeedingAttention = [];
 
 export default function CoursePortalPage() {
   const { courseId } = useParams();
@@ -214,8 +208,6 @@ export default function CoursePortalPage() {
     { id: 'submissions', label: 'Submissions', icon: FileText },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'content', label: 'Course Content', icon: FolderRoot },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'audit', label: 'Audit Log', icon: History },
   ];
 
   const stats = [
@@ -356,7 +348,7 @@ export default function CoursePortalPage() {
                   <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-border">
                     <div>
                       <CardTitle className="text-lg font-bold">Weekly Performance Trend</CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">Average class score progression over the last 6 weeks.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Class score progression is currently baseline.</p>
                     </div>
                     <Badge variant="outline" className="border-border text-xs font-bold text-primary px-3">Live Feed</Badge>
                   </CardHeader>
@@ -492,17 +484,17 @@ export default function CoursePortalPage() {
                 <Card className="bg-card border-border overflow-hidden">
                   <CardHeader className="p-8 pb-4 border-b border-border">
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                      <History className="h-4 w-4" /> Recent Activity
+                      <History className="h-4 w-4" /> System Readiness
                     </CardTitle>
                   </CardHeader>
                   <div className="divide-y divide-border">
                     <div className="p-10 text-center">
-                      <p className="text-sm font-medium text-muted-foreground">No recent activity found.</p>
+                      <p className="text-sm font-medium text-muted-foreground">No activity logs to display.</p>
                     </div>
                   </div>
                   <CardContent className="p-6 bg-accent/10">
                     <Button variant="link" className="w-full text-xs font-bold text-primary group uppercase tracking-widest h-auto p-0" disabled>
-                      No Activity Log <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                      Monitoring Active <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </CardContent>
                 </Card>
@@ -582,7 +574,7 @@ export default function CoursePortalPage() {
                               {assignment.isGroupProject ? 'group' : 'individual'}
                             </Badge>
                             <Badge variant="outline" className="rounded-full bg-amber-500/5 text-amber-500 border-amber-500/10 px-3 py-1 text-[10px] font-bold flex items-center gap-1.5">
-                              <Clock className="h-3 w-3" /> 2d left
+                              <Clock className="h-3 w-3" /> No deadline
                             </Badge>
                           </div>
 
@@ -814,7 +806,7 @@ export default function CoursePortalPage() {
             {/* Analytics Header */}
             <div className="space-y-1">
               <h1 className="text-3xl font-bold tracking-tighter">Class Analytics</h1>
-              <p className="text-muted-foreground text-sm font-medium">Performance insights across all your courses and assignments.</p>
+              <p className="text-muted-foreground text-sm font-medium">Performance insights for your course portal.</p>
             </div>
 
             {/* Top Stat Cards */}
@@ -955,26 +947,15 @@ export default function CoursePortalPage() {
               <Card className="bg-card border-border">
                 <CardHeader className="px-8 pt-8 pb-4">
                   <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-rose-500" /> Students Needing Attention
+                    <AlertCircle className="h-5 w-5 text-rose-500" /> Academic Risk Registry
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-8 pb-8 space-y-4">
-                  {studentsNeedingAttention.map((student, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 group hover:border-rose-500/30 transition-all cursor-pointer">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10 border border-rose-500/20 shadow-sm">
-                          <AvatarFallback className="bg-rose-500/10 text-rose-500 font-bold">{student.initial}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="text-sm font-bold">{student.name}</div>
-                          <div className="text-[10px] font-medium text-muted-foreground uppercase">Weak in: <span className="text-rose-500 font-bold">{student.weakArea}</span></div>
-                        </div>
-                      </div>
-                      <div className="text-xl font-bold text-rose-500 tabular-nums">{student.score}%</div>
-                    </div>
-                  ))}
-                  <Button variant="ghost" className="w-full text-xs font-bold text-muted-foreground hover:text-primary h-12 rounded-xl group">
-                    View Comprehensive Risk Report <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                  <div className="py-20 text-center text-muted-foreground italic text-sm">
+                    No students currently flagged for academic risk.
+                  </div>
+                  <Button variant="ghost" className="w-full text-xs font-bold text-muted-foreground hover:text-primary h-12 rounded-xl group" disabled>
+                    Risk Registry Baseline <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </CardContent>
               </Card>
