@@ -1,5 +1,5 @@
 /**
- * IIIT Dharwad AIS Platform - Security Rules Configuration
+ * IIIT Dharwad Portal - Security Rules Configuration
  *
  * CORE PHILOSOPHY:
  * This ruleset implements a robust, role-based access control (RBAC) model.
@@ -72,13 +72,14 @@ service cloud.firestore {
       match /assignments/{assignmentId} {
         allow get, list: if isSignedIn();
         allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
+      }
 
-        match /submissions/{submissionId} {
-          allow list: if isSignedIn();
-          allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
-          allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
-          allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
-        }
+      // Submissions are queried as a direct subcollection of Course for the portal overview
+      match /submissions/{submissionId} {
+        allow list: if isSignedIn();
+        allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+        allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
+        allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
       }
     }
 
