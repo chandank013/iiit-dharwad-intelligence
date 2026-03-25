@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -41,7 +42,14 @@ import {
   Edit2,
   Trash2,
   User,
-  Users
+  Users,
+  CheckCircle,
+  AlertTriangle,
+  Github,
+  HardDrive,
+  FileJson,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,12 +67,28 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
 import { useAuth as useFirebaseAuth } from '@/firebase';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const weeklyTrendData = [
   { name: 'Wk 1', avg: 0 },
@@ -110,6 +134,13 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: enrollments } = useCollection(enrollmentsQuery);
 
+  // Submissions Query
+  const submissionsQuery = useMemoFirebase(() => {
+    if (!firestore || !courseId) return null;
+    return query(collection(firestore, 'courses', courseId as string, 'submissions'), orderBy('submittedAt', 'desc'));
+  }, [firestore, courseId]);
+  const { data: submissions } = useCollection(submissionsQuery);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
@@ -146,8 +177,15 @@ export default function CoursePortalPage() {
   const stats = [
     { label: 'Total Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Submissions', value: '0', icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Submissions', value: submissions?.length || 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  ];
+
+  const submissionStats = [
+    { label: 'Total', value: submissions?.length || 0, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Pending', value: 0, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { label: 'AI Graded', value: 0, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Flagged', value: 0, color: 'text-rose-500', bg: 'bg-rose-500/10' },
   ];
 
   return (
@@ -562,6 +600,160 @@ export default function CoursePortalPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'submissions' && (
+          <div className="p-10 space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
+            {/* Submissions Header */}
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
+              <p className="text-muted-foreground text-sm font-medium">{submissions?.length || 0} total submissions</p>
+            </div>
+
+            {/* Submissions Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {submissionStats.map((stat, i) => (
+                <Card key={i} className="bg-card border-border shadow-sm">
+                  <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                    <div className="text-2xl font-bold mb-1">{stat.value}</div>
+                    <div className={cn("text-[10px] font-bold uppercase tracking-widest", stat.color)}>{stat.label}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Submissions Filters */}
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-card p-2 rounded-2xl border border-border shadow-sm">
+              <div className="relative w-full lg:max-w-md group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Input 
+                  placeholder="Search by name or roll..." 
+                  className="bg-transparent border-none h-11 pl-11 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50 text-sm"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Select defaultValue="all-assignments">
+                  <SelectTrigger className="w-[180px] bg-accent/30 border-none rounded-xl h-11 text-xs font-bold">
+                    <SelectValue placeholder="All Assignments" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    <SelectItem value="all-assignments">All Assignments</SelectItem>
+                    {assignments?.map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select defaultValue="all-status">
+                  <SelectTrigger className="w-[140px] bg-accent/30 border-none rounded-xl h-11 text-xs font-bold">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-border">
+                    <SelectItem value="all-status">All Status</SelectItem>
+                    <SelectItem value="graded">Graded</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="flagged">Flagged</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Submissions Table */}
+            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader className="bg-accent/30">
+                  <TableRow className="hover:bg-transparent border-border">
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Student</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Assignment</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Type</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5 text-center">AI Score</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Confidence</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Status</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Flag</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5">Time</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-6 py-5 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissions && submissions.length > 0 ? (
+                    submissions.map((sub) => (
+                      <TableRow key={sub.id} className="border-border hover:bg-accent/10 group transition-colors">
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 border border-border">
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                                {sub.submitterId.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-sm font-bold">Student Name</div>
+                              <div className="text-[10px] font-medium text-muted-foreground tabular-nums uppercase">21BCS000</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            {assignments?.find(a => a.id === sub.assignmentId)?.title || 'Assignment'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                            {sub.submissionType === 'github' ? <Github className="h-3.5 w-3.5" /> : 
+                             sub.submissionType === 'zip' ? <FileJson className="h-3.5 w-3.5" /> : 
+                             <HardDrive className="h-3.5 w-3.5" />}
+                            <span className="uppercase">{sub.submissionType}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-center">
+                          <div className="text-sm font-bold text-emerald-500">0%</div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="w-[80px] space-y-1">
+                            <Progress value={0} className="h-1 bg-accent" />
+                            <div className="text-[8px] font-bold text-muted-foreground text-right">0%</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Badge className="bg-blue-500/10 text-blue-500 border-none px-2 py-0.5 text-[10px] font-bold rounded-lg">
+                            Pending
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="text-xs text-muted-foreground">—</div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="text-[10px] font-bold text-muted-foreground whitespace-nowrap">Just now</div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="sm" className="h-8 rounded-lg gap-1.5 text-[10px] font-bold text-primary hover:bg-primary/10">
+                              <Eye className="h-3 w-3" /> View
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 rounded-lg gap-1.5 text-[10px] font-bold text-emerald-500 hover:bg-emerald-500/10">
+                              <CheckCircle2 className="h-3 w-3" /> Approve
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-[300px] text-center">
+                        <div className="flex flex-col items-center justify-center space-y-4">
+                          <div className="bg-accent/50 p-4 rounded-full">
+                            <Users className="h-8 w-8 text-muted-foreground/40" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-bold">No submissions yet</p>
+                            <p className="text-xs text-muted-foreground">Once students submit their work, it will appear here for evaluation.</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
