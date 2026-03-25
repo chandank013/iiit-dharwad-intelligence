@@ -58,6 +58,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
 import { useAuth as useFirebaseAuth } from '@/firebase';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const weeklyTrendData = [
   { name: 'Wk 1', avg: 65 },
@@ -109,7 +110,7 @@ export default function CoursePortalPage() {
 
   if (isUserLoading || isCourseLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -117,7 +118,7 @@ export default function CoursePortalPage() {
 
   if (!course) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center text-white">
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
         Course not found.
       </div>
     );
@@ -134,24 +135,24 @@ export default function CoursePortalPage() {
   ];
 
   const stats = [
-    { label: 'Total Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-    { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-    { label: 'Submissions', value: '128', icon: FileText, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-    { label: 'Avg. Score', value: '76%', icon: TrendingUp, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+    { label: 'Total Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Submissions', value: '128', icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Avg. Score', value: '76%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#09090b] text-foreground selection:bg-primary/30">
+    <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30">
       {/* Sidebar */}
-      <aside className="w-72 border-r border-white/5 flex flex-col fixed inset-y-0 left-0 bg-[#0c0c0e] z-30">
+      <aside className="w-72 border-r border-border flex flex-col fixed inset-y-0 left-0 bg-card z-30">
         <div className="p-8">
-          <Link href="/courses" className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors text-xs font-bold uppercase tracking-widest mb-10 group">
+          <Link href="/courses" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs font-bold uppercase tracking-widest mb-10 group">
             <ChevronLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Catalog
           </Link>
           
-          <div className="mb-10 p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent border border-white/5">
+          <div className="mb-10 p-4 rounded-2xl bg-primary/5 border border-primary/10">
             <div className="text-[10px] font-bold text-primary mb-1 uppercase tracking-widest">{course.code}</div>
-            <div className="text-sm font-bold text-white truncate leading-tight">{course.name}</div>
+            <div className="text-sm font-bold truncate leading-tight">{course.name}</div>
           </div>
 
           <nav className="space-y-1.5">
@@ -163,7 +164,7 @@ export default function CoursePortalPage() {
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all font-medium border border-transparent",
                   activeTab === link.id 
                     ? "bg-primary/10 text-primary border-primary/20" 
-                    : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <link.icon className={cn("h-4 w-4", activeTab === link.id ? "text-primary" : "text-muted-foreground")} />
@@ -173,10 +174,10 @@ export default function CoursePortalPage() {
           </nav>
         </div>
         
-        <div className="mt-auto p-8 border-t border-white/5">
+        <div className="mt-auto p-8 border-t border-border">
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all"
           >
             <LogOut className="h-4 w-4" /> Sign Out
           </button>
@@ -186,10 +187,10 @@ export default function CoursePortalPage() {
       {/* Main Content */}
       <main className="flex-1 ml-72 min-h-screen flex flex-col relative">
         {/* Header */}
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-10 sticky top-0 z-20 bg-[#09090b]/80 backdrop-blur-xl">
+        <header className="h-20 border-b border-border flex items-center justify-between px-10 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg font-bold tracking-tight text-white capitalize">{activeTab}</h2>
-            <Badge variant="outline" className="border-white/10 text-muted-foreground font-mono text-[10px]">
+            <h2 className="text-lg font-bold tracking-tight capitalize">{activeTab}</h2>
+            <Badge variant="outline" className="border-border text-muted-foreground font-mono text-[10px]">
               ID: {course.joinCode}
             </Badge>
           </div>
@@ -199,21 +200,22 @@ export default function CoursePortalPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input 
                 placeholder="Search resources..." 
-                className="bg-[#141416] border border-white/10 rounded-full py-2.5 pl-11 pr-6 text-sm w-[360px] focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-muted-foreground/50"
+                className="bg-accent/50 border border-border rounded-full py-2.5 pl-11 pr-6 text-sm w-[360px] focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-muted-foreground/50"
               />
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors relative">
+              <ThemeToggle />
+              <button className="h-10 w-10 rounded-full bg-accent flex items-center justify-center hover:bg-accent/80 transition-colors relative">
                 <Bell className="h-4 w-4 text-muted-foreground" />
-                <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-primary rounded-full border-2 border-[#09090b]" />
+                <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-primary rounded-full border-2 border-background" />
               </button>
-              <div className="flex items-center gap-3 border-l border-white/10 pl-6 ml-2">
+              <div className="flex items-center gap-3 border-l border-border pl-6 ml-2">
                 <div className="text-right leading-none hidden sm:block">
-                  <div className="text-sm font-bold text-white">{user.displayName || 'User'}</div>
+                  <div className="text-sm font-bold">{user.displayName || 'User'}</div>
                   <div className="text-[10px] text-primary uppercase tracking-widest mt-1 font-bold">Professor</div>
                 </div>
-                <Avatar className="h-10 w-10 border border-white/10 ring-4 ring-primary/5">
+                <Avatar className="h-10 w-10 border border-border ring-4 ring-primary/5">
                   <AvatarImage src={user.photoURL || undefined} />
                   <AvatarFallback className="bg-primary/20 text-primary font-bold">{(user.displayName || 'U').charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -224,9 +226,9 @@ export default function CoursePortalPage() {
 
         {/* Dashboard Grid */}
         <div className="p-10 space-y-10">
-          <div className="flex items-end justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tighter text-white">Course Overview</h1>
+              <h1 className="text-3xl font-bold tracking-tighter">Course Overview</h1>
               <p className="text-muted-foreground text-sm font-medium">Monitoring progress for <span className="text-primary">{course.semester}</span> session.</p>
             </div>
             <Link href={`/dashboard/professor/assignment/create`}>
@@ -239,7 +241,7 @@ export default function CoursePortalPage() {
           {/* Stats Bar */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, i) => (
-              <Card key={i} className="bg-[#141416] border-white/5 hover:border-white/10 transition-all group overflow-hidden relative">
+              <Card key={i} className="bg-card border-border hover:border-primary/20 transition-all group overflow-hidden relative">
                 <div className={cn("absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 rounded-full opacity-5 blur-2xl transition-opacity group-hover:opacity-10", stat.bg)} />
                 <CardContent className="p-6">
                   <div className="flex items-center gap-5">
@@ -248,7 +250,7 @@ export default function CoursePortalPage() {
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">{stat.label}</div>
-                      <div className="text-2xl font-bold text-white tracking-tight">{stat.value}</div>
+                      <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -260,44 +262,43 @@ export default function CoursePortalPage() {
           <div className="grid grid-cols-12 gap-8">
             {/* Left: Performance Visuals */}
             <div className="col-span-12 lg:col-span-8 space-y-8">
-              <Card className="bg-[#141416] border-white/5 overflow-hidden">
-                <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-white/5">
+              <Card className="bg-card border-border overflow-hidden">
+                <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-border">
                   <div>
-                    <CardTitle className="text-lg font-bold text-white">Weekly Performance Trend</CardTitle>
+                    <CardTitle className="text-lg font-bold">Weekly Performance Trend</CardTitle>
                     <p className="text-xs text-muted-foreground mt-1">Average class score progression over the last 6 weeks.</p>
                   </div>
-                  <Badge variant="outline" className="border-white/10 text-xs font-bold text-primary px-3">Live Feed</Badge>
+                  <Badge variant="outline" className="border-border text-xs font-bold text-primary px-3">Live Feed</Badge>
                 </CardHeader>
                 <CardContent className="h-[360px] p-8">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={weeklyTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.05} vertical={false} />
                       <XAxis 
                         dataKey="name" 
                         axisLine={false} 
                         tickLine={false} 
-                        tick={{ fill: '#71717a', fontSize: 10, fontWeight: 700 }} 
+                        tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }} 
                         dy={10}
                       />
                       <YAxis 
                         axisLine={false} 
                         tickLine={false} 
-                        tick={{ fill: '#71717a', fontSize: 10, fontWeight: 700 }}
+                        tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }}
                         domain={[50, 100]}
                         dx={-10}
                       />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#141416', border: '1px solid #ffffff10', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
-                        itemStyle={{ color: '#3b82f6' }}
-                        cursor={{ stroke: '#ffffff10', strokeWidth: 2 }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
+                        itemStyle={{ color: 'hsl(var(--primary))' }}
                       />
                       <Line 
                         type="monotone" 
                         dataKey="avg" 
-                        stroke="#3b82f6" 
+                        stroke="hsl(var(--primary))" 
                         strokeWidth={4} 
-                        dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5, stroke: '#09090b' }}
-                        activeDot={{ r: 8, strokeWidth: 0, fill: '#60a5fa' }}
+                        dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 5, stroke: 'hsl(var(--background))' }}
+                        activeDot={{ r: 8, strokeWidth: 0, fill: 'hsl(var(--primary))' }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -305,29 +306,29 @@ export default function CoursePortalPage() {
               </Card>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="bg-[#141416] border-white/5">
+                <Card className="bg-card border-border">
                   <CardHeader className="p-8 pb-4">
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Class Statistics</CardTitle>
                   </CardHeader>
                   <CardContent className="h-[280px] p-8 pt-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={assignmentAvgData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.05} vertical={false} />
                         <XAxis 
                           dataKey="name" 
                           axisLine={false} 
                           tickLine={false} 
-                          tick={{ fill: '#71717a', fontSize: 10, fontWeight: 700 }}
+                          tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }}
                           dy={10}
                         />
                         <YAxis hide domain={[0, 100]} />
                         <Tooltip 
-                          cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                          contentStyle={{ backgroundColor: '#141416', border: '1px solid #ffffff10', borderRadius: '12px', fontSize: '11px' }}
+                          cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px', fontSize: '11px' }}
                         />
                         <Bar dataKey="avg" radius={[6, 6, 0, 0]} barSize={28}>
                           {assignmentAvgData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.avg > 80 ? '#3b82f6' : '#3b82f660'} />
+                            <Cell key={`cell-${index}`} fill={entry.avg > 80 ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.4)'} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -336,7 +337,7 @@ export default function CoursePortalPage() {
                 </Card>
 
                 <Card className="bg-primary text-primary-foreground shadow-2xl border-none p-8 flex flex-col justify-between overflow-hidden relative">
-                  <Zap className="absolute -bottom-6 -right-6 h-32 w-32 text-white/10 rotate-12" />
+                  <Zap className="absolute -bottom-6 -right-6 h-32 w-32 text-primary-foreground/10 rotate-12" />
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-4">
                       <Sparkles className="h-5 w-5 fill-current" />
@@ -356,10 +357,10 @@ export default function CoursePortalPage() {
 
             {/* Right: Assignments & Submissions Tracker */}
             <div className="col-span-12 lg:col-span-4 space-y-8">
-              <Card className="bg-[#141416] border-white/5">
+              <Card className="bg-card border-border">
                 <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
                   <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Active Assignments</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white"><MoreVertical className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"><MoreVertical className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent className="p-8 pt-0 space-y-6">
                   {[
@@ -369,10 +370,10 @@ export default function CoursePortalPage() {
                   ].map((task, i) => (
                     <div key={i} className="space-y-3 group cursor-pointer">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{task.title}</div>
+                        <div className="text-sm font-bold group-hover:text-primary transition-colors">{task.title}</div>
                         <div className="text-[10px] font-bold text-muted-foreground uppercase">Due: {task.due}</div>
                       </div>
-                      <Progress value={task.progress} className="h-1.5 bg-white/5">
+                      <Progress value={task.progress} className="h-1.5 bg-accent">
                         <div className={cn("h-full transition-all", task.color)} />
                       </Progress>
                       <div className="flex justify-between text-[10px] font-bold text-muted-foreground/60">
@@ -381,37 +382,37 @@ export default function CoursePortalPage() {
                       </div>
                     </div>
                   ))}
-                  <Button variant="outline" className="w-full border-white/10 rounded-xl font-bold text-xs h-12 hover:bg-white/5 transition-all">
+                  <Button variant="outline" className="w-full border-border rounded-xl font-bold text-xs h-12 hover:bg-accent transition-all">
                     View All Assignments
                   </Button>
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#141416] border-white/5 overflow-hidden">
-                <CardHeader className="p-8 pb-4 border-b border-white/5">
+              <Card className="bg-card border-border overflow-hidden">
+                <CardHeader className="p-8 pb-4 border-b border-border">
                   <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                     <History className="h-4 w-4" /> Recent Activity
                   </CardTitle>
                 </CardHeader>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border">
                   {[
                     { name: 'Arjun S.', action: 'submitted', time: '12m ago', score: null },
                     { name: 'Priya K.', action: 'graded', time: '45m ago', score: '92%' },
                     { name: 'Rahul V.', action: 'submitted', time: '1h ago', score: null },
                     { name: 'Sneha P.', action: 'graded', time: '3h ago', score: '78%' },
                   ].map((activity, i) => (
-                    <div key={i} className="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
+                    <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/20 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-4">
-                        <div className="h-9 w-9 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold text-white uppercase group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                        <div className="h-9 w-9 rounded-full bg-accent flex items-center justify-center text-[10px] font-bold uppercase group-hover:bg-primary/20 group-hover:text-primary transition-colors">
                           {activity.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-white">{activity.name}</div>
+                          <div className="text-sm font-bold">{activity.name}</div>
                           <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{activity.action} • {activity.time}</div>
                         </div>
                       </div>
                       {activity.score ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] font-bold px-2.5">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] font-bold px-2.5">
                           {activity.score}
                         </Badge>
                       ) : (
@@ -420,7 +421,7 @@ export default function CoursePortalPage() {
                     </div>
                   ))}
                 </div>
-                <CardContent className="p-6 bg-white/[0.02]">
+                <CardContent className="p-6 bg-accent/10">
                   <Button variant="link" className="w-full text-xs font-bold text-primary group uppercase tracking-widest h-auto p-0">
                     Full Submission Log <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
                   </Button>
@@ -432,7 +433,7 @@ export default function CoursePortalPage() {
       </main>
 
       {/* Floating AI Helper */}
-      <button className="fixed bottom-10 right-10 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border-4 border-white/10">
+      <button className="fixed bottom-10 right-10 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border-4 border-background/10">
         <Sparkles className="h-7 w-7 fill-current group-hover:rotate-12 transition-transform" />
       </button>
     </div>
