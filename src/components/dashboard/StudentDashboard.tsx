@@ -31,7 +31,6 @@ import {
   addDoc, 
   serverTimestamp,
   limit,
-  collectionGroup,
   orderBy
 } from 'firebase/firestore';
 import { 
@@ -68,7 +67,7 @@ export function StudentDashboard() {
 
   const { data: enrollments, isLoading: isEnrollmentsLoading } = useCollection(enrollmentsQuery);
 
-  // Fetch all courses (for display/lookup)
+  // Fetch all active courses
   const allCoursesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, "courses"), where("isActive", "==", true));
@@ -76,7 +75,7 @@ export function StudentDashboard() {
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
 
-  // Manual fetch for assignments across enrolled courses since collectionGroup needs index
+  // Manual fetch for assignments across enrolled courses
   useEffect(() => {
     async function fetchAssignments() {
       if (!firestore || !enrollments || enrollments.length === 0) {
@@ -305,16 +304,27 @@ export function StudentDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {myCourses.map((course) => (
                 <div key={course.id}>
-                  <Card className="h-full border-l-4 border-l-primary">
+                  <Card className="h-full border-l-4 border-l-primary hover:shadow-md transition-shadow group">
                     <CardHeader>
-                      <Badge variant="secondary" className="w-fit mb-1">{course.code}</Badge>
-                      <CardTitle className="text-lg">{course.name}</CardTitle>
+                      <div className="flex justify-between items-start mb-1">
+                        <Badge variant="secondary" className="w-fit">{course.code}</Badge>
+                        <Link href={`/student/courses/${course.id}`}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                             <ArrowRight className="h-4 w-4" />
+                           </Button>
+                        </Link>
+                      </div>
+                      <Link href={`/student/courses/${course.id}`}>
+                        <CardTitle className="text-lg hover:text-primary transition-colors cursor-pointer">{course.name}</CardTitle>
+                      </Link>
                       <CardDescription className="line-clamp-2">{course.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex justify-between items-center text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                        <span>Enrollment Verified</span>
-                      </div>
+                      <Link href={`/student/courses/${course.id}`}>
+                        <Button variant="outline" className="w-full text-xs font-bold gap-2">
+                          My Dashboard <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      </Link>
                     </CardContent>
                   </Card>
                 </div>
@@ -338,7 +348,7 @@ export function StudentDashboard() {
 
         <div className="space-y-6">
           <h2 className="text-xl font-headline font-semibold flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" /> Active Assignments
+            <Calendar className="h-5 w-5 text-primary" /> Upcoming Deadlines
           </h2>
           <div className="space-y-4">
             {isAssignmentsLoading ? (
@@ -351,23 +361,19 @@ export function StudentDashboard() {
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="space-y-1">
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/20 text-primary">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/20 text-primary uppercase font-bold">
                           {assignment.courseCode}
                         </Badge>
                         <h4 className="text-sm font-bold leading-none">{assignment.title}</h4>
                       </div>
-                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none text-[10px]">
-                        Active
+                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none text-[10px] font-bold">
+                        Open
                       </Badge>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-medium">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" /> 
                         {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'No Deadline'}
-                      </span>
-                      <span className="flex items-center gap-1 uppercase">
-                        <BookOpen className="h-3 w-3" />
-                        {assignment.submissionType}
                       </span>
                     </div>
                   </CardContent>
@@ -380,7 +386,7 @@ export function StudentDashboard() {
                     <AlertCircle className="h-5 w-5 text-primary shrink-0" />
                     <div className="text-left space-y-1">
                       <p className="text-sm font-semibold leading-tight">No Active Assignments</p>
-                      <p className="text-xs text-muted-foreground">Check back later or join a course to see assignments.</p>
+                      <p className="text-xs text-muted-foreground">Check back later or join a course.</p>
                     </div>
                   </div>
                 </CardContent>
