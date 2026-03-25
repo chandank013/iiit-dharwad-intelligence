@@ -49,7 +49,12 @@ import {
   HardDrive,
   FileJson,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Target,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,7 +70,15 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell
+  Cell,
+  PieChart,
+  Pie,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Legend
 } from 'recharts';
 import {
   Table,
@@ -90,21 +103,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// --- Mock Data for Analytics ---
 const weeklyTrendData = [
-  { name: 'Wk 1', avg: 0 },
-  { name: 'Wk 2', avg: 0 },
-  { name: 'Wk 3', avg: 0 },
-  { name: 'Wk 4', avg: 0 },
-  { name: 'Wk 5', avg: 0 },
-  { name: 'Wk 6', avg: 0 },
+  { name: 'Wk1', avg: 68 },
+  { name: 'Wk2', avg: 72 },
+  { name: 'Wk3', avg: 70 },
+  { name: 'Wk4', avg: 76 },
+  { name: 'Wk5', avg: 74 },
+  { name: 'Wk6', avg: 80 },
+];
+
+const gradeDistributionData = [
+  { name: 'A (90-100)', value: 25, color: '#10b981' },
+  { name: 'B (75-89)', value: 45, color: '#3b82f6' },
+  { name: 'C (60-74)', value: 20, color: '#f59e0b' },
+  { name: 'D (< 60)', value: 10, color: '#ef4444' },
 ];
 
 const assignmentAvgData = [
-  { name: 'A1', avg: 0 },
-  { name: 'A2', avg: 0 },
-  { name: 'A3', avg: 0 },
-  { name: 'A4', avg: 0 },
-  { name: 'A5', avg: 0 },
+  { name: 'Web Dev', avg: 82 },
+  { name: 'DSA-3', avg: 72 },
+  { name: 'ML Proj', avg: 65 },
+  { name: 'OS Lab', avg: 88 },
+  { name: 'DBMS', avg: 78 },
+];
+
+const submissionBehaviourData = [
+  { name: 'Day 1', count: 3 },
+  { name: 'Day 2', count: 5 },
+  { name: 'Day 3', count: 8 },
+  { name: 'Day 4', count: 6 },
+  { name: 'Day 5', count: 12 },
+  { name: 'Due Day', count: 25 },
+];
+
+const subjectStrengthData = [
+  { subject: 'Algorithms', value: 120, fullMark: 150 },
+  { subject: 'Databases', value: 98, fullMark: 150 },
+  { subject: 'Web Dev', value: 86, fullMark: 150 },
+  { subject: 'ML/AI', value: 99, fullMark: 150 },
+  { subject: 'Networks', value: 85, fullMark: 150 },
+  { subject: 'OS', value: 65, fullMark: 150 },
+];
+
+const studentsNeedingAttention = [
+  { name: 'Mohit Sharma', weakArea: 'Algorithms', score: 52, initial: 'M' },
+  { name: 'Ravi Kumar', weakArea: 'ML Concepts', score: 55, initial: 'R' },
+  { name: 'Pooja Iyer', weakArea: 'Database Design', score: 58, initial: 'P' },
 ];
 
 export default function CoursePortalPage() {
@@ -134,7 +179,6 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: enrollments } = useCollection(enrollmentsQuery);
 
-  // Submissions Query
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
     return query(collection(firestore, 'courses', courseId as string, 'submissions'), orderBy('submittedAt', 'desc'));
@@ -177,15 +221,22 @@ export default function CoursePortalPage() {
   const stats = [
     { label: 'Total Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Submissions', value: submissions?.length || 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Submissions', value: 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
 
   const submissionStats = [
-    { label: 'Total', value: submissions?.length || 0, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Total', value: 0, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Pending', value: 0, color: 'text-amber-500', bg: 'bg-amber-500/10' },
     { label: 'AI Graded', value: 0, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Flagged', value: 0, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+  ];
+
+  const analyticsOverview = [
+    { label: 'Class Average', value: '74%', change: '+3% this week', trend: 'up', color: 'text-primary' },
+    { label: 'Submission Rate', value: '87%', change: '+5% this week', trend: 'up', color: 'text-emerald-500' },
+    { label: 'Failing Students', value: '8', change: '-2 this week', trend: 'down', color: 'text-rose-500' },
+    { label: 'Avg AI Confidence', value: '88%', change: '+1% this week', trend: 'up', color: 'text-purple-500' },
   ];
 
   return (
@@ -382,13 +433,13 @@ export default function CoursePortalPage() {
                         <Sparkles className="h-5 w-5 fill-current" />
                         <span className="text-xs font-bold uppercase tracking-[0.2em]">Insights</span>
                       </div>
-                      <h3 className="text-2xl font-bold leading-tight mb-4">Ready for Submissions</h3>
+                      <h3 className="text-2xl font-bold leading-tight mb-4">Awaiting Data</h3>
                       <p className="text-sm opacity-90 leading-relaxed font-medium">
-                        No student submissions have been recorded for this course yet. Once students begin submitting, you'll see analytics here.
+                        Insights will be generated once your students begin submitting their assignments.
                       </p>
                     </div>
                     <Button variant="secondary" className="w-fit gap-2 font-bold rounded-full relative z-10" disabled>
-                      Awaiting Data <ArrowRight className="h-4 w-4" />
+                      Processing <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Card>
                 </div>
@@ -466,11 +517,11 @@ export default function CoursePortalPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1">
                 <h1 className="text-3xl font-bold tracking-tighter">Assignments</h1>
-                <p className="text-muted-foreground text-sm font-medium">0 active · 0 closed</p>
+                <p className="text-muted-foreground text-sm font-medium">{assignments?.length || 0} active · 0 closed</p>
               </div>
               {isProfessor && (
                 <Link href={`/dashboard/professor/assignment/create`}>
-                  <Button className="rounded-2xl px-8 h-12 gap-3 font-bold bg-[#6366F1] hover:bg-[#5558E3] text-white shadow-xl shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <Button className="rounded-2xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
                     <Plus className="h-5 w-5" /> New Assignment
                   </Button>
                 </Link>
@@ -754,6 +805,179 @@ export default function CoursePortalPage() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="p-10 space-y-10 animate-in fade-in slide-in-from-bottom-5 duration-500">
+            {/* Analytics Header */}
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tighter">Class Analytics</h1>
+              <p className="text-muted-foreground text-sm font-medium">Performance insights across all your courses and assignments.</p>
+            </div>
+
+            {/* Top Stat Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {analyticsOverview.map((item, i) => (
+                <Card key={i} className="bg-card border-border shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">{item.label}</div>
+                    <div className={cn("text-3xl font-bold tracking-tighter mb-1", item.color)}>{item.value}</div>
+                    <div className="flex items-center gap-1.5">
+                      {item.trend === 'up' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : <TrendingUp className="h-3 w-3 text-rose-500 rotate-180" />}
+                      <span className={cn("text-[10px] font-bold", item.trend === 'up' ? "text-emerald-500" : "text-rose-500")}>
+                        {item.change}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Row 1: Weekly Trend & Grade Distribution */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="bg-card border-border">
+                <CardHeader className="px-8 pt-8 pb-4">
+                  <CardTitle className="text-lg font-bold">Weekly Average Trend</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[320px] px-4 pb-8">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={weeklyTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dx={-10} domain={[0, 100]} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
+                      />
+                      <Line type="monotone" dataKey="avg" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ fill: 'hsl(var(--primary))', r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="px-8 pt-8 pb-4">
+                  <CardTitle className="text-lg font-bold">Grade Distribution</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[320px] px-8 pb-8 flex flex-col items-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={gradeDistributionData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {gradeDistributionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} opacity={0.8} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Row 2: Assignment Averages & Submission Behaviour */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="bg-card border-border">
+                <CardHeader className="px-8 pt-8 pb-4">
+                  <CardTitle className="text-lg font-bold">Assignment Averages</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[320px] px-4 pb-8">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={assignmentAvgData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dx={-10} domain={[0, 100]} />
+                      <Tooltip 
+                        cursor={{ fill: 'hsl(var(--primary) / 0.05)' }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
+                      />
+                      <Bar dataKey="avg" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="px-8 pt-8 pb-4">
+                  <CardTitle className="text-lg font-bold">Submission Behaviour</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[320px] px-4 pb-8">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={submissionBehaviourData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: 'hsl(var(--muted-foreground))' }} dx={-10} />
+                      <Tooltip 
+                        cursor={{ fill: 'hsl(var(--secondary) / 0.1)' }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '12px' }}
+                      />
+                      <Bar dataKey="count" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} barSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Row 3: Strength Heatmap & Attention List */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="bg-card border-border">
+                <CardHeader className="px-8 pt-8 pb-4">
+                  <CardTitle className="text-lg font-bold">Subject Strength Heatmap</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[400px] flex items-center justify-center pb-8">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={subjectStrengthData}>
+                      <PolarGrid stroke="hsl(var(--border))" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 700 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
+                      <Radar
+                        name="Class Performance"
+                        dataKey="value"
+                        stroke="hsl(var(--primary))"
+                        fill="hsl(var(--primary))"
+                        fillOpacity={0.3}
+                      />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="px-8 pt-8 pb-4">
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-rose-500" /> Students Needing Attention
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-8 pb-8 space-y-4">
+                  {studentsNeedingAttention.map((student, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 group hover:border-rose-500/30 transition-all cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-10 w-10 border border-rose-500/20 shadow-sm">
+                          <AvatarFallback className="bg-rose-500/10 text-rose-500 font-bold">{student.initial}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="text-sm font-bold">{student.name}</div>
+                          <div className="text-[10px] font-medium text-muted-foreground uppercase">Weak in: <span className="text-rose-500 font-bold">{student.weakArea}</span></div>
+                        </div>
+                      </div>
+                      <div className="text-xl font-bold text-rose-500 tabular-nums">{student.score}%</div>
+                    </div>
+                  ))}
+                  <Button variant="ghost" className="w-full text-xs font-bold text-muted-foreground hover:text-primary h-12 rounded-xl group">
+                    View Comprehensive Risk Report <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
