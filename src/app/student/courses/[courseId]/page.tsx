@@ -25,9 +25,6 @@ import {
   TrendingUp, 
   Loader2, 
   Search, 
-  Bell, 
-  Sparkles, 
-  ArrowRight, 
   Target, 
   AlertCircle, 
   FolderOpen,
@@ -39,7 +36,8 @@ import {
   HardDrive,
   CheckCircle2,
   RefreshCcw,
-  Eye
+  Eye,
+  Inbox
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,53 +78,9 @@ const subjectStrengthData = [
   { subject: 'OS', A: 0, fullMark: 100 },
 ];
 
-const scoreHistoryData = [
-  { val: 70 }, { val: 75 }, { val: 72 }, { val: 80 }, { val: 78 }, { val: 84 }, { val: 84 }
-];
+const scoreHistoryData: any[] = [];
 
-const mySubmissionsMock = [
-  {
-    title: 'DBMS Lab — SQL Queries',
-    subject: 'Database Systems',
-    type: 'File',
-    status: 'approved',
-    score: 91,
-    date: 'Feb 28, 2024',
-    feedback: 'Excellent query optimization! Minor improvements possible in indexing.',
-    color: 'emerald'
-  },
-  {
-    title: 'ML Assignment 2 — Classification',
-    subject: 'Machine Learning',
-    type: 'ZIP',
-    status: 'approved',
-    version: 'v2',
-    score: 88,
-    date: 'Mar 5, 2024',
-    feedback: 'Good feature engineering, improve model selection rationale.',
-    color: 'emerald'
-  },
-  {
-    title: 'DSA Assignment 3 — Sorting',
-    subject: 'Data Structures',
-    type: 'GitHub',
-    status: 'approved',
-    score: 76,
-    date: 'Feb 20, 2024',
-    feedback: 'Time complexity analysis needs more depth.',
-    color: 'amber'
-  },
-  {
-    title: 'OS Lab Report',
-    subject: 'Operating Systems',
-    type: 'Drive',
-    status: 'graded',
-    score: 84,
-    date: 'Jan 30, 2024',
-    feedback: 'Well written. Include more diagrams for scheduling algorithms.',
-    color: 'emerald'
-  }
-];
+const mySubmissionsMock: any[] = [];
 
 export default function StudentCoursePage() {
   const { courseId } = useParams();
@@ -177,7 +131,6 @@ export default function StudentCoursePage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar */}
       <aside className="w-64 border-r border-border flex flex-col fixed inset-y-0 left-0 bg-card z-30">
         <div className="p-6">
           <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-[10px] font-bold uppercase tracking-widest mb-8 group">
@@ -209,11 +162,9 @@ export default function StudentCoursePage() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 ml-64 min-h-screen flex flex-col relative">
         <header className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <h2 className="text-sm font-bold tracking-widest uppercase text-muted-foreground">{activeTab.replace('-', ' ')}</h2>
-          
           <div className="flex items-center gap-6">
             <div className="relative group hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -388,7 +339,7 @@ export default function StudentCoursePage() {
                 <div className="flex items-center gap-2 text-sm font-bold">
                   <span className="text-orange-500">{pendingAssignments.length} pending</span>
                   <span className="text-muted-foreground/30">•</span>
-                  <span className="text-emerald-500">{submittedAssignments.length} submitted</span>
+                  <span className="text-emerald-500">0 submitted</span>
                 </div>
               </div>
 
@@ -410,7 +361,7 @@ export default function StudentCoursePage() {
                               <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{assignment.description}</p>
                             </div>
                             <div className="flex flex-wrap items-center gap-3">
-                              <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold px-3 py-1">
+                              <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/20 font-bold px-3 py-1">
                                 {course.code || 'Course'}
                               </Badge>
                               <Badge variant="outline" className="flex items-center gap-1.5 font-bold px-3 py-1 bg-accent/30 border-none">
@@ -451,41 +402,9 @@ export default function StudentCoursePage() {
                   <CheckCircle className="h-4 w-4" /> Submitted
                 </div>
                 <div className="space-y-4">
-                  {submittedAssignments.length > 0 ? (
-                    submittedAssignments.map((assignment) => (
-                      <Card key={assignment.id} className="border-border bg-card/50 border-l-4 border-l-emerald-500 transition-all hover:bg-accent/10">
-                        <CardContent className="p-8 flex items-center justify-between gap-8">
-                          <div className="flex-1 space-y-4">
-                            <div className="space-y-1">
-                              <h3 className="text-lg font-bold tracking-tight">{assignment.title}</h3>
-                              <div className="flex items-center gap-3">
-                                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 font-bold">
-                                  {course.code || 'Course'}
-                                </Badge>
-                                <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold">Submitted</Badge>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-12">
-                            <div className="text-right">
-                              <div className="flex items-end gap-1">
-                                <span className="text-2xl font-bold text-emerald-500">88%</span>
-                                <span className="text-[10px] font-bold text-muted-foreground pb-1">/ 100</span>
-                              </div>
-                            </div>
-                            <Button variant="outline" className="rounded-xl font-bold gap-2 px-6 h-12 hover:bg-primary/5 hover:text-primary transition-all">
-                              View Feedback <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-xs text-muted-foreground font-medium italic border-border border rounded-2xl bg-card/30">
-                      No submissions found.
-                    </div>
-                  )}
+                  <div className="p-8 text-center text-xs text-muted-foreground font-medium italic border-border border rounded-2xl bg-card/30">
+                    No submissions found.
+                  </div>
                 </div>
               </div>
             </div>
@@ -496,24 +415,23 @@ export default function StudentCoursePage() {
               <div className="flex flex-col gap-2">
                 <h1 className="text-4xl font-bold tracking-tight">My Submissions</h1>
                 <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-                  <span>5 total submissions</span>
+                  <span>0 total submissions</span>
                   <span className="h-1 w-1 rounded-full bg-border" />
-                  <span>Average score: <span className="text-emerald-500 font-bold">84%</span></span>
+                  <span>Average score: <span className="text-emerald-500 font-bold">0%</span></span>
                 </div>
               </div>
 
-              {/* Stats Row */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-primary">5</div>
+                  <div className="text-3xl font-bold text-primary">0</div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Submitted</div>
                 </Card>
                 <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-emerald-500">84%</div>
+                  <div className="text-3xl font-bold text-emerald-500">0%</div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Average Score</div>
                 </Card>
                 <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-primary">4</div>
+                  <div className="text-3xl font-bold text-primary">0</div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Approved</div>
                 </Card>
                 <Card className="p-4 border-border shadow-sm">
@@ -534,64 +452,17 @@ export default function StudentCoursePage() {
                 </Card>
               </div>
 
-              {/* Submissions List */}
-              <div className="space-y-6">
-                {mySubmissionsMock.map((sub, i) => (
-                  <Card key={i} className="border-border shadow-sm hover:shadow-md transition-all overflow-hidden bg-card">
-                    <CardContent className="p-8">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-                        <div className="space-y-3">
-                          <h3 className="text-xl font-bold tracking-tight">{sub.title}</h3>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold">{sub.subject}</Badge>
-                            <Badge variant="outline" className="bg-muted text-muted-foreground border-none flex items-center gap-1.5 font-bold">
-                              {sub.type === 'GitHub' ? <Github className="h-3 w-3" /> : sub.type === 'Drive' ? <HardDrive className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-                              {sub.type}
-                            </Badge>
-                            <Badge className={cn(
-                              "font-bold flex items-center gap-1.5 border-none",
-                              sub.status === 'approved' ? "bg-emerald-500/10 text-emerald-500" : "bg-primary/10 text-primary"
-                            )}>
-                              {sub.status === 'approved' && <CheckCircle2 className="h-3 w-3" />}
-                              {sub.status}
-                            </Badge>
-                            {sub.version && <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-none font-bold">{sub.version}</Badge>}
-                          </div>
-                        </div>
-                        <div className="text-right space-y-1">
-                          <div className="flex items-end justify-end gap-1">
-                            <span className={cn("text-4xl font-black", sub.color === 'emerald' ? 'text-emerald-500' : 'text-amber-500')}>{sub.score}</span>
-                            <span className="text-muted-foreground text-sm font-bold pb-2">/ 100</span>
-                          </div>
-                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{sub.date}</div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={cn("h-full transition-all duration-1000", sub.color === 'emerald' ? 'bg-emerald-500' : 'bg-amber-500')} 
-                            style={{ width: `${sub.score}%` }}
-                          />
-                        </div>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <p className="text-sm text-muted-foreground leading-relaxed flex-1 italic">
-                            <span className="font-bold text-foreground not-italic mr-2">AI Feedback:</span>
-                            {sub.feedback}
-                          </p>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="rounded-lg font-bold gap-2 text-xs h-9 border-primary/20 text-primary hover:bg-primary/5">
-                              <Eye className="h-3.5 w-3.5" /> View Report
-                            </Button>
-                            <Button variant="outline" size="sm" className="rounded-lg font-bold gap-2 text-xs h-9 hover:bg-muted transition-colors">
-                              <RefreshCcw className="h-3.5 w-3.5" /> Resubmit
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="flex flex-col items-center justify-center py-24 bg-card/50 border-2 border-dashed border-border rounded-[2rem] space-y-6">
+                <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 ring-1 ring-primary/10">
+                  <Inbox className="h-10 w-10" />
+                </div>
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl font-bold tracking-tight">No submissions yet</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">Your evaluations and feedback will appear here once you submit your first assignment.</p>
+                </div>
+                <Button variant="secondary" className="rounded-xl font-bold" onClick={() => setActiveTab('assignments')}>
+                  View Active Assignments
+                </Button>
               </div>
             </div>
           )}
