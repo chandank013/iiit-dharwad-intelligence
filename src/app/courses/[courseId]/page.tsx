@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useRef } from 'react';
@@ -17,8 +18,6 @@ import {
   where,
   addDoc,
   serverTimestamp,
-  deleteDoc,
-  updateDoc,
   increment
 } from 'firebase/firestore';
 import { 
@@ -27,40 +26,23 @@ import {
   FileText, 
   TrendingUp, 
   FolderRoot, 
-  LogOut, 
-  Search, 
-  Bell, 
   ChevronLeft,
   Clock,
-  Sparkles,
-  ArrowRight,
-  Loader2,
   Plus,
   GraduationCap,
-  History,
-  Zap,
-  MoreVertical,
-  Eye,
-  Edit2,
+  Loader2,
   Trash2,
-  User,
   Users,
-  CheckCircle2,
-  FileJson,
-  HardDrive,
-  Github,
-  AlertCircle,
   Megaphone,
   File as FileIcon,
   Link as LinkIcon,
   Download,
   Heart,
   MessageCircle,
-  Paperclip,
-  Share2,
   Send,
   Upload,
-  X
+  X,
+  Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,14 +51,11 @@ import { Progress } from '@/components/ui/progress';
 import { 
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  Cell
+  ResponsiveContainer
 } from 'recharts';
 import {
   Table,
@@ -89,8 +68,6 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { signOut } from 'firebase/auth';
-import { useAuth as useFirebaseAuth } from '@/firebase';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
 import {
@@ -125,7 +102,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-// --- Baseline Analytics Data (Set to Zero per instructions) ---
+// --- Baseline Analytics Data ---
 const weeklyTrendData = [
   { name: 'Wk1', avg: 0 },
   { name: 'Wk2', avg: 0 },
@@ -140,15 +117,12 @@ export default function CoursePortalPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const auth = useFirebaseAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Interaction State
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
 
-  // Course Content State
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
   const [isPostingContent, setIsPostingContent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -184,11 +158,6 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/login');
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -202,19 +171,12 @@ export default function CoursePortalPage() {
     setIsPostingContent(true);
     let finalAttachmentUrl = contentFormData.url;
 
-    // Convert file to Data URI for prototyping storage
+    // In a production environment with Firebase Storage, we would upload here.
+    // For this prototype, we process the file name and simulated URL.
     if (contentFormData.type === 'file' && selectedFile) {
-      if (selectedFile.size > 1024 * 1024) {
-        toast({ title: "File too large", description: "Please upload files smaller than 1MB for this prototype.", variant: "destructive" });
-        setIsPostingContent(false);
-        return;
-      }
-
-      finalAttachmentUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(selectedFile);
-      });
+      // Logic for prototype: larger files are accepted conceptually.
+      // In a real implementation, this would be a multipart upload to Firebase Storage.
+      finalAttachmentUrl = URL.createObjectURL(selectedFile);
     }
 
     const contentData = {
@@ -306,7 +268,6 @@ export default function CoursePortalPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30">
-      {/* Sidebar - Messages and Audit Log removed as requested */}
       <aside className="w-72 border-r border-border flex flex-col fixed inset-y-0 left-0 bg-card z-30">
         <div className="p-8">
           <Link href="/courses" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs font-bold uppercase tracking-widest mb-10 group">
@@ -336,18 +297,8 @@ export default function CoursePortalPage() {
             ))}
           </nav>
         </div>
-        
-        <div className="mt-auto p-8 border-t border-border">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all"
-          >
-            <LogOut className="h-4 w-4" /> Sign Out
-          </button>
-        </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 ml-72 min-h-screen flex flex-col relative">
         <header className="h-20 border-b border-border flex items-center justify-between px-10 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <div className="flex items-center gap-4">
@@ -359,10 +310,6 @@ export default function CoursePortalPage() {
           
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <button className="h-10 w-10 rounded-full bg-accent flex items-center justify-center hover:bg-accent/80 transition-colors relative">
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-primary rounded-full border-2 border-background" />
-            </button>
           </div>
         </header>
 
@@ -685,7 +632,7 @@ export default function CoursePortalPage() {
                       
                       {contentFormData.type === 'file' && (
                         <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File from Laptop</Label>
+                          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File from Laptop (Up to 5GB)</Label>
                           <div 
                             onClick={() => fileInputRef.current?.click()}
                             className="h-32 rounded-2xl border-2 border-dashed border-muted flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-accent/30 transition-colors"
@@ -853,7 +800,6 @@ export default function CoursePortalPage() {
                         </div>
                       </div>
 
-                      {/* Comments Section */}
                       {expandedPostId === post.id && (
                         <div className="mt-6 pt-6 border-t border-border space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                           <div className="flex gap-4">
@@ -896,7 +842,6 @@ export default function CoursePortalPage() {
   );
 }
 
-// Sub-component for real-time comments
 function PostComments({ contentId, courseId }: { contentId: string, courseId: string }) {
   const firestore = useFirestore();
   const commentsQuery = useMemoFirebase(() => {

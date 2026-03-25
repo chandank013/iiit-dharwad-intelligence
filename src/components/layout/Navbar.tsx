@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -7,6 +8,7 @@ import { GraduationCap, LayoutDashboard, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { signOut } from 'firebase/auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
@@ -21,6 +23,7 @@ export function Navbar() {
   };
 
   const isStudent = user.email?.startsWith('24bds');
+  const displayName = user.displayName || user.email?.split('@')[0] || 'User';
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,7 +31,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-primary p-1.5 rounded-lg text-primary-foreground group-hover:scale-110 transition-transform">
-              < GraduationCap className="h-6 w-6" />
+              <GraduationCap className="h-6 w-6" />
             </div>
             <span className="font-headline text-xl font-bold tracking-tight text-primary">IIIT Dharwad</span>
           </Link>
@@ -43,17 +46,29 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-destructive gap-2"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Log out</span>
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 pr-4 border-r border-border">
+            <Avatar className="h-8 w-8 shadow-sm">
+              <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`} />
+              <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+                {displayName[0].toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-bold hidden lg:inline-block tracking-tight">{displayName}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-destructive gap-2 h-9"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline font-bold text-xs uppercase tracking-wider">Log out</span>
+            </Button>
+          </div>
         </div>
       </div>
     </nav>
