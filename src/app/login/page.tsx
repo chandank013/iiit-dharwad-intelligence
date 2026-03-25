@@ -1,19 +1,22 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, Loader2, Mail, Lock } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, Mail, Lock, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
@@ -26,14 +29,14 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
 
     if (!email.endsWith('@iiitdwd.ac.in')) {
       toast({
         title: "Invalid Email",
-        description: "Please use your IIIT Dharwad email address.",
+        description: "Please use your IIIT Dharwad email address (@iiitdwd.ac.in).",
         variant: "destructive",
       });
       return;
@@ -41,16 +44,37 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({
-        title: "Login Successful",
-        description: `Welcome back to IIIT Dharwad AIS.`,
-      });
+      if (isSignUp) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        if (name) {
+          await updateProfile(userCredential.user, { displayName: name });
+        }
+        toast({
+          title: "Account Created",
+          description: `Welcome to IIIT Dharwad AIS, ${name || email.split('@')[0]}.`,
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({
+          title: "Login Successful",
+          description: `Welcome back to IIIT Dharwad AIS.`,
+        });
+      }
       router.push('/');
     } catch (error: any) {
+      console.error(error);
+      let message = "An error occurred during authentication.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = "Invalid credentials. Please check your email and password.";
+      } else if (error.code === 'auth/email-already-in-use') {
+        message = "This email is already registered. Try logging in instead.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "Password should be at least 6 characters.";
+      }
+      
       toast({
-        title: "Login Failed",
-        description: "Invalid credentials. Please check your email and password.",
+        title: isSignUp ? "Sign Up Failed" : "Login Failed",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -79,13 +103,27 @@ export default function LoginPage() {
 
         <Card className="shadow-xl border-none">
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+            <CardTitle>{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
             <CardDescription>
-              Enter your institute credentials to access your dashboard.
+              {isSignUp 
+                ? 'Register with your institute email to get started.' 
+                : 'Enter your institute credentials to access your dashboard.'}
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleAuth}>
             <CardContent className="space-y-4">
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required={isSignUp}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Institute Email</Label>
                 <div className="relative">
@@ -100,11 +138,16 @@ export default function LoginPage() {
                     required
                   />
                 </div>
+                <p className="text-[10px] text-muted-foreground px-1">
+                  Students: 24bdsXXX@iiitdwd.ac.in | Professors: name@iiitdwd.ac.in
+                </p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Button variant="link" className="p-0 h-auto text-[10px]" type="button">Forgot password?</Button>
+                  {!isSignUp && (
+                    <Button variant="link" className="p-0 h-auto text-[10px]" type="button">Forgot password?</Button>
+                  )}
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -118,20 +161,26 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground px-1">
-                  Students use 24bds001@iiitdwd.ac.in
-                </p>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full h-11 text-base font-semibold group" disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    Continue <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    {isSignUp ? 'Create Account' : 'Continue'} 
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
+              </Button>
+              <Button 
+                variant="ghost" 
+                type="button" 
+                className="w-full text-xs" 
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
               </Button>
             </CardFooter>
           </form>
