@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/store';
+import { useUser } from '@/firebase';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,16 +13,16 @@ import { Badge } from '@/components/ui/badge';
 import { Share2, Download, ExternalLink, Trophy, Star, TrendingUp, Loader2 } from 'lucide-react';
 
 export default function PortfolioPage() {
-  const { user, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, isUserLoading, router]);
 
-  if (loading || !user) {
+  if (isUserLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -30,7 +31,10 @@ export default function PortfolioPage() {
   }
 
   // Use the logged in user or fall back to mock student for UI demo
-  const displayUser = user.role === 'student' ? user : MOCK_USERS[1];
+  const displayUser = {
+    name: user.displayName || user.email?.split('@')[0] || 'Student',
+    avatar: user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`,
+  };
 
   return (
     <div className="min-h-screen bg-[#F6FAFC]">

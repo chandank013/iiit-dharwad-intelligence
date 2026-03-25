@@ -1,6 +1,8 @@
 
 "use client";
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +16,7 @@ import Link from 'next/link';
 export default function CoursesPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const coursesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -22,16 +25,18 @@ export default function CoursesPage() {
 
   const { data: courses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
 
-  if (isUserLoading || isCoursesLoading) {
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || isCoursesLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (

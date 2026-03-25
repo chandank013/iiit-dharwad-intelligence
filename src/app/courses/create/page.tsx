@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth, useFirestore } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function CreateCoursePage() {
-  const { user, isUserLoading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -32,17 +32,18 @@ export default function CreateCoursePage() {
     semester: 'Fall 2024',
   });
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!user) {
-    router.push('/login');
-    return null;
   }
 
   const generateJoinCode = () => {
@@ -75,10 +76,8 @@ export default function CreateCoursePage() {
     };
 
     try {
+      if (!firestore) return;
       const coursesRef = collection(firestore, 'courses');
-      // We don't await here as per the non-blocking guidelines, but we handle the redirect 
-      // in the then/catch or use a standard approach if we need the ID.
-      // For a better UX in this specific form, we'll use a standard addDoc.
       await addDoc(coursesRef, courseData);
       
       toast({
