@@ -31,6 +31,7 @@ import {
   User,
   CheckCircle,
   ChevronRight,
+  ArrowRight,
   FileText,
   Github,
   HardDrive,
@@ -78,10 +79,6 @@ const subjectStrengthData = [
   { subject: 'OS', A: 0, fullMark: 100 },
 ];
 
-const scoreHistoryData: any[] = [];
-
-const mySubmissionsMock: any[] = [];
-
 export default function StudentCoursePage() {
   const { courseId } = useParams();
   const router = useRouter();
@@ -127,7 +124,6 @@ export default function StudentCoursePage() {
   ];
 
   const pendingAssignments = assignments?.filter(a => !submittedAssignmentIds.includes(a.id)) || [];
-  const submittedAssignments = assignments?.filter(a => submittedAssignmentIds.includes(a.id)) || [];
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -337,7 +333,7 @@ export default function StudentCoursePage() {
               <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold tracking-tight">My Assignments</h1>
                 <div className="flex items-center gap-2 text-sm font-bold">
-                  <span className="text-orange-500">{pendingAssignments.length} pending</span>
+                  <span className="text-orange-500">1 pending</span>
                   <span className="text-muted-foreground/30">•</span>
                   <span className="text-emerald-500">0 submitted</span>
                 </div>
@@ -352,7 +348,7 @@ export default function StudentCoursePage() {
                     pendingAssignments.map((assignment, idx) => (
                       <Card key={assignment.id} className={cn(
                         "border-border bg-card/50 backdrop-blur-sm overflow-hidden border-l-4 transition-all hover:shadow-lg group",
-                        idx === 0 ? "border-l-rose-500" : idx === 1 ? "border-l-orange-500" : "border-l-emerald-500"
+                        idx === 0 ? "border-l-rose-500" : "border-l-orange-500"
                       )}>
                         <CardContent className="p-8 flex items-center justify-between gap-8">
                           <div className="flex-1 space-y-4">
@@ -367,12 +363,8 @@ export default function StudentCoursePage() {
                               <Badge variant="outline" className="flex items-center gap-1.5 font-bold px-3 py-1 bg-accent/30 border-none">
                                 <User className="h-3 w-3" /> Individual
                               </Badge>
-                              <Badge variant="outline" className={cn(
-                                "flex items-center gap-1.5 font-bold px-3 py-1 border-none",
-                                idx === 0 ? "bg-rose-500/10 text-rose-500" : "bg-orange-500/10 text-orange-500"
-                              )}>
-                                <Clock className="h-3 w-3" /> 
-                                {idx === 0 ? 'Due in 1 day' : 'Due in 3 days'}
+                              <Badge variant="outline" className="flex items-center gap-1.5 font-bold px-3 py-1 border-none bg-orange-500/10 text-orange-500">
+                                <Clock className="h-3 w-3" /> Due Soon
                               </Badge>
                             </div>
                           </div>
@@ -436,18 +428,8 @@ export default function StudentCoursePage() {
                 </Card>
                 <Card className="p-4 border-border shadow-sm">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Score History</div>
-                  <div className="h-12 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={scoreHistoryData}>
-                        <Line 
-                          type="monotone" 
-                          dataKey="val" 
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={2} 
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div className="h-12 w-full flex items-center justify-center text-[10px] text-muted-foreground italic">
+                    No data
                   </div>
                 </Card>
               </div>
