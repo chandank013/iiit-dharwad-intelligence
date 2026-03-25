@@ -2,16 +2,9 @@
  * IIIT Dharwad AIS Platform - Security Rules Configuration
  *
  * CORE PHILOSOPHY:
- * This ruleset implements a robust, role-based access control (RBAC) model using "Sentinel Collections"
- * for efficient role verification and extensive data denormalization for authorization independence.
- * The system distinguishes primarily between 'Professors' and 'Students'.
- *
- * DATA STRUCTURE:
- * - User Profiles: /users/{userId} (Owner-managed)
- * - Sentinel Roles: /professor_roles/{userId} and /student_roles/{userId} (Read-only flags)
- * - Academic Tree: /courses/{courseId} and its subcollections (Assignments, Submissions, etc.)
- * - Private User Data: Nested under /users/{userId}/... (Portfolio, Chatbot)
- * - Communication: /private_messages/{messageId} (Sender/Receiver shared access)
+ * This ruleset implements a robust, role-based access control (RBAC) model.
+ * It uses both Sentinel Collections and JWT Token email pattern matching for 
+ * redundant and reliable authorization.
  */
 
 rules_version = '2';
@@ -20,7 +13,7 @@ service cloud.firestore {
 
     // --- Helper Functions ---
 
-    /** @description Checks if the user is authenticated with any provider. */
+    /** @description Checks if the user is authenticated. */
     function isSignedIn() {
       return request.auth != null;
     }
@@ -30,160 +23,80 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the user has the 'Professor' role via sentinel collection. */
+    /** @description Checks if the user is a Professor (Sentinel or Email pattern). */
     function isProfessor() {
-      return isSignedIn() && exists(/databases/$(database)/documents/professor_roles/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/professor_roles/$(request.auth.uid)) ||
+        (request.auth.token.email.matches('.*@iiitdwd\\.ac\\.in$') && !request.auth.token.email.matches('^24bds.*'))
+      );
     }
 
-    /** @description Checks if the user has the 'Student' role via sentinel collection. */
+    /** @description Checks if the user is a Student (Sentinel or Email pattern). */
     function isStudent() {
-      return isSignedIn() && exists(/databases/$(database)/documents/student_roles/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/student_roles/$(request.auth.uid)) ||
+        request.auth.token.email.matches('^24bds.*@iiitdwd\\.ac\\.in$')
+      );
     }
 
-    /** @description Combines ownership and existence checks for updates and deletes. */
-    function isExistingOwner(ownerId) {
-      return resource != null && request.auth.uid == ownerId;
-    }
-
-    /** @description Checks if the user is a member of a list (used for ProjectGroups). */
+    /** @description Checks if the user is a member of a list. */
     function isMember(memberIds) {
       return isSignedIn() && request.auth.uid in memberIds;
     }
 
     // --- Collection Rules ---
 
-    /**
-     * @description User profile management. Users can manage their own profile data.
-     */
     match /users/{userId} {
       allow get, list: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow create, update: if isOwner(userId);
       allow delete: if false;
     }
 
-    /**
-     * @description Role sentinel collections. 
-     * Users can create their own sentinel on first sign up if it matches their UID.
-     */
     match /professor_roles/{userId} {
       allow get: if isSignedIn();
       allow create: if isOwner(userId);
       allow list, update, delete: if false;
     }
+
     match /student_roles/{userId} {
       allow get: if isSignedIn();
       allow create: if isOwner(userId);
       allow list, update, delete: if false;
     }
 
-    /**
-     * @description Course management. Professors create courses; all signed-in users can view.
-     */
     match /courses/{courseId} {
       allow get, list: if isSignedIn();
       allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-      allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
+      allow update, delete: if isProfessor() && (resource.data.professorId == request.auth.uid);
 
       match /assignments/{assignmentId} {
         allow get, list: if isSignedIn();
-        allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-        allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
-
-        match /rubrics/{rubricId} {
-          allow get, list: if isSignedIn();
-          allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-          allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
-
-          match /criteria/{criterionId} {
-            allow get, list: if isSignedIn();
-            allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-            allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
-          }
-        }
+        allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
 
         match /submissions/{submissionId} {
           allow list: if isSignedIn();
-          allow get: if isSignedIn() && (isOwner(resource.data.submitterId) || isOwner(resource.data.professorId));
+          allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
           allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
-          allow update: if isExistingOwner(resource.data.submitterId) || isExistingOwner(resource.data.professorId);
-          allow delete: if isExistingOwner(resource.data.professorId);
-
-          match /evaluations/{evaluationId} {
-            allow list: if isSignedIn();
-            allow get: if isSignedIn() && (isOwner(resource.data.submitterId) || isOwner(resource.data.professorId));
-            allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-            allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
-
-            match /criterion_scores/{scoreId} {
-              allow get, list: if isSignedIn() && (isOwner(resource.data.submitterId) || isOwner(resource.data.professorId));
-              allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
-            }
-
-            match /group_member_scores/{individualScoreId} {
-              allow get, list: if isSignedIn() && (isOwner(resource.data.studentId) || isOwner(resource.data.professorId));
-              allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
-            }
-          }
-
-          match /contribution_reports/{reportId} {
-            allow get, list: if isSignedIn() && (isOwner(resource.data.reportingStudentId) || isOwner(resource.data.professorId));
-            allow create: if isStudent() && request.resource.data.reportingStudentId == request.auth.uid;
-            allow update, delete: if isExistingOwner(resource.data.reportingStudentId) || isExistingOwner(resource.data.professorId);
-          }
+          allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
         }
-      }
-
-      match /project_groups/{groupId} {
-        allow get: if isSignedIn() && (isMember(resource.data.memberIds) || isOwner(resource.data.professorId));
-        allow list: if isSignedIn();
-        allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-        allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
-      }
-
-      match /content/{contentId} {
-        allow get, list: if isSignedIn();
-        allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
-        allow update, delete: if isProfessor() && isExistingOwner(resource.data.professorId);
       }
     }
 
     match /course_enrollments/{enrollmentId} {
       allow list: if isSignedIn();
-      allow get: if isSignedIn() && (isOwner(resource.data.studentId) || isOwner(resource.data.professorId));
+      allow get: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.professorId);
       allow create: if isStudent() && request.resource.data.studentId == request.auth.uid;
-      allow update, delete: if isExistingOwner(resource.data.studentId) || isExistingOwner(resource.data.professorId);
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.professorId);
     }
-
+    
+    // Allow reading public learning resources
     match /learning_resources/{resourceId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if false;
     }
 
-    match /private_messages/{messageId} {
-      allow list: if isSignedIn();
-      allow get: if isSignedIn() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId));
-      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.receiverId) || isExistingOwner(resource.data.senderId);
-      allow delete: if isExistingOwner(resource.data.senderId);
-    }
-
-    match /audit_logs/{logId} {
-      allow get, list: if isProfessor();
-      allow create: if isSignedIn();
-      allow update, delete: if false;
-    }
-
-    match /users/{userId}/portfolio/{portfolioId} {
-      allow list: if isOwner(userId) || isProfessor();
-      allow get: if true;
-      allow create: if isOwner(userId);
-      allow update, delete: if isExistingOwner(userId);
-    }
-
+    // Chatbot interactions - private to user
     match /users/{userId}/chatbot_interactions/{interactionId} {
-      allow get, list, create: if isOwner(userId);
-      allow update, delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId);
     }
   }
 }

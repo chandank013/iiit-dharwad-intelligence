@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, Loader2, Mail, Lock, UserPlus } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, Mail, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -62,10 +61,12 @@ export default function LoginPage() {
       const role = isStudent ? 'Student' : 'Professor';
       const roleCollection = isStudent ? 'student_roles' : 'professor_roles';
 
-      // Idempotent User Profile Setup
+      if (!firestore) return;
+
+      // Idempotent User Profile and Role Setup
       const userRef = doc(firestore, 'users', uid);
-      const userSnap = await getDoc(userRef);
-      
+      const roleRef = doc(firestore, roleCollection, uid);
+
       const userData = {
         id: uid,
         firstName: name.split(' ')[0] || firebaseUser.displayName?.split(' ')[0] || email.split('@')[0],
@@ -75,24 +76,16 @@ export default function LoginPage() {
         updatedAt: serverTimestamp(),
       };
 
-      if (!userSnap.exists()) {
-        await setDoc(userRef, { ...userData, createdAt: serverTimestamp() });
-      } else {
-        await setDoc(userRef, userData, { merge: true });
-      }
+      // Set user profile
+      await setDoc(userRef, userData, { merge: true });
 
-      // Ensure Sentinel Role Document for Security Rules exists
-      const roleRef = doc(firestore, roleCollection, uid);
-      const roleSnap = await getDoc(roleRef);
-      
-      if (!roleSnap.exists()) {
-        await setDoc(roleRef, {
-          id: uid,
-          email: email,
-          role: role,
-          createdAt: serverTimestamp()
-        });
-      }
+      // Set role sentinel
+      await setDoc(roleRef, {
+        id: uid,
+        email: email,
+        role: role,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
 
       toast({
         title: isSignUp ? "Account Created" : "Login Successful",
@@ -107,8 +100,6 @@ export default function LoginPage() {
         message = "Invalid credentials. Please check your email and password.";
       } else if (error.code === 'auth/email-already-in-use') {
         message = "This email is already registered. Try logging in instead.";
-      } else if (error.code === 'auth/weak-password') {
-        message = "Password should be at least 6 characters.";
       }
       
       toast({
@@ -182,12 +173,7 @@ export default function LoginPage() {
                 </p>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  {!isSignUp && (
-                    <Button variant="link" className="p-0 h-auto text-[10px]" type="button">Forgot password?</Button>
-                  )}
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -224,10 +210,6 @@ export default function LoginPage() {
             </CardFooter>
           </form>
         </Card>
-
-        <p className="text-center text-xs text-muted-foreground">
-          By continuing, you agree to the Institute Academic Policies and Privacy Guidelines.
-        </p>
       </div>
     </div>
   );
