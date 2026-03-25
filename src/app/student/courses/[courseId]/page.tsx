@@ -15,6 +15,11 @@ import {
   query, 
   orderBy,
   where,
+  setDoc,
+  deleteDoc,
+  updateDoc,
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -33,12 +38,17 @@ import {
   ChevronRight,
   ArrowRight,
   FileText,
-  Github,
-  HardDrive,
   CheckCircle2,
-  RefreshCcw,
-  Eye,
-  Inbox
+  Inbox,
+  Megaphone,
+  File as FileIcon,
+  Link as LinkIcon,
+  Download,
+  Heart,
+  MessageCircle,
+  Send,
+  X,
+  Share2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,10 +66,13 @@ import {
   PolarGrid,
   PolarAngleAxis,
 } from 'recharts';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 const scoreProgressData = [
   { name: 'Aug', score: 0 },
@@ -85,6 +98,8 @@ export default function StudentCoursePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     if (!isUserLoading && user && !user.email?.startsWith('24bds')) {
@@ -104,7 +119,23 @@ export default function StudentCoursePage() {
   }, [firestore, courseId]);
   const { data: assignments } = useCollection(assignmentsQuery);
 
-  const submittedAssignmentIds = useMemo(() => [], []); 
+  const contentQuery = useMemoFirebase(() => {
+    if (!firestore || !courseId) return null;
+    return query(collection(firestore, 'courses', courseId as string, 'content'), orderBy('postedAt', 'desc'));
+  }, [firestore, courseId]);
+  const { data: courseContent } = useCollection(contentQuery);
+
+  const handleAddComment = (contentId: string) => {
+    if (!firestore || !courseId || !user || !commentText.trim()) return;
+    const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
+    addDocumentNonBlocking(commentsRef, {
+      text: commentText,
+      authorId: user.uid,
+      authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+      createdAt: serverTimestamp(),
+    });
+    setCommentText('');
+  };
 
   if (isUserLoading || isCourseLoading || !user) {
     return (
@@ -122,8 +153,6 @@ export default function StudentCoursePage() {
     { id: 'submissions', label: 'My Submissions', icon: FileCheck },
     { id: 'content', label: 'Content', icon: FolderOpen },
   ];
-
-  const pendingAssignments = assignments?.filter(a => !submittedAssignmentIds.includes(a.id)) || [];
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -224,8 +253,8 @@ export default function StudentCoursePage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
-                      {pendingAssignments.length > 0 ? (
-                        pendingAssignments.slice(0, 1).map((task, i) => (
+                      {assignments && assignments.length > 0 ? (
+                        assignments.slice(0, 1).map((task, i) => (
                           <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer">
                             <div className="space-y-2">
                               <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</div>
@@ -344,8 +373,8 @@ export default function StudentCoursePage() {
                   <AlertCircle className="h-4 w-4" /> Pending Submissions
                 </div>
                 <div className="space-y-4">
-                  {pendingAssignments.length > 0 ? (
-                    pendingAssignments.map((assignment, idx) => (
+                  {assignments && assignments.length > 0 ? (
+                    assignments.map((assignment, idx) => (
                       <Card key={assignment.id} className={cn(
                         "border-border bg-card/50 backdrop-blur-sm overflow-hidden border-l-4 transition-all hover:shadow-lg group",
                         idx === 0 ? "border-l-rose-500" : "border-l-orange-500"
@@ -450,17 +479,220 @@ export default function StudentCoursePage() {
           )}
 
           {activeTab === 'content' && (
-            <div className="p-10 space-y-8 animate-in fade-in duration-500">
-              <h1 className="text-3xl font-bold tracking-tight">Course Content</h1>
-              <Card className="border-border">
-                <CardContent className="p-12 text-center text-muted-foreground italic font-medium">
-                  Lecture notes, resources, and announcements shared by your professor.
-                </CardContent>
-              </Card>
+            <div className="p-10 space-y-10 animate-in fade-in duration-500">
+              <div className="space-y-1">
+                <h1 className="text-4xl font-bold tracking-tighter">Course Content</h1>
+                <p className="text-muted-foreground text-sm font-medium">{courseContent?.length || 0} posts shared</p>
+              </div>
+
+              <div className="max-w-4xl space-y-8 mx-auto lg:mx-0">
+                {courseContent && courseContent.length > 0 ? (
+                  courseContent.map((post) => (
+                    <Card key={post.id} className="bg-card border-border shadow-sm hover:shadow-md transition-shadow rounded-[2rem] overflow-hidden group">
+                      <CardContent className="p-10 space-y-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "p-3 rounded-2xl border transition-colors",
+                              post.contentType === 'announcement' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                              post.contentType === 'file' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                              "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            )}>
+                              {post.contentType === 'announcement' && <Megaphone className="h-5 w-5" />}
+                              {post.contentType === 'file' && <FileIcon className="h-5 w-5" />}
+                              {post.contentType === 'link' && <LinkIcon className="h-5 w-5" />}
+                            </div>
+                            <div>
+                              <div className={cn(
+                                "text-[10px] font-bold uppercase tracking-widest mb-1",
+                                post.contentType === 'announcement' ? "text-blue-500" :
+                                post.contentType === 'file' ? "text-orange-500" :
+                                "text-emerald-500"
+                              )}>
+                                {post.contentType}
+                              </div>
+                              <h3 className="text-xl font-bold tracking-tight">{post.title}</h3>
+                            </div>
+                          </div>
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                            {post.postedAt?.toDate().toLocaleDateString('en-CA')}
+                          </div>
+                        </div>
+
+                        <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl font-medium">
+                          {post.content}
+                        </p>
+
+                        {post.attachmentUrl && (
+                          <div className="flex items-center gap-3">
+                            <Button variant="outline" className="h-10 px-4 rounded-xl gap-2 font-bold text-xs" asChild>
+                              <a href={post.attachmentUrl} download={post.fileName || 'attachment'} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-3.5 w-3.5" /> 
+                                {post.contentType === 'file' ? (post.fileName || 'Download Resource') : 'Visit Link'}
+                              </a>
+                            </Button>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-6 border-t border-border">
+                          <div className="flex items-center gap-6">
+                            <LikeButton 
+                              postId={post.id} 
+                              courseId={courseId as string} 
+                              currentUserId={user.uid} 
+                              initialLikes={post.likesCount} 
+                            />
+                            <button 
+                              onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}
+                              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group/comment"
+                            >
+                              <MessageCircle className="h-4 w-4 group-hover/comment:fill-primary/20 transition-all" />
+                              <span className="text-[10px] font-bold">Comments</span>
+                            </button>
+                          </div>
+                          <div className="text-[10px] font-bold text-muted-foreground italic">
+                            by Professor
+                          </div>
+                        </div>
+
+                        {expandedPostId === post.id && (
+                          <div className="mt-6 pt-6 border-t border-border space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="flex gap-4">
+                              <Input 
+                                placeholder="Write a comment..." 
+                                className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                              />
+                              <Button 
+                                size="icon" 
+                                className="h-11 w-11 shrink-0 rounded-xl"
+                                onClick={() => handleAddComment(post.id)}
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <PostComments contentId={post.id} courseId={courseId as string} currentUserId={user.uid} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="py-24 text-center space-y-6 bg-card/50 border-2 border-dashed border-border rounded-[3rem]">
+                    <div className="bg-primary/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto ring-1 ring-primary/10">
+                      <Share2 className="h-10 w-10 text-primary/40" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-2xl font-bold tracking-tight">No content shared yet</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">Resources and announcements shared by your professor will appear here.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId: string, courseId: string, currentUserId: string, initialLikes: number }) {
+  const firestore = useFirestore();
+  const likeRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'courses', courseId, 'content', postId, 'likes', currentUserId);
+  }, [firestore, courseId, postId, currentUserId]);
+  
+  const { data: likeData } = useDoc(likeRef);
+  const isLiked = !!likeData;
+
+  const handleToggleLike = async () => {
+    if (!firestore) return;
+    const postRef = doc(firestore, 'courses', courseId, 'content', postId);
+    
+    if (isLiked) {
+      await deleteDoc(likeRef!);
+      await updateDoc(postRef, { likesCount: increment(-1) });
+    } else {
+      await setDoc(likeRef!, { uid: currentUserId, createdAt: serverTimestamp() });
+      await updateDoc(postRef, { likesCount: increment(1) });
+    }
+  };
+
+  return (
+    <button 
+      onClick={handleToggleLike}
+      className={cn(
+        "flex items-center gap-2 transition-colors group/like",
+        isLiked ? "text-rose-500" : "text-muted-foreground hover:text-rose-500"
+      )}
+    >
+      <Heart className={cn("h-4 w-4 transition-all", isLiked && "fill-rose-500")} />
+      <span className="text-[10px] font-bold">{initialLikes || 0}</span>
+    </button>
+  );
+}
+
+function PostComments({ contentId, courseId, currentUserId }: { contentId: string, courseId: string, currentUserId: string }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const commentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'courses', courseId, 'content', contentId, 'comments'),
+      orderBy('createdAt', 'desc')
+    );
+  }, [firestore, contentId, courseId]);
+
+  const { data: comments } = useCollection(commentsQuery);
+
+  const handleDeleteComment = (commentId: string) => {
+    if (!firestore) return;
+    const commentRef = doc(firestore, 'courses', courseId, 'content', contentId, 'comments', commentId);
+    deleteDocumentNonBlocking(commentRef);
+    toast({ title: "Comment deleted" });
+  };
+
+  return (
+    <div className="space-y-4">
+      {comments && comments.map((comment) => (
+        <div key={comment.id} className="flex gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+              {comment.authorName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div className="bg-accent/30 p-4 rounded-2xl rounded-tl-none flex-1 relative group/comment-item">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold text-foreground">{comment.authorName}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {comment.createdAt?.toDate().toLocaleDateString()}
+                </span>
+                {comment.authorId === currentUserId && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 opacity-0 group-hover/comment-item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeleteComment(comment.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{comment.text}</p>
+          </div>
+        </div>
+      ))}
+      {(!comments || comments.length === 0) && (
+        <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4">
+          No comments yet. Start the conversation.
+        </p>
+      )}
     </div>
   );
 }
