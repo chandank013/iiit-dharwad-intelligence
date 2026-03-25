@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,7 +13,8 @@ import {
   Loader2, 
   Search,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -29,7 +31,9 @@ import {
   getDocs, 
   addDoc, 
   serverTimestamp,
-  limit
+  limit,
+  collectionGroup,
+  orderBy
 } from 'firebase/firestore';
 import { 
   Dialog, 
@@ -54,6 +58,8 @@ export function StudentDashboard() {
   const [joinCode, setJoinCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [allAssignments, setAllAssignments] = useState<any[]>([]);
+  const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
 
   // Fetch student's enrollments
   const enrollmentsQuery = useMemoFirebase(() => {
@@ -71,13 +77,55 @@ export function StudentDashboard() {
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
 
+  // Manual fetch for assignments across enrolled courses since collectionGroup needs index
+  useEffect(() => {
+    async function fetchAssignments() {
+      if (!firestore || !enrollments || enrollments.length === 0) {
+        setAllAssignments([]);
+        return;
+      }
+
+      setIsAssignmentsLoading(true);
+      try {
+        const assignmentsPromises = enrollments.map(async (enrollment) => {
+          const q = query(
+            collection(firestore, 'courses', enrollment.courseId, 'assignments'),
+            orderBy('createdAt', 'desc'),
+            limit(5)
+          );
+          const snap = await getDocs(q);
+          const course = allCourses?.find(c => c.id === enrollment.courseId);
+          return snap.docs.map(doc => ({ 
+            ...doc.data(), 
+            id: doc.id, 
+            courseName: course?.name || 'Unknown Course',
+            courseCode: course?.code || ''
+          }));
+        });
+
+        const results = await Promise.all(assignmentsPromises);
+        const flattened = results.flat().sort((a, b) => {
+          const dateA = a.deadline ? new Date(a.deadline).getTime() : 0;
+          const dateB = b.deadline ? new Date(b.deadline).getTime() : 0;
+          return dateA - dateB;
+        });
+        setAllAssignments(flattened);
+      } catch (err) {
+        console.error("Error fetching assignments:", err);
+      } finally {
+        setIsAssignmentsLoading(false);
+      }
+    }
+
+    fetchAssignments();
+  }, [firestore, enrollments, allCourses]);
+
   const handleJoinCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!joinCode.trim() || !firestore || !user) return;
 
     setIsJoining(true);
     try {
-      // 1. Find the course with the matching join code
       const coursesRef = collection(firestore, 'courses');
       const q = query(coursesRef, where('joinCode', '==', joinCode.trim().toUpperCase()), limit(1));
       const querySnapshot = await getDocs(q);
@@ -95,7 +143,6 @@ export function StudentDashboard() {
       const courseDoc = querySnapshot.docs[0];
       const courseData = courseDoc.data();
 
-      // 2. Check if already enrolled
       const isAlreadyEnrolled = enrollments?.some(e => e.courseId === courseDoc.id);
       if (isAlreadyEnrolled) {
         toast({
@@ -108,11 +155,10 @@ export function StudentDashboard() {
         return;
       }
 
-      // 3. Create enrollment
       const enrollmentData = {
         studentId: user.uid,
         courseId: courseDoc.id,
-        professorId: courseData.professorId, // denormalized for security rules
+        professorId: courseData.professorId,
         enrollmentDate: serverTimestamp(),
         isArchived: false,
         createdAt: serverTimestamp(),
@@ -129,9 +175,6 @@ export function StudentDashboard() {
       setJoinCode('');
       setIsDialogOpen(false);
     } catch (error: any) {
-      console.error("Error joining course:", error);
-      
-      // Only emit permission error if it's actually a permission-denied error from Firebase
       if (error.code === 'permission-denied') {
         const permissionError = new FirestorePermissionError({
           path: 'course_enrollments',
@@ -151,7 +194,6 @@ export function StudentDashboard() {
     }
   };
 
-  // Map enrolled course IDs to actual course objects
   const myCourses = allCourses?.filter(course => 
     enrollments?.some(enrollment => enrollment.courseId === course.id)
   ) || [];
@@ -225,19 +267,19 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">Good</div>
+            <div className="text-4xl font-bold">{myCourses.length > 0 ? 'Good' : 'N/A'}</div>
             <p className="text-xs opacity-75 mt-1">Based on {enrollments?.length || 0} enrolled courses</p>
           </CardContent>
         </Card>
         <Card className="shadow-sm border-none bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Active Submissions
+              <Clock className="h-4 w-4" /> Active Assignments
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">No pending deadlines today</p>
+            <div className="text-3xl font-bold">{allAssignments.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Pending deadlines across courses</p>
           </CardContent>
         </Card>
         <Card className="shadow-sm border-none bg-white">
@@ -255,9 +297,11 @@ export function StudentDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-xl font-headline font-semibold flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" /> My Enrolled Courses
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-headline font-semibold flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" /> My Enrolled Courses
+            </h2>
+          </div>
           {myCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {myCourses.map((course) => (
@@ -295,21 +339,61 @@ export function StudentDashboard() {
         </div>
 
         <div className="space-y-6">
-          <h2 className="text-xl font-headline font-semibold">Activity Feed</h2>
-          <Card className="border-none shadow-sm bg-white">
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex gap-4 items-start p-3 rounded-lg border border-dashed border-primary/20 bg-primary/5">
-                <AlertCircle className="h-5 w-5 text-primary shrink-0" />
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold leading-tight">Welcome to AIS</p>
-                  <p className="text-xs text-muted-foreground">Your academic dashboard is now active. Explore your courses and track your progress.</p>
-                </div>
+          <h2 className="text-xl font-headline font-semibold flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" /> Active Assignments
+          </h2>
+          <div className="space-y-4">
+            {isAssignmentsLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
               </div>
-              <div className="text-center py-4">
-                <p className="text-xs text-muted-foreground italic">No other recent activity.</p>
-              </div>
-            </CardContent>
-          </Card>
+            ) : allAssignments.length > 0 ? (
+              allAssignments.map((assignment) => (
+                <Card key={assignment.id} className="border-none shadow-sm bg-white hover:bg-accent/5 transition-colors">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/20 text-primary">
+                          {assignment.courseCode}
+                        </Badge>
+                        <h4 className="text-sm font-bold leading-none">{assignment.title}</h4>
+                      </div>
+                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-none text-[10px]">
+                        Active
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-medium">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> 
+                        {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'No Deadline'}
+                      </span>
+                      <span className="flex items-center gap-1 uppercase">
+                        <BookOpen className="h-3 w-3" />
+                        {assignment.submissionType}
+                      </span>
+                    </div>
+                    <Link href={`/courses/${assignment.courseId}`}>
+                      <Button variant="link" className="p-0 h-auto text-[10px] font-bold text-primary">
+                        View Assignment Portal
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="border-none shadow-sm bg-white">
+                <CardContent className="pt-6 space-y-4 text-center">
+                  <div className="flex gap-4 items-start p-3 rounded-lg border border-dashed border-primary/20 bg-primary/5">
+                    <AlertCircle className="h-5 w-5 text-primary shrink-0" />
+                    <div className="text-left space-y-1">
+                      <p className="text-sm font-semibold leading-tight">No Active Assignments</p>
+                      <p className="text-xs text-muted-foreground">Check back later or join a course to see assignments.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

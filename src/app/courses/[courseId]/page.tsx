@@ -537,14 +537,14 @@ export default function CoursePortalPage() {
         {/* Assignment Details Dialog */}
         <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
           <DialogContent className="sm:max-w-[600px] rounded-[2rem] overflow-hidden p-0 border-none shadow-2xl">
-            <div className="bg-primary/5 p-8 border-b border-border">
+            <DialogHeader className="bg-primary/5 p-8 border-b border-border text-left">
               <div className="flex items-center gap-4 mb-4">
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
                   <BookOpen className="h-6 w-6" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight leading-none">{selectedAssignment?.title}</h2>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Assignment ID: {selectedAssignment?.id}</p>
+                  <DialogTitle className="text-2xl font-bold tracking-tight leading-none">{selectedAssignment?.title}</DialogTitle>
+                  <DialogDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Assignment ID: {selectedAssignment?.id}</DialogDescription>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -563,7 +563,7 @@ export default function CoursePortalPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </DialogHeader>
             <div className="p-8 space-y-6">
               <div>
                 <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Description & Instructions</Label>
