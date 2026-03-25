@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -18,7 +17,9 @@ export default function CoursesPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  // Ensure query is only created when user is authenticated to avoid auth: null errors
+  const isStudent = user?.email?.startsWith('24bds');
+
+  // Ensure query is only created when user is authenticated
   const coursesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, "courses"));
@@ -55,7 +56,7 @@ export default function CoursesPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search courses..." className="pl-9" />
               </div>
-              {user.email?.endsWith('@iiitdwd.ac.in') && !user.email?.startsWith('24bds') && (
+              {!isStudent && (
                 <Link href="/courses/create">
                   <Button className="gap-2 shadow-md">
                     <Plus className="h-4 w-4" /> Create Course
@@ -85,7 +86,10 @@ export default function CoursesPage() {
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                       <span>Semester: {course.semester}</span>
-                      <span className="font-mono bg-muted px-2 py-0.5 rounded">ID: {course.joinCode}</span>
+                      {/* Hide join code from students */}
+                      {!isStudent && (
+                        <span className="font-mono bg-muted px-2 py-0.5 rounded">ID: {course.joinCode}</span>
+                      )}
                     </div>
                     <Link href={`/courses/${course.id}`}>
                       <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
@@ -103,12 +107,12 @@ export default function CoursesPage() {
                 <div className="text-center">
                   <h3 className="text-lg font-bold">No courses found</h3>
                   <p className="text-muted-foreground max-w-sm">
-                    {user.email?.startsWith('24bds') 
+                    {isStudent 
                       ? "You are not enrolled in any courses yet. Use a join code provided by your professor."
                       : "Start by creating your first academic course for your students."}
                   </p>
                 </div>
-                {!user.email?.startsWith('24bds') && (
+                {!isStudent && (
                   <Link href="/courses/create">
                     <Button className="mt-2">Create Course Now</Button>
                   </Link>
