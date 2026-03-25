@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,51 +46,59 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
+      let userCredential;
       if (isSignUp) {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const uid = userCredential.user.uid;
-        
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
         if (name) {
           await updateProfile(userCredential.user, { displayName: name });
         }
+      } else {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      }
 
-        const isStudent = email.startsWith('24bds');
-        const role = isStudent ? 'Student' : 'Professor';
-        const roleCollection = isStudent ? 'student_roles' : 'professor_roles';
+      const firebaseUser = userCredential.user;
+      const uid = firebaseUser.uid;
+      const isStudent = email.startsWith('24bds');
+      const role = isStudent ? 'Student' : 'Professor';
+      const roleCollection = isStudent ? 'student_roles' : 'professor_roles';
 
-        // Prepare User Profile Data
-        const userData = {
-          id: uid,
-          firstName: name.split(' ')[0] || email.split('@')[0],
-          lastName: name.split(' ').slice(1).join(' ') || '',
-          email: email,
-          role: role,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        };
+      // Idempotent User Profile Setup
+      const userRef = doc(firestore, 'users', uid);
+      const userSnap = await getDoc(userRef);
+      
+      const userData = {
+        id: uid,
+        firstName: name.split(' ')[0] || firebaseUser.displayName?.split(' ')[0] || email.split('@')[0],
+        lastName: name.split(' ').slice(1).join(' ') || firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+        email: email,
+        role: role,
+        updatedAt: serverTimestamp(),
+      };
 
-        // Create User Profile in Firestore
-        setDoc(doc(firestore, 'users', uid), userData);
+      if (!userSnap.exists()) {
+        await setDoc(userRef, { ...userData, createdAt: serverTimestamp() });
+      } else {
+        await setDoc(userRef, userData, { merge: true });
+      }
 
-        // Create Sentinel Role Document for Security Rules
-        setDoc(doc(firestore, roleCollection, uid), {
+      // Ensure Sentinel Role Document for Security Rules exists
+      const roleRef = doc(firestore, roleCollection, uid);
+      const roleSnap = await getDoc(roleRef);
+      
+      if (!roleSnap.exists()) {
+        await setDoc(roleRef, {
           id: uid,
           email: email,
           role: role,
           createdAt: serverTimestamp()
         });
-
-        toast({
-          title: "Account Created",
-          description: `Welcome to IIIT Dharwad AIS, ${name || email.split('@')[0]}.`,
-        });
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({
-          title: "Login Successful",
-          description: `Welcome back to IIIT Dharwad AIS.`,
-        });
       }
+
+      toast({
+        title: isSignUp ? "Account Created" : "Login Successful",
+        description: `Welcome to IIIT Dharwad AIS.`,
+      });
+      
       router.push('/');
     } catch (error: any) {
       console.error(error);
