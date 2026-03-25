@@ -171,11 +171,7 @@ export default function CoursePortalPage() {
     setIsPostingContent(true);
     let finalAttachmentUrl = contentFormData.url;
 
-    // In a production environment with Firebase Storage, we would upload here.
-    // For this prototype, we process the file name and simulated URL.
     if (contentFormData.type === 'file' && selectedFile) {
-      // Logic for prototype: larger files are accepted conceptually.
-      // In a real implementation, this would be a multipart upload to Firebase Storage.
       finalAttachmentUrl = URL.createObjectURL(selectedFile);
     }
 

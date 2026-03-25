@@ -2,25 +2,15 @@
 "use client";
 
 import Link from 'next/link';
-import { useUser, useAuth } from '@/firebase';
-import { Button } from '@/components/ui/button';
-import { GraduationCap, LayoutDashboard, LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
+import { GraduationCap, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-  const router = useRouter();
 
   if (isUserLoading || !user) return null;
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/login');
-  };
 
   const isStudent = user.email?.startsWith('24bds');
   const displayName = user.displayName || user.email?.split('@')[0] || 'User';
@@ -47,7 +37,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 pr-4 border-r border-border">
+          <div className="flex items-center gap-3 pr-4">
             <Avatar className="h-8 w-8 shadow-sm">
               <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`} />
               <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
@@ -59,15 +49,6 @@ export function Navbar() {
           
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-destructive gap-2 h-9"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline font-bold text-xs uppercase tracking-wider">Log out</span>
-            </Button>
           </div>
         </div>
       </div>
