@@ -116,8 +116,6 @@ export default function StudentCoursePage() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
     { id: 'submissions', label: 'My Submissions', icon: FileCheck },
-    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-    { id: 'portfolio', label: 'Portfolio', icon: UserIcon },
     { id: 'content', label: 'Content', icon: FolderRoot },
   ];
 
