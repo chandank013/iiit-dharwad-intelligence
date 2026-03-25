@@ -1,0 +1,1473 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the IIIT Dharwad AIS platform, capable of being a Professor or a Student. Authentication handled externally.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system (e.g., 'Professor', 'Student')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Course": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Course",
+      "type": "object",
+      "description": "Represents an academic course offered on the platform, managed by a professor, and enrolled by students.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Course entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the course."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the course content and objectives."
+        },
+        "professorId": {
+          "type": "string",
+          "description": "Reference to the User entity who is the professor teaching this course. (Relationship: User 1:N Course)"
+        },
+        "joinCode": {
+          "type": "string",
+          "description": "An auto-generated unique code that students can use to enroll in the course."
+        },
+        "semester": {
+          "type": "string",
+          "description": "The academic semester in which the course is offered (e.g., 'Fall 2023')."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates whether the course is currently active, open for enrollment, or accepting submissions."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the course was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the course was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "professorId",
+        "joinCode",
+        "semester",
+        "isActive",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CourseEnrollment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CourseEnrollment",
+      "type": "object",
+      "description": "Represents a student's enrollment in a specific course.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CourseEnrollment entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the User entity who is the student enrolled in the course. (Relationship: User 1:N CourseEnrollment)"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Reference to the Course entity the student is enrolled in. (Relationship: Course 1:N CourseEnrollment)"
+        },
+        "enrollmentDate": {
+          "type": "string",
+          "description": "Timestamp when the student enrolled in the course.",
+          "format": "date-time"
+        },
+        "isArchived": {
+          "type": "boolean",
+          "description": "Indicates if the course enrollment is archived, typically after the course concludes."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the enrollment record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the enrollment record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "courseId",
+        "enrollmentDate",
+        "isArchived",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Assignment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Assignment",
+      "type": "object",
+      "description": "Represents an academic assignment created by a professor within a course.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Assignment entity."
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Reference to the Course entity this assignment belongs to. (Relationship: Course 1:N Assignment)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the assignment."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the assignment, including instructions and requirements."
+        },
+        "deadline": {
+          "type": "string",
+          "description": "The submission deadline for the assignment.",
+          "format": "date-time"
+        },
+        "submissionType": {
+          "type": "string",
+          "description": "The allowed format(s) for submission (e.g., 'text', 'file', 'zip', 'github', 'drive')."
+        },
+        "lateSubmissionPolicy": {
+          "type": "string",
+          "description": "Policy for late submissions (e.g., 'none', 'deduction', 'allow')."
+        },
+        "allowResubmissions": {
+          "type": "boolean",
+          "description": "Indicates whether students are allowed to resubmit the assignment."
+        },
+        "maxResubmissions": {
+          "type": "number",
+          "description": "The maximum number of times a student can resubmit the assignment, if allowed."
+        },
+        "enableLeaderboard": {
+          "type": "boolean",
+          "description": "Indicates whether a leaderboard for this assignment should be enabled."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the assignment was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the assignment was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "courseId",
+        "title",
+        "description",
+        "deadline",
+        "submissionType",
+        "lateSubmissionPolicy",
+        "allowResubmissions",
+        "enableLeaderboard",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Rubric": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rubric",
+      "type": "object",
+      "description": "Defines the grading criteria for an assignment, generated by AI and refined by professors.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Rubric entity."
+        },
+        "assignmentId": {
+          "type": "string",
+          "description": "Reference to the Assignment entity this rubric is for. (Relationship: Assignment 1:1 Rubric)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A descriptive name for the rubric (e.g., 'AI-Generated Rubric for Essay 1')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A general description of the rubric's purpose or scope."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the rubric was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the rubric was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "assignmentId",
+        "name",
+        "description",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RubricCriterion": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RubricCriterion",
+      "type": "object",
+      "description": "A single criterion within a rubric, defining a specific aspect for evaluation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RubricCriterion entity."
+        },
+        "rubricId": {
+          "type": "string",
+          "description": "Reference to the Rubric entity this criterion belongs to. (Relationship: Rubric 1:N RubricCriterion)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the specific evaluation criterion (e.g., 'Clarity of Argument')."
+        },
+        "maxScore": {
+          "type": "number",
+          "description": "The maximum score attainable for this criterion."
+        },
+        "order": {
+          "type": "number",
+          "description": "The display order of this criterion within its rubric."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the rubric criterion was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the rubric criterion was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "rubricId",
+        "description",
+        "maxScore",
+        "order",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ProjectGroup": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProjectGroup",
+      "type": "object",
+      "description": "Represents a group of students collaborating on a group project for a specific assignment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProjectGroup entity."
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Reference to the Course entity the group project is associated with. (Relationship: Course 1:N ProjectGroup)"
+        },
+        "assignmentId": {
+          "type": "string",
+          "description": "Reference to the Assignment entity this group is formed for. (Relationship: Assignment 1:N ProjectGroup)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the project group (e.g., 'Team Alpha')."
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to User entities who are members of this group. (Relationship: User N:N ProjectGroup)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the project group was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the project group was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "courseId",
+        "assignmentId",
+        "name",
+        "memberIds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Submission": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Submission",
+      "type": "object",
+      "description": "Represents a student's (or group's) attempt to submit an assignment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Submission entity."
+        },
+        "assignmentId": {
+          "type": "string",
+          "description": "Reference to the Assignment entity this submission is for. (Relationship: Assignment 1:N Submission)"
+        },
+        "submitterId": {
+          "type": "string",
+          "description": "Reference to the User entity who submitted the assignment (individual or lead for group). (Relationship: User 1:N Submission)"
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Optional reference to the ProjectGroup entity if this is a group submission. (Relationship: ProjectGroup 1:N Submission)"
+        },
+        "submissionNumber": {
+          "type": "number",
+          "description": "The sequential number of this submission for a given assignment and student/group (e.g., 1 for first submission, 2 for first resubmission)."
+        },
+        "submissionType": {
+          "type": "string",
+          "description": "The format of the submitted content (e.g., 'text', 'file', 'zip', 'github', 'drive')."
+        },
+        "content": {
+          "type": "string",
+          "description": "The actual submitted content (e.g., text, file path/URL, GitHub repository URL, Google Drive link)."
+        },
+        "submittedAt": {
+          "type": "string",
+          "description": "Timestamp when the submission was made.",
+          "format": "date-time"
+        },
+        "isLate": {
+          "type": "boolean",
+          "description": "Indicates whether the submission was made after the assignment deadline."
+        },
+        "aiQualityWarning": {
+          "type": "string",
+          "description": "An AI-generated warning or feedback regarding submission quality prior to final submission."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the submission record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the submission record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "assignmentId",
+        "submitterId",
+        "submissionNumber",
+        "submissionType",
+        "content",
+        "submittedAt",
+        "isLate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Evaluation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Evaluation",
+      "type": "object",
+      "description": "Stores the AI-driven assessment results and personalized feedback for a specific student or group submission.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Evaluation entity."
+        },
+        "submissionId": {
+          "type": "string",
+          "description": "Reference to the Submission entity that this evaluation is for. (Relationship: Submission 1:1 Evaluation)"
+        },
+        "totalScore": {
+          "type": "number",
+          "description": "The overall score for the submission, as initially determined by AI."
+        },
+        "professorOverrideScore": {
+          "type": "number",
+          "description": "The score set by the professor, if they override the AI-generated total score."
+        },
+        "aiConfidenceScore": {
+          "type": "number",
+          "description": "A score (0-1) indicating the AI's confidence in its evaluation."
+        },
+        "writtenFeedback": {
+          "type": "string",
+          "description": "AI-generated comprehensive written feedback for the submission."
+        },
+        "weakAreasDetected": {
+          "type": "array",
+          "description": "A list of identified weak areas in the submission, detected by AI.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "plagiarismFlagged": {
+          "type": "boolean",
+          "description": "Indicates whether plagiarism was detected in the submission."
+        },
+        "plagiarismDetails": {
+          "type": "string",
+          "description": "Details about the detected plagiarism, if any."
+        },
+        "gitHubAnalysis": {
+          "type": "string",
+          "description": "Detailed AI analysis for GitHub repository submissions (e.g., code quality, commit history)."
+        },
+        "resubmissionComparison": {
+          "type": "string",
+          "description": "AI analysis comparing the current submission with previous resubmissions, highlighting improvements or regressions."
+        },
+        "learningResourceIds": {
+          "type": "array",
+          "description": "References to LearningResource entities suggested by AI based on identified weak areas. (Relationship: Evaluation N:N LearningResource)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "groupEvaluationData": {
+          "type": "string",
+          "description": "JSON string containing group-specific evaluation data, such as commit history analysis, cross-checked contribution reports, and flagged conflicts for professor review."
+        },
+        "evaluatedAt": {
+          "type": "string",
+          "description": "Timestamp when the AI evaluation was completed.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the evaluation record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the evaluation record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "submissionId",
+        "totalScore",
+        "aiConfidenceScore",
+        "writtenFeedback",
+        "weakAreasDetected",
+        "plagiarismFlagged",
+        "evaluatedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EvaluationCriterionScore": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EvaluationCriterionScore",
+      "type": "object",
+      "description": "Stores the individual score for each rubric criterion as part of an overall evaluation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the EvaluationCriterionScore entity."
+        },
+        "evaluationId": {
+          "type": "string",
+          "description": "Reference to the Evaluation entity this criterion score belongs to. (Relationship: Evaluation 1:N EvaluationCriterionScore)"
+        },
+        "rubricCriterionId": {
+          "type": "string",
+          "description": "Reference to the RubricCriterion entity that this score corresponds to. (Relationship: RubricCriterion 1:N EvaluationCriterionScore)"
+        },
+        "score": {
+          "type": "number",
+          "description": "The score achieved for this specific rubric criterion."
+        },
+        "feedback": {
+          "type": "string",
+          "description": "Specific feedback pertaining to this rubric criterion."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the criterion score record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the criterion score record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "evaluationId",
+        "rubricCriterionId",
+        "score",
+        "feedback",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "IndividualGroupMemberScore": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "IndividualGroupMemberScore",
+      "type": "object",
+      "description": "Stores the individual score for a student participating in a group project, as determined by AI and/or professor, based on the group's overall evaluation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the IndividualGroupMemberScore entity."
+        },
+        "evaluationId": {
+          "type": "string",
+          "description": "Reference to the Evaluation entity for the group submission. (Relationship: Evaluation 1:N IndividualGroupMemberScore)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the User entity for the specific student in the group. (Relationship: User 1:N IndividualGroupMemberScore)"
+        },
+        "score": {
+          "type": "number",
+          "description": "The individual score assigned to this student for the group project."
+        },
+        "feedback": {
+          "type": "string",
+          "description": "Specific feedback for the individual student's contribution to the group project."
+        },
+        "isConflicted": {
+          "type": "boolean",
+          "description": "Indicates if AI flagged a conflict regarding this student's contribution or score, requiring professor review."
+        },
+        "professorOverrideScore": {
+          "type": "number",
+          "description": "The individual score set by the professor, if they override the AI-generated individual score."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the individual score record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the individual score record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "evaluationId",
+        "studentId",
+        "score",
+        "feedback",
+        "isConflicted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "GroupContributionReport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GroupContributionReport",
+      "type": "object",
+      "description": "Report submitted by students or professor regarding individual contributions to a group project.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GroupContributionReport entity."
+        },
+        "groupId": {
+          "type": "string",
+          "description": "Reference to the ProjectGroup entity this report is for. (Relationship: ProjectGroup 1:N GroupContributionReport)"
+        },
+        "submissionId": {
+          "type": "string",
+          "description": "Reference to the Submission entity of the group project this report is associated with. (Relationship: Submission 1:N GroupContributionReport)"
+        },
+        "reportingStudentId": {
+          "type": "string",
+          "description": "Reference to the User entity who submitted this contribution report. (Relationship: User 1:N GroupContributionReport)"
+        },
+        "reportedStudentId": {
+          "type": "string",
+          "description": "Reference to the User entity whose contribution is being reported on. (Relationship: User 1:N GroupContributionReport)"
+        },
+        "contributionDetails": {
+          "type": "string",
+          "description": "Narrative description of the reported student's contribution to the project."
+        },
+        "contributionScore": {
+          "type": "number",
+          "description": "A score or rating reflecting the reported student's contribution, often from self/peer assessment."
+        },
+        "submittedAt": {
+          "type": "string",
+          "description": "Timestamp when the contribution report was submitted.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the contribution report record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the contribution report record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "groupId",
+        "submissionId",
+        "reportingStudentId",
+        "reportedStudentId",
+        "contributionDetails",
+        "contributionScore",
+        "submittedAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LearningResource": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LearningResource",
+      "type": "object",
+      "description": "Represents a suggested learning resource for students, often provided by AI based on weak areas.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LearningResource entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the learning resource."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what the resource covers."
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL to access the learning resource.",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of resource (e.g., 'article', 'video', 'tutorial', 'documentation')."
+        },
+        "keywords": {
+          "type": "array",
+          "description": "Keywords or tags associated with the resource for categorization and search.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the learning resource was added.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the learning resource was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "url",
+        "type",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CourseContent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CourseContent",
+      "type": "object",
+      "description": "Represents various types of content shared by a professor within a course, including announcements, files, links, and embedded videos.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CourseContent entity."
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Reference to the Course entity this content belongs to. (Relationship: Course 1:N CourseContent)"
+        },
+        "professorId": {
+          "type": "string",
+          "description": "Reference to the User entity who posted this content. (Relationship: User 1:N CourseContent)"
+        },
+        "contentType": {
+          "type": "string",
+          "description": "The type of content (e.g., 'announcement', 'file', 'link', 'video')."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the content item."
+        },
+        "content": {
+          "type": "string",
+          "description": "The main content (e.g., text for announcement, URL for link/video, file reference)."
+        },
+        "attachmentUrl": {
+          "type": "string",
+          "description": "Optional URL for an attached file, if applicable (e.g., PDF, document, ZIP).",
+          "format": "uri"
+        },
+        "postedAt": {
+          "type": "string",
+          "description": "Timestamp when the content was posted.",
+          "format": "date-time"
+        },
+        "isPinned": {
+          "type": "boolean",
+          "description": "Indicates if the content (e.g., announcement) is pinned for prominent display."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the content record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the content record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "courseId",
+        "professorId",
+        "contentType",
+        "title",
+        "content",
+        "postedAt",
+        "isPinned",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PrivateMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PrivateMessage",
+      "type": "object",
+      "description": "Represents a private message sent between a student and a professor within the system, potentially linked to a course.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PrivateMessage entity."
+        },
+        "courseId": {
+          "type": "string",
+          "description": "Reference to the Course entity this message is associated with, if applicable. (Relationship: Course 1:N PrivateMessage)"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to the User entity who sent the message. (Relationship: User 1:N PrivateMessage)"
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "Reference to the User entity who is the recipient of the message. (Relationship: User 1:N PrivateMessage)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject line of the private message."
+        },
+        "body": {
+          "type": "string",
+          "description": "The main content of the private message."
+        },
+        "sentAt": {
+          "type": "string",
+          "description": "Timestamp when the message was sent.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates whether the recipient has read the message."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the private message record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the private message record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "receiverId",
+        "subject",
+        "body",
+        "sentAt",
+        "isRead",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AuditLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AuditLog",
+      "type": "object",
+      "description": "Records significant actions and changes within the system for audit purposes, especially professor overrides.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AuditLog entity."
+        },
+        "actorId": {
+          "type": "string",
+          "description": "Reference to the User entity who performed the action. (Relationship: User 1:N AuditLog)"
+        },
+        "actionType": {
+          "type": "string",
+          "description": "The type of action performed (e.g., 'evaluation_override', 'course_created', 'assignment_deleted')."
+        },
+        "entityType": {
+          "type": "string",
+          "description": "The type of entity that was affected by the action (e.g., 'Evaluation', 'Course', 'Assignment')."
+        },
+        "entityId": {
+          "type": "string",
+          "description": "The unique identifier of the entity that was affected."
+        },
+        "oldValue": {
+          "type": "string",
+          "description": "The previous state or value of the affected data, represented as a JSON string."
+        },
+        "newValue": {
+          "type": "string",
+          "description": "The new state or value of the affected data, represented as a JSON string."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the audit event occurred.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "A human-readable description of the action and its context."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the audit log record was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "actorId",
+        "actionType",
+        "entityType",
+        "entityId",
+        "timestamp",
+        "description",
+        "createdAt"
+      ]
+    },
+    "StudentPortfolio": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudentPortfolio",
+      "type": "object",
+      "description": "An automatically generated personal portfolio for a student, displaying their academic progress, assignments, and scores.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudentPortfolio entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the User entity this portfolio belongs to. (Relationship: User 1:1 StudentPortfolio)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the student's portfolio (e.g., 'John Doe's Academic Portfolio')."
+        },
+        "shareableLink": {
+          "type": "string",
+          "description": "A publicly accessible URL for sharing the student's portfolio.",
+          "format": "uri"
+        },
+        "generatedAt": {
+          "type": "string",
+          "description": "Timestamp when the portfolio was initially generated.",
+          "format": "date-time"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "Timestamp when the portfolio content was last automatically updated.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the portfolio record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the portfolio record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "title",
+        "shareableLink",
+        "generatedAt",
+        "lastUpdated",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatbotInteraction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatbotInteraction",
+      "type": "object",
+      "description": "Stores interactions with the AI Chatbot Assistant for context, history, and analytics.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatbotInteraction entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User entity who interacted with the chatbot. (Relationship: User 1:N ChatbotInteraction)"
+        },
+        "query": {
+          "type": "string",
+          "description": "The user's question or prompt submitted to the chatbot."
+        },
+        "response": {
+          "type": "string",
+          "description": "The chatbot's generated response to the user's query."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the interaction occurred.",
+          "format": "date-time"
+        },
+        "contextData": {
+          "type": "string",
+          "description": "JSON string containing relevant contextual data used by the chatbot during this interaction (e.g., 'courseId', 'assignmentId')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the chatbot interaction record was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "query",
+        "response",
+        "timestamp",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Access is typically restricted to the user themselves (read/write) or authorized administrators/professors (read-only for specific fields). The 'role' field is mirrored in dedicated role collections for atomic access control."
+        }
+      },
+      {
+        "path": "/professor_roles/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Sentinel collection. The existence of a document here (even empty) grants 'professor' role permissions to the '{userId}'. Used for atomic DBAC checks.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user with the professor role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/student_roles/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Sentinel collection. The existence of a document here (even empty) grants 'student' role permissions to the '{userId}'. Used for atomic DBAC checks.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user with the student role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}",
+        "definition": {
+          "entityName": "Course",
+          "schema": {
+            "$ref": "#/backend/entities/Course"
+          },
+          "description": "Top-level collection for academic courses. Includes denormalized 'professorId' for authorization independence and direct ownership checks.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the course."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/course_enrollments/{enrollmentId}",
+        "definition": {
+          "entityName": "CourseEnrollment",
+          "schema": {
+            "$ref": "#/backend/entities/CourseEnrollment"
+          },
+          "description": "Top-level collection for student course enrollments. Includes denormalized 'professorId' (from Course) and 'studentId' for authorization independence, allowing direct checks for both professors and students.",
+          "params": [
+            {
+              "name": "enrollmentId",
+              "description": "The unique ID of the course enrollment record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}",
+        "definition": {
+          "entityName": "Assignment",
+          "schema": {
+            "$ref": "#/backend/entities/Assignment"
+          },
+          "description": "Assignments within a specific course. Includes denormalized 'professorId' (from Course) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the assignment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/rubrics/{rubricId}",
+        "definition": {
+          "entityName": "Rubric",
+          "schema": {
+            "$ref": "#/backend/entities/Rubric"
+          },
+          "description": "Rubrics associated with a specific assignment. Includes denormalized 'professorId' (from Course) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "rubricId",
+              "description": "The unique ID of the rubric."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/rubrics/{rubricId}/criteria/{criterionId}",
+        "definition": {
+          "entityName": "RubricCriterion",
+          "schema": {
+            "$ref": "#/backend/entities/RubricCriterion"
+          },
+          "description": "Individual criteria within a rubric. Includes denormalized 'professorId' (from Course) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "rubricId",
+              "description": "The unique ID of the parent rubric."
+            },
+            {
+              "name": "criterionId",
+              "description": "The unique ID of the rubric criterion."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/project_groups/{groupId}",
+        "definition": {
+          "entityName": "ProjectGroup",
+          "schema": {
+            "$ref": "#/backend/entities/ProjectGroup"
+          },
+          "description": "Project groups formed for assignments within a course. Includes 'memberIds' array for student access and denormalized 'professorId' (from Course) for professor access and authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "groupId",
+              "description": "The unique ID of the project group."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/submissions/{submissionId}",
+        "definition": {
+          "entityName": "Submission",
+          "schema": {
+            "$ref": "#/backend/entities/Submission"
+          },
+          "description": "Submissions for assignments. Includes denormalized 'professorId' (from Course) and 'submitterId' for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique ID of the submission."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/submissions/{submissionId}/evaluations/{evaluationId}",
+        "definition": {
+          "entityName": "Evaluation",
+          "schema": {
+            "$ref": "#/backend/entities/Evaluation"
+          },
+          "description": "AI evaluations for submissions. Includes denormalized 'professorId' (from Course) and 'submitterId' (from Submission) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique ID of the parent submission."
+            },
+            {
+              "name": "evaluationId",
+              "description": "The unique ID of the evaluation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/submissions/{submissionId}/evaluations/{evaluationId}/criterion_scores/{scoreId}",
+        "definition": {
+          "entityName": "EvaluationCriterionScore",
+          "schema": {
+            "$ref": "#/backend/entities/EvaluationCriterionScore"
+          },
+          "description": "Individual scores per rubric criterion within an evaluation. Includes denormalized 'professorId' (from Course) and 'submitterId' (from Submission) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique ID of the parent submission."
+            },
+            {
+              "name": "evaluationId",
+              "description": "The unique ID of the parent evaluation."
+            },
+            {
+              "name": "scoreId",
+              "description": "The unique ID for the criterion score."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/submissions/{submissionId}/evaluations/{evaluationId}/group_member_scores/{individualScoreId}",
+        "definition": {
+          "entityName": "IndividualGroupMemberScore",
+          "schema": {
+            "$ref": "#/backend/entities/IndividualGroupMemberScore"
+          },
+          "description": "Individual scores for group members within a group evaluation. Includes denormalized 'professorId' (from Course), 'submitterId' (from Submission for the group), and 'studentId' (the individual student) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique ID of the parent group submission."
+            },
+            {
+              "name": "evaluationId",
+              "description": "The unique ID of the parent evaluation."
+            },
+            {
+              "name": "individualScoreId",
+              "description": "The unique ID for the individual group member score."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/assignments/{assignmentId}/submissions/{submissionId}/contribution_reports/{reportId}",
+        "definition": {
+          "entityName": "GroupContributionReport",
+          "schema": {
+            "$ref": "#/backend/entities/GroupContributionReport"
+          },
+          "description": "Contribution reports for group projects. Includes denormalized 'professorId' (from Course), 'groupId', 'reportingStudentId', and 'reportedStudentId' for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "assignmentId",
+              "description": "The unique ID of the parent assignment."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique ID of the parent group submission."
+            },
+            {
+              "name": "reportId",
+              "description": "The unique ID for the group contribution report."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/learning_resources/{resourceId}",
+        "definition": {
+          "entityName": "LearningResource",
+          "schema": {
+            "$ref": "#/backend/entities/LearningResource"
+          },
+          "description": "Global collection for AI-suggested learning resources. Generally readable by all authenticated users.",
+          "params": [
+            {
+              "name": "resourceId",
+              "description": "The unique ID of the learning resource."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/courses/{courseId}/content/{contentId}",
+        "definition": {
+          "entityName": "CourseContent",
+          "schema": {
+            "$ref": "#/backend/entities/CourseContent"
+          },
+          "description": "Various content types (announcements, files, links) posted within a course by professors. Includes denormalized 'professorId' (from Course) for authorization independence.",
+          "params": [
+            {
+              "name": "courseId",
+              "description": "The unique ID of the parent course."
+            },
+            {
+              "name": "contentId",
+              "description": "The unique ID of the course content item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/private_messages/{messageId}",
+        "definition": {
+          "entityName": "PrivateMessage",
+          "schema": {
+            "$ref": "#/backend/entities/PrivateMessage"
+          },
+          "description": "Private messages between users. Includes 'senderId' and 'receiverId' for direct authorization checks by either party.",
+          "params": [
+            {
+              "name": "messageId",
+              "description": "The unique ID of the private message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/audit_logs/{logId}",
+        "definition": {
+          "entityName": "AuditLog",
+          "schema": {
+            "$ref": "#/backend/entities/AuditLog"
+          },
+          "description": "Records significant actions and overrides. Primarily accessible by professors for auditing purposes. Includes 'actorId' for logging.",
+          "params": [
+            {
+              "name": "logId",
+              "description": "The unique ID of the audit log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/portfolio/{portfolioId}",
+        "definition": {
+          "entityName": "StudentPortfolio",
+          "schema": {
+            "$ref": "#/backend/entities/StudentPortfolio"
+          },
+          "description": "Student's personal academic portfolio, owned by the student. Access is restricted to the student and potentially professors for courses they teach.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the student user."
+            },
+            {
+              "name": "portfolioId",
+              "description": "The unique ID of the student's portfolio."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/chatbot_interactions/{interactionId}",
+        "definition": {
+          "entityName": "ChatbotInteraction",
+          "schema": {
+            "$ref": "#/backend/entities/ChatbotInteraction"
+          },
+          "description": "Records interactions with the AI Chatbot Assistant, owned by the user who interacted. Access is restricted to the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who interacted with the chatbot."
+            },
+            {
+              "name": "interactionId",
+              "description": "The unique ID of the chatbot interaction."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure prioritizes secure, scalable, and debuggable authorization by strictly adhering to the core design principles. The primary strategy for Authorization Independence is **extensive denormalization of authorization context**. Specifically, for any subcollection or related collection whose access depends on a 'parent' entity's ownership or membership, the relevant identifier (e.g., `professorId`, `studentId`, `memberIds`) is explicitly copied into the document itself. For instance, `Course` documents contain `professorId`, and crucially, `Assignment`, `Rubric`, `RubricCriterion`, `ProjectGroup`, `CourseContent`, `Submission`, `Evaluation`, `EvaluationCriterionScore`, `IndividualGroupMemberScore`, and `GroupContributionReport` documents all denormalize `professorId` from their respective parent `Course` entity. This means that security rules evaluating access for these documents do not need to perform `get()` operations on parent collections, enabling atomic transactions and preventing complex, hard-to-debug rule dependencies.\n\n**Structural Segregation** is applied by ensuring that all documents within a given collection path share a homogeneous security posture. For example, `Course` documents are managed by their respective professors, while `CourseEnrollment` documents track student membership. User-specific data, such as `StudentPortfolio` and `ChatbotInteraction`, is organized under a `/users/{userId}/...` path, enforcing strict path-based ownership. Global entities like `LearningResource` are placed in top-level collections with broader read access.\n\n**Access Modeling** utilizes standard patterns:\n1.  **Private Data:** Path-based ownership (`/users/{userId}/portfolio/{portfolioId}` and `/users/{userId}/chatbot_interactions/{interactionId}`) is used for inherently private user data, where `request.auth.uid` must match `{userId}`.\n2.  **Hierarchical Paths:** Most entities follow a logical hierarchy (e.g., `/courses/{courseId}/assignments/{assignmentId}/submissions/{submissionId}`) to reflect their natural relationships. Each document in these nested paths includes necessary denormalized `professorId` (and `submitterId` for submissions/evaluations) to allow direct authorization checks without costly lookups.\n3.  **Collaborative Data:** `ProjectGroup` documents include a `memberIds` array, allowing security rules to efficiently check if `request.auth.uid` is part of the group for access control.\n4.  **Global Roles (DBAC):** Instead of relying on a `get()` call to the `User` document to fetch the `role` field, dedicated collections `/professor_roles/{userId}` and `/student_roles/{userId}` are used. The *existence* of a document at these paths signifies the user's role. This allows for atomic and efficient role checks using `exists(/professor_roles/$(request.auth.uid))` in security rules, fulfilling the 'Existence over Content' mandate.\n\nThis design significantly supports **QAPs (Rules are not Filters)** for `list` operations:\n*   **Courses:** Professors can list their courses using a query like `where('professorId', '==', request.auth.uid)`. Students can query `/course_enrollments` for their `studentId`, then use the `courseId` values to fetch the courses they are enrolled in, rather than filtering a large `courses` collection.\n*   **Assignments, Submissions, Evaluations, Course Content:** All these documents under `/courses/{courseId}/...` paths contain the denormalized `professorId`. Professors can directly query for all such items within *their* courses. Students can query for these within courses they are enrolled in, and for their specific submissions (`submitterId == request.auth.uid`).\n*   **Private Messages:** The `/private_messages` collection can be queried by `senderId` or `receiverId` matching `request.auth.uid`.\n\nBy embedding all necessary authorization context directly within the documents and using dedicated role collections, security rules become extremely simple and efficient, typically involving only `request.auth.uid == resource.data.ownerId` or `exists(/role_collection/$(request.auth.uid))` checks, thus minimizing complexity and maximizing debuggability."
+  }
+}
