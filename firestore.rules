@@ -46,13 +46,11 @@ service cloud.firestore {
       allow create, update: if isOwner(userId);
       allow delete: if false;
 
-      // Portfolios are owned by students but can be shared/read by others
       match /portfolio/{portfolioId} {
         allow read: if isSignedIn();
         allow write: if isOwner(userId);
       }
 
-      // Chatbot interactions - private to user
       match /chatbot_interactions/{interactionId} {
         allow read, write: if isOwner(userId);
       }
@@ -80,7 +78,6 @@ service cloud.firestore {
         allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
       }
 
-      // Submissions overview
       match /submissions/{submissionId} {
         allow list: if isSignedIn();
         allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
@@ -88,13 +85,19 @@ service cloud.firestore {
         allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
       }
 
-      // FIXED: Added rules for course content (announcements, files, links)
       match /content/{contentId} {
         allow get, list: if isSignedIn();
-        allow create, update, delete: if isProfessor() && (
+        allow create, delete: if isProfessor() && (
           (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
           (resource != null && resource.data.professorId == request.auth.uid)
         );
+        // Allow updating for likes counter
+        allow update: if isSignedIn();
+
+        match /comments/{commentId} {
+          allow read, create: if isSignedIn();
+          allow delete: if isProfessor() || (resource != null && resource.data.authorId == request.auth.uid);
+        }
       }
     }
 
@@ -112,7 +115,7 @@ service cloud.firestore {
     match /private_messages/{messageId} {
       allow create: if isSignedIn();
       allow get, list: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
-      allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId); // e.g., mark as read
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId);
       allow delete: if false;
     }
 

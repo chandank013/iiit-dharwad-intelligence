@@ -17,7 +17,9 @@ import {
   where,
   addDoc,
   serverTimestamp,
-  deleteDoc
+  deleteDoc,
+  updateDoc,
+  increment
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -55,7 +57,8 @@ import {
   Heart,
   MessageCircle,
   Paperclip,
-  Share2
+  Share2,
+  Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,15 +74,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  Legend
+  Cell
 } from 'recharts';
 import {
   Table,
@@ -112,9 +107,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 // --- Data for Analytics (Baseline Zeroed) ---
 const weeklyTrendData = [
@@ -126,35 +133,10 @@ const weeklyTrendData = [
   { name: 'Wk6', avg: 0 },
 ];
 
-const gradeDistributionData = [
-  { name: 'A (90-100)', value: 0, color: '#10b981' },
-  { name: 'B (75-89)', value: 0, color: '#3b82f6' },
-  { name: 'C (60-74)', value: 0, color: '#f59e0b' },
-  { name: 'D (< 60)', value: 0, color: '#ef4444' },
-];
-
 const assignmentAvgData = [
   { name: 'Task 1', avg: 0 },
   { name: 'Task 2', avg: 0 },
   { name: 'Task 3', avg: 0 },
-];
-
-const submissionBehaviourData = [
-  { name: 'Day 1', count: 0 },
-  { name: 'Day 2', count: 0 },
-  { name: 'Day 3', count: 0 },
-  { name: 'Day 4', count: 0 },
-  { name: 'Day 5', count: 0 },
-  { name: 'Due Day', count: 0 },
-];
-
-const subjectStrengthData = [
-  { subject: 'Algorithms', value: 0, fullMark: 150 },
-  { subject: 'Databases', value: 0, fullMark: 150 },
-  { subject: 'Web Dev', value: 0, fullMark: 150 },
-  { subject: 'ML/AI', value: 0, fullMark: 150 },
-  { subject: 'Networks', value: 0, fullMark: 150 },
-  { subject: 'OS', value: 0, fullMark: 150 },
 ];
 
 export default function CoursePortalPage() {
@@ -165,7 +147,10 @@ export default function CoursePortalPage() {
   const auth = useFirebaseAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [assignmentFilter, setAssignmentFilter] = useState('all');
+  
+  // Interaction State
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
 
   // Course Content State
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
@@ -226,6 +211,7 @@ export default function CoursePortalPage() {
       attachmentUrl: contentFormData.type === 'file' || contentFormData.type === 'link' ? contentFormData.url : '',
       postedAt: serverTimestamp(),
       isPinned: false,
+      likesCount: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -242,14 +228,30 @@ export default function CoursePortalPage() {
     }
   };
 
-  const handleDeleteContent = async (contentId: string) => {
+  const handleDeleteContent = (contentId: string) => {
     if (!firestore || !courseId) return;
-    try {
-      await deleteDoc(doc(firestore, 'courses', courseId as string, 'content', contentId));
-      toast({ title: "Post Deleted" });
-    } catch (error) {
-      toast({ title: "Failed to delete", variant: "destructive" });
-    }
+    const contentRef = doc(firestore, 'courses', courseId as string, 'content', contentId);
+    deleteDocumentNonBlocking(contentRef);
+    toast({ title: "Post Deleted" });
+  };
+
+  const handleLikePost = (contentId: string) => {
+    if (!firestore || !courseId) return;
+    const contentRef = doc(firestore, 'courses', courseId as string, 'content', contentId);
+    updateDocumentNonBlocking(contentRef, { likesCount: increment(1) });
+  };
+
+  const handleAddComment = (contentId: string) => {
+    if (!firestore || !courseId || !user || !commentText.trim()) return;
+    const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
+    addDocumentNonBlocking(commentsRef, {
+      text: commentText,
+      authorId: user.uid,
+      authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+      createdAt: serverTimestamp(),
+    });
+    setCommentText('');
+    toast({ title: "Comment added" });
   };
 
   if (isUserLoading || isCourseLoading || !user) {
@@ -283,13 +285,6 @@ export default function CoursePortalPage() {
     { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Submissions', value: 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-  ];
-
-  const analyticsOverview = [
-    { label: 'Class Average', value: '0%', change: '0% this week', trend: 'up', color: 'text-primary' },
-    { label: 'Submission Rate', value: '0%', change: '0% this week', trend: 'up', color: 'text-emerald-500' },
-    { label: 'Failing Students', value: '0', change: '0 this week', trend: 'down', color: 'text-rose-500' },
-    { label: 'Avg AI Confidence', value: '0%', change: '0% this week', trend: 'up', color: 'text-purple-500' },
   ];
 
   return (
@@ -337,7 +332,6 @@ export default function CoursePortalPage() {
 
       {/* Main Content */}
       <main className="flex-1 ml-72 min-h-screen flex flex-col relative">
-        {/* Header */}
         <header className="h-20 border-b border-border flex items-center justify-between px-10 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold tracking-tight capitalize">{activeTab.replace('-', ' ')}</h2>
@@ -372,16 +366,8 @@ export default function CoursePortalPage() {
                 <h1 className="text-3xl font-bold tracking-tighter">Course Overview</h1>
                 <p className="text-muted-foreground text-sm font-medium">Monitoring progress for <span className="text-primary">{course.semester}</span> session.</p>
               </div>
-              {isProfessor && (
-                <Link href={`/dashboard/professor/assignment/create`}>
-                  <Button className="rounded-full px-6 h-11 gap-2 font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
-                    <Plus className="h-4 w-4" /> Create Assignment
-                  </Button>
-                </Link>
-              )}
             </div>
 
-            {/* Stats Bar */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, i) => (
                 <Card key={i} className="bg-card border-border hover:border-primary/20 transition-all group overflow-hidden relative">
@@ -401,9 +387,7 @@ export default function CoursePortalPage() {
               ))}
             </div>
 
-            {/* Main Content Area */}
             <div className="grid grid-cols-12 gap-8">
-              {/* Performance Visuals */}
               <div className="col-span-12 lg:col-span-8 space-y-8">
                 <Card className="bg-card border-border overflow-hidden">
                   <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-border">
@@ -446,51 +430,12 @@ export default function CoursePortalPage() {
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <Card className="bg-card border-border">
-                    <CardHeader className="p-8 pb-4">
-                      <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Class Statistics</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[280px] p-8 pt-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={assignmentAvgData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.05} vertical={false} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontWeight: 700 }} dy={10} />
-                          <YAxis hide domain={[0, 100]} />
-                          <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} />
-                          <Bar dataKey="avg" radius={[6, 6, 0, 0]} barSize={28}>
-                            {assignmentAvgData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={'hsl(var(--primary) / 0.4)'} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-primary text-primary-foreground shadow-2xl border-none p-8 flex flex-col justify-between overflow-hidden relative">
-                    <Zap className="absolute -bottom-6 -right-6 h-32 w-32 text-primary-foreground/10 rotate-12" />
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Sparkles className="h-5 w-5 fill-current" />
-                        <span className="text-xs font-bold uppercase tracking-[0.2em]">Insights</span>
-                      </div>
-                      <h3 className="text-2xl font-bold leading-tight mb-4">Awaiting Data</h3>
-                      <p className="text-sm opacity-90 leading-relaxed font-medium">
-                        Insights will be generated once your students begin submitting their assignments.
-                      </p>
-                    </div>
-                  </Card>
-                </div>
               </div>
 
-              {/* Assignments & Submissions Tracker */}
               <div className="col-span-12 lg:col-span-4 space-y-8">
                 <Card className="bg-card border-border">
                   <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between">
                     <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Active Assignments</CardTitle>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"><MoreVertical className="h-4 w-4" /></Button>
                   </CardHeader>
                   <CardContent className="p-8 pt-0 space-y-6">
                     {assignments && assignments.length > 0 ? (
@@ -508,133 +453,7 @@ export default function CoursePortalPage() {
                     )}
                   </CardContent>
                 </Card>
-
-                <Card className="bg-card border-border overflow-hidden">
-                  <CardHeader className="p-8 pb-4 border-b border-border">
-                    <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                      <History className="h-4 w-4" /> System Readiness
-                    </CardTitle>
-                  </CardHeader>
-                  <div className="p-10 text-center">
-                    <p className="text-sm font-medium text-muted-foreground">Monitoring active sessions.</p>
-                  </div>
-                </Card>
               </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'assignments' && (
-          <div className="p-10 space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-              <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tighter">Assignments</h1>
-                <p className="text-muted-foreground text-sm font-medium">{assignments?.length || 0} active assignments</p>
-              </div>
-              {isProfessor && (
-                <Link href={`/dashboard/professor/assignment/create`}>
-                  <Button className="rounded-2xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20">
-                    <Plus className="h-5 w-5" /> New Assignment
-                  </Button>
-                </Link>
-              )}
-            </div>
-
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-card p-2 rounded-2xl border border-border shadow-sm">
-              <div className="relative w-full lg:max-w-md group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input placeholder="Search assignments..." className="bg-transparent border-none h-11 pl-11 focus-visible:ring-0" />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {assignments && assignments.length > 0 ? (
-                assignments.map((assignment) => (
-                  <Card key={assignment.id} className="bg-card border-border hover:border-primary/30 transition-all group overflow-hidden rounded-3xl">
-                    <CardContent className="p-8 flex flex-col lg:flex-row gap-8 items-start justify-between">
-                      <div className="space-y-4 flex-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-xl font-bold tracking-tight">{assignment.title}</h3>
-                          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-bold">Active</Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className="text-[10px] font-bold">{course.code}</Badge>
-                          <Badge variant="outline" className="text-[10px] font-bold">{assignment.submissionType}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="h-10 rounded-xl font-bold">View</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="py-24 text-center border-2 border-dashed border-border rounded-[2.5rem]">
-                  <p className="text-muted-foreground font-medium">No assignments posted yet.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'submissions' && (
-          <div className="p-10 space-y-10 animate-in fade-in duration-500">
-            <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
-            <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm">
-              <Table>
-                <TableHeader className="bg-accent/30">
-                  <TableRow>
-                    <TableHead className="px-6 py-5">Student</TableHead>
-                    <TableHead className="px-6 py-5">Assignment</TableHead>
-                    <TableHead className="px-6 py-5">Type</TableHead>
-                    <TableHead className="px-6 py-5 text-center">Score</TableHead>
-                    <TableHead className="px-6 py-5 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions && submissions.length > 0 ? (
-                    submissions.map((sub) => (
-                      <TableRow key={sub.id} className="border-border hover:bg-accent/10 transition-colors">
-                        <TableCell className="px-6 py-4">
-                          <div className="text-sm font-bold">Student Name</div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="text-xs text-muted-foreground">Assignment</div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="text-xs uppercase font-medium">{sub.submissionType}</div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-center">
-                          <div className="text-sm font-bold text-emerald-500">0%</div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-right">
-                          <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[10px] font-bold">View</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-64 text-center text-muted-foreground">No submissions yet.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'analytics' && (
-          <div className="p-10 space-y-10 animate-in fade-in duration-500">
-            <h1 className="text-3xl font-bold tracking-tighter">Class Analytics</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {analyticsOverview.map((item, i) => (
-                <Card key={i} className="bg-card border-border shadow-sm">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">{item.label}</div>
-                    <div className={cn("text-3xl font-bold tracking-tighter", item.color)}>{item.value}</div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
         )}
@@ -758,14 +577,35 @@ export default function CoursePortalPage() {
                             {post.postedAt?.toDate().toLocaleDateString('en-CA')}
                           </div>
                           {isProfessor && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                              onClick={() => handleDeleteContent(post.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-3xl border-border">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the post
+                                    and remove all its data from the course feed.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteContent(post.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                                  >
+                                    Delete Post
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                         </div>
                       </div>
@@ -774,52 +614,50 @@ export default function CoursePortalPage() {
                         {post.content}
                       </p>
 
-                      {post.contentType === 'file' && (
-                        <div className="bg-accent/30 rounded-2xl p-6 border border-border flex items-center justify-between group/file">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 bg-card rounded-xl border border-border flex items-center justify-center text-orange-500">
-                              <FileIcon className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <div className="text-sm font-bold truncate max-w-[200px]">{post.attachmentUrl.split('/').pop()}</div>
-                              <div className="text-[10px] font-bold text-muted-foreground uppercase">PDF • 2.4 MB</div>
-                            </div>
-                          </div>
-                          <Button variant="outline" className="h-10 rounded-xl gap-2 font-bold border-border bg-card group-hover/file:bg-orange-500 group-hover/file:text-white transition-all">
-                            <Download className="h-4 w-4" /> Download
-                          </Button>
-                        </div>
-                      )}
-
-                      {post.contentType === 'link' && (
-                        <a 
-                          href={post.attachmentUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="block bg-emerald-500/5 rounded-2xl p-6 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors group/link"
-                        >
-                          <div className="flex items-center gap-4 text-emerald-500">
-                            <LinkIcon className="h-5 w-5" />
-                            <span className="text-sm font-bold truncate">{post.attachmentUrl}</span>
-                          </div>
-                        </a>
-                      )}
-
                       <div className="flex items-center justify-between pt-6 border-t border-border">
                         <div className="flex items-center gap-6">
-                          <button className="flex items-center gap-2 text-muted-foreground hover:text-rose-500 transition-colors">
-                            <Heart className="h-4 w-4" />
-                            <span className="text-[10px] font-bold">0</span>
+                          <button 
+                            onClick={() => handleLikePost(post.id)}
+                            className="flex items-center gap-2 text-muted-foreground hover:text-rose-500 transition-colors group/like"
+                          >
+                            <Heart className="h-4 w-4 group-hover/like:fill-rose-500 transition-all" />
+                            <span className="text-[10px] font-bold">{post.likesCount || 0}</span>
                           </button>
-                          <button className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors">
-                            <MessageCircle className="h-4 w-4" />
-                            <span className="text-[10px] font-bold">0 comments</span>
+                          <button 
+                            onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}
+                            className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group/comment"
+                          >
+                            <MessageCircle className="h-4 w-4 group-hover/comment:fill-primary/20 transition-all" />
+                            <span className="text-[10px] font-bold">Comments</span>
                           </button>
                         </div>
                         <div className="text-[10px] font-bold text-muted-foreground italic">
-                          by {isProfessor ? 'You' : 'Dr. Rajesh Kumar'}
+                          by {post.professorId === user.uid ? 'You' : 'Dr. Rajesh Kumar'}
                         </div>
                       </div>
+
+                      {/* Comments Section */}
+                      {expandedPostId === post.id && (
+                        <div className="mt-6 pt-6 border-t border-border space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex gap-4">
+                            <Input 
+                              placeholder="Write a comment..." 
+                              className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                              value={commentText}
+                              onChange={(e) => setCommentText(e.target.value)}
+                            />
+                            <Button 
+                              size="icon" 
+                              className="h-11 w-11 shrink-0 rounded-xl"
+                              onClick={() => handleAddComment(post.id)}
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <PostComments contentId={post.id} courseId={courseId as string} />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))
@@ -830,11 +668,6 @@ export default function CoursePortalPage() {
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-2xl font-bold tracking-tight">No content shared yet</h3>
-                    <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
-                      {isProfessor 
-                        ? "Start sharing lecture notes, files, and important announcements with your students."
-                        : "Your professor hasn't shared any content for this course yet."}
-                    </p>
                   </div>
                 </div>
               )}
@@ -842,11 +675,48 @@ export default function CoursePortalPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
 
-      {/* Floating AI Helper */}
-      <button className="fixed bottom-10 right-10 h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group border-4 border-background/10">
-        <Sparkles className="h-7 w-7 fill-current group-hover:rotate-12 transition-transform" />
-      </button>
+// Sub-component for real-time comments
+function PostComments({ contentId, courseId }: { contentId: string, courseId: string }) {
+  const firestore = useFirestore();
+  const commentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'courses', courseId, 'content', contentId, 'comments'),
+      orderBy('createdAt', 'desc')
+    );
+  }, [firestore, contentId, courseId]);
+
+  const { data: comments } = useCollection(commentsQuery);
+
+  return (
+    <div className="space-y-4">
+      {comments && comments.map((comment) => (
+        <div key={comment.id} className="flex gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+              {comment.authorName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div className="bg-accent/30 p-4 rounded-2xl rounded-tl-none flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold text-foreground">{comment.authorName}</span>
+              <span className="text-[10px] font-medium text-muted-foreground">
+                {comment.createdAt?.toDate().toLocaleDateString()}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{comment.text}</p>
+          </div>
+        </div>
+      ))}
+      {(!comments || comments.length === 0) && (
+        <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest py-4">
+          No comments yet. Start the conversation.
+        </p>
+      )}
     </div>
   );
 }
