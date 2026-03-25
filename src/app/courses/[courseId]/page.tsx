@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -23,7 +22,6 @@ import {
   FileText, 
   TrendingUp, 
   FolderRoot, 
-  MessageSquare, 
   LogOut, 
   Search, 
   Bell, 
@@ -37,23 +35,15 @@ import {
   History,
   Zap,
   MoreVertical,
-  Filter,
   Eye,
   Edit2,
   Trash2,
   User,
   Users,
-  CheckCircle,
-  AlertTriangle,
-  Github,
-  HardDrive,
-  FileJson,
   CheckCircle2,
-  ExternalLink,
-  Target,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Activity,
+  FileJson,
+  HardDrive,
+  Github,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -88,7 +78,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
@@ -103,7 +93,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// --- Data for Analytics (Zeroed out as per request for "no assignments") ---
+// --- Data for Analytics (All zeroed out) ---
 const weeklyTrendData = [
   { name: 'Wk1', avg: 0 },
   { name: 'Wk2', avg: 0 },
@@ -143,8 +133,6 @@ const subjectStrengthData = [
   { subject: 'Networks', value: 0, fullMark: 150 },
   { subject: 'OS', value: 0, fullMark: 150 },
 ];
-
-const studentsNeedingAttention = [];
 
 export default function CoursePortalPage() {
   const { courseId } = useParams();
@@ -225,10 +213,10 @@ export default function CoursePortalPage() {
   ];
 
   const analyticsOverview = [
-    { label: 'Class Average', value: '74%', change: '+3% this week', trend: 'up', color: 'text-primary' },
-    { label: 'Submission Rate', value: '87%', change: '+5% this week', trend: 'up', color: 'text-emerald-500' },
-    { label: 'Failing Students', value: '8', change: '-2 this week', trend: 'down', color: 'text-rose-500' },
-    { label: 'Avg AI Confidence', value: '88%', change: '+1% this week', trend: 'up', color: 'text-purple-500' },
+    { label: 'Class Average', value: '0%', change: '0% this week', trend: 'up', color: 'text-primary' },
+    { label: 'Submission Rate', value: '0%', change: '0% this week', trend: 'up', color: 'text-emerald-500' },
+    { label: 'Failing Students', value: '0', change: '0 this week', trend: 'down', color: 'text-rose-500' },
+    { label: 'Avg AI Confidence', value: '0%', change: '0% this week', trend: 'up', color: 'text-purple-500' },
   ];
 
   return (
@@ -817,8 +805,8 @@ export default function CoursePortalPage() {
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">{item.label}</div>
                     <div className={cn("text-3xl font-bold tracking-tighter mb-1", item.color)}>{item.value}</div>
                     <div className="flex items-center gap-1.5">
-                      {item.trend === 'up' ? <TrendingUp className="h-3 w-3 text-emerald-500" /> : <TrendingUp className="h-3 w-3 text-rose-500 rotate-180" />}
-                      <span className={cn("text-[10px] font-bold", item.trend === 'up' ? "text-emerald-500" : "text-rose-500")}>
+                      <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-[10px] font-bold text-muted-foreground">
                         {item.change}
                       </span>
                     </div>
