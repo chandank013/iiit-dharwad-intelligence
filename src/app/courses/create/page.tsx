@@ -13,7 +13,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Loader2, ArrowLeft, BookOpen } from 'lucide-react';
+import { Loader2, ArrowLeft, BookOpen, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -39,7 +39,7 @@ export default function CreateCoursePage() {
 
   if (isUserLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -97,48 +97,53 @@ export default function CreateCoursePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6FAFC]">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <Link href="/courses" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6 transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to Courses
+      <main className="container mx-auto px-6 py-12 max-w-3xl">
+        <Link href="/courses" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-8 transition-colors group">
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Catalog
         </Link>
-        <div className="max-w-2xl mx-auto space-y-8">
-          <div>
-            <h1 className="text-3xl font-headline font-bold">Launch New Course</h1>
-            <p className="text-muted-foreground">Set up your academic portal for the upcoming semester.</p>
+        
+        <div className="space-y-10">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tighter">Launch New Course</h1>
+            <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" /> AIS Course Builder
+            </p>
           </div>
 
-          <Card className="shadow-lg border-none">
-            <CardHeader className="bg-primary/5 border-b">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary rounded-lg text-primary-foreground">
-                  <BookOpen className="h-5 w-5" />
+          <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-md overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b border-white/5 py-8">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-primary/10 rounded-2xl text-primary border border-primary/20">
+                  <BookOpen className="h-6 w-6" />
                 </div>
                 <div>
-                  <CardTitle>Course Details</CardTitle>
-                  <CardDescription>Enter the basic information for your course.</CardDescription>
+                  <CardTitle className="text-2xl font-bold">Course Metadata</CardTitle>
+                  <CardDescription className="text-sm">Define the syllabus and administrative details.</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Course Name</Label>
+            <CardContent className="pt-10 p-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Course Name</Label>
                     <Input 
                       id="name" 
                       placeholder="e.g. Advanced Algorithms" 
+                      className="bg-background/50 border-white/10 h-12"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="code">Course Code</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="code" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Course Code</Label>
                     <Input 
                       id="code" 
                       placeholder="e.g. CS301" 
+                      className="bg-background/50 border-white/10 h-12"
                       value={formData.code}
                       onChange={(e) => setFormData({...formData, code: e.target.value})}
                       required
@@ -146,13 +151,13 @@ export default function CreateCoursePage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="semester">Academic Semester</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="semester" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Academic Semester</Label>
                   <Select 
                     value={formData.semester} 
                     onValueChange={(value) => setFormData({...formData, semester: value})}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background/50 border-white/10 h-12">
                       <SelectValue placeholder="Select semester" />
                     </SelectTrigger>
                     <SelectContent>
@@ -165,37 +170,37 @@ export default function CreateCoursePage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Course Description</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="description" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Course Description</Label>
                   <Textarea
                     id="description"
                     placeholder="Provide a brief overview of the course objectives and syllabus..."
-                    className="min-h-[150px]"
+                    className="min-h-[150px] bg-background/50 border-white/10"
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     required
                   />
                 </div>
 
-                <div className="pt-4 flex gap-3">
+                <div className="pt-6 flex gap-4">
                   <Button 
                     type="submit" 
-                    className="flex-1 font-bold h-12 text-lg shadow-md" 
+                    className="flex-1 font-bold h-14 text-lg shadow-xl shadow-primary/20" 
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Initializing...
                       </>
                     ) : (
-                      'Create Course'
+                      'Publish Course Portal'
                     )}
                   </Button>
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="h-12"
+                    className="h-14 px-8 border-white/10 font-bold"
                     onClick={() => router.push('/courses')}
                   >
                     Cancel

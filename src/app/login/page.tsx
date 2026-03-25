@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, Loader2, Mail, Lock } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, Mail, Lock, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -63,7 +63,6 @@ export default function LoginPage() {
 
       if (!firestore) return;
 
-      // Idempotent User Profile and Role Setup
       const userRef = doc(firestore, 'users', uid);
       const roleRef = doc(firestore, roleCollection, uid);
 
@@ -76,10 +75,7 @@ export default function LoginPage() {
         updatedAt: serverTimestamp(),
       };
 
-      // Set user profile
       await setDoc(userRef, userData, { merge: true });
-
-      // Set role sentinel - ensure it's written so security rules recognize the role
       await setDoc(roleRef, {
         id: uid,
         email: email,
@@ -114,26 +110,35 @@ export default function LoginPage() {
 
   if (isUserLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F6FAFC] flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Visual background elements */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+        <div className="absolute top-10 left-10 w-64 h-64 bg-primary rounded-full blur-[120px]" />
+        <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary rounded-full blur-[120px]" />
+      </div>
+
+      <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500 relative z-10">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="bg-primary p-4 rounded-3xl text-primary-foreground shadow-xl">
+          <div className="bg-primary/10 p-4 rounded-3xl text-primary shadow-xl border border-primary/20">
             <GraduationCap className="h-12 w-12" />
           </div>
-          <h1 className="text-4xl font-headline font-bold text-primary">IIIT Dharwad AIS</h1>
-          <p className="text-muted-foreground font-medium">Academic Intelligence System</p>
+          <h1 className="text-4xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad AIS</h1>
+          <div className="flex items-center gap-2 text-muted-foreground font-medium uppercase tracking-widest text-[10px]">
+            <Sparkles className="h-3 w-3 text-primary" />
+            Academic Intelligence System
+          </div>
         </div>
 
-        <Card className="shadow-xl border-none">
+        <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl">
           <CardHeader>
-            <CardTitle>{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
+            <CardTitle className="text-xl">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
             <CardDescription>
               {isSignUp 
                 ? 'Register with your institute email to get started.' 
@@ -148,6 +153,7 @@ export default function LoginPage() {
                   <Input
                     id="name"
                     placeholder="John Doe"
+                    className="bg-background/50 border-white/10"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required={isSignUp}
@@ -162,14 +168,14 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="name@iiitdwd.ac.in"
-                    className="pl-10"
+                    className="pl-10 bg-background/50 border-white/10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground px-1">
-                  Students: 24bdsXXX@iiitdwd.ac.in | Professors: name@iiitdwd.ac.in
+                  Students: 24bdsXXX... | Professors: name@iiitdwd.ac.in
                 </p>
               </div>
               <div className="space-y-2">
@@ -180,7 +186,7 @@ export default function LoginPage() {
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 bg-background/50 border-white/10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -189,7 +195,7 @@ export default function LoginPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full h-11 text-base font-semibold group" disabled={isLoading}>
+              <Button type="submit" className="w-full h-11 text-sm font-bold group shadow-lg" disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -202,7 +208,7 @@ export default function LoginPage() {
               <Button 
                 variant="ghost" 
                 type="button" 
-                className="w-full text-xs" 
+                className="w-full text-xs text-muted-foreground hover:text-primary" 
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}

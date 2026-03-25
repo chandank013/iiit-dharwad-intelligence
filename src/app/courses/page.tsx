@@ -6,7 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Search, Plus, Loader2, BookOpen } from 'lucide-react';
+import { ArrowRight, Search, Plus, Loader2, BookOpen, GraduationCap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
@@ -19,7 +19,6 @@ export default function CoursesPage() {
 
   const isStudent = user?.email?.startsWith('24bds');
 
-  // Ensure query is only created when user is authenticated
   const coursesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, "courses"));
@@ -35,30 +34,32 @@ export default function CoursesPage() {
 
   if (isUserLoading || (isCoursesLoading && user) || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F6FAFC]">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-headline font-bold">Academic Courses</h1>
-              <p className="text-muted-foreground">Manage and browse current academic offerings.</p>
+      <main className="container mx-auto px-6 py-10 max-w-7xl">
+        <div className="space-y-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold tracking-tighter">Course Catalog</h1>
+              <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" /> Academic Offerings
+              </p>
             </div>
-            <div className="flex gap-2">
-              <div className="relative w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search courses..." className="pl-9" />
+            <div className="flex items-center gap-3">
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Input placeholder="Search catalog..." className="pl-10 w-64 bg-card/50 border-white/5 focus:ring-primary/20" />
               </div>
               {!isStudent && (
                 <Link href="/courses/create">
-                  <Button className="gap-2 shadow-md">
+                  <Button className="gap-2 shadow-lg shadow-primary/10 font-bold px-6">
                     <Plus className="h-4 w-4" /> Create Course
                   </Button>
                 </Link>
@@ -66,55 +67,63 @@ export default function CoursesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {courses && courses.length > 0 ? (
               courses.map((course) => (
-                <Card key={course.id} className="hover:shadow-lg transition-all group border-none shadow-sm">
-                  <div className="h-2 bg-primary rounded-t-lg" />
-                  <CardHeader>
-                    <div className="flex justify-between items-start mb-2">
-                      <Badge variant="secondary">{course.code}</Badge>
+                <Card key={course.id} className="group hover:border-primary/40 transition-all border-white/5 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
+                  <div className="h-1.5 bg-primary/20 group-hover:bg-primary transition-colors" />
+                  <CardHeader className="flex-1">
+                    <div className="flex justify-between items-start mb-4">
+                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold">
+                        {course.code}
+                      </Badge>
                       {course.isActive ? (
-                        <Badge variant="outline" className="text-[10px] uppercase font-bold text-green-600 bg-green-50 border-green-200">Active</Badge>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[10px] font-bold text-green-500 uppercase">Live</span>
+                        </div>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] uppercase font-bold text-muted-foreground">Archived</Badge>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">Archived</span>
                       )}
                     </div>
-                    <CardTitle className="group-hover:text-primary transition-colors text-xl">{course.name}</CardTitle>
-                    <CardDescription className="line-clamp-3">{course.description}</CardDescription>
+                    <CardTitle className="group-hover:text-primary transition-colors text-2xl font-bold leading-tight">
+                      {course.name}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-3 text-sm leading-relaxed mt-2">
+                      {course.description}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                      <span>Semester: {course.semester}</span>
-                      {/* Hide join code from students */}
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <span>{course.semester}</span>
                       {!isStudent && (
-                        <span className="font-mono bg-muted px-2 py-0.5 rounded">ID: {course.joinCode}</span>
+                        <span className="font-mono bg-white/5 px-2 py-0.5 rounded text-primary">ID: {course.joinCode}</span>
                       )}
                     </div>
                     <Link href={`/courses/${course.id}`}>
-                      <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                        Course Portal <ArrowRight className="ml-2 h-4 w-4" />
+                      <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all font-bold">
+                        Portal Entry <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
                     </Link>
                   </CardContent>
                 </Card>
               ))
             ) : (
-              <div className="col-span-full py-20 flex flex-col items-center justify-center space-y-4 bg-white rounded-2xl border-2 border-dashed">
-                <div className="p-4 bg-primary/5 rounded-full">
+              <div className="col-span-full py-24 flex flex-col items-center justify-center space-y-6 bg-card/30 border-2 border-dashed border-white/5 rounded-3xl">
+                <div className="p-6 bg-primary/5 rounded-full ring-1 ring-primary/10">
                   <BookOpen className="h-12 w-12 text-primary/40" />
                 </div>
-                <div className="text-center">
-                  <h3 className="text-lg font-bold">No courses found</h3>
-                  <p className="text-muted-foreground max-w-sm">
+                <div className="text-center space-y-2">
+                  <h3 className="text-2xl font-bold tracking-tight">No courses found</h3>
+                  <p className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed">
                     {isStudent 
-                      ? "You are not enrolled in any courses yet. Use a join code provided by your professor."
-                      : "Start by creating your first academic course for your students."}
+                      ? "You are not enrolled in any courses yet. Use a join code provided by your professor to get started."
+                      : "The academic catalog is empty. Start by launching your first course for students."}
                   </p>
                 </div>
                 {!isStudent && (
                   <Link href="/courses/create">
-                    <Button className="mt-2">Create Course Now</Button>
+                    <Button className="font-bold px-8 shadow-xl shadow-primary/20">Create Course Now</Button>
                   </Link>
                 )}
               </div>
