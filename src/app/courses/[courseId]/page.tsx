@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   useUser, 
@@ -58,7 +58,9 @@ import {
   MessageCircle,
   Paperclip,
   Share2,
-  Send
+  Send,
+  Upload,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,7 +125,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-// --- Data for Analytics (Baseline Zeroed) ---
+// --- Baseline Analytics Data (Set to Zero per instructions) ---
 const weeklyTrendData = [
   { name: 'Wk1', avg: 0 },
   { name: 'Wk2', avg: 0 },
@@ -131,12 +133,6 @@ const weeklyTrendData = [
   { name: 'Wk4', avg: 0 },
   { name: 'Wk5', avg: 0 },
   { name: 'Wk6', avg: 0 },
-];
-
-const assignmentAvgData = [
-  { name: 'Task 1', avg: 0 },
-  { name: 'Task 2', avg: 0 },
-  { name: 'Task 3', avg: 0 },
 ];
 
 export default function CoursePortalPage() {
@@ -155,6 +151,8 @@ export default function CoursePortalPage() {
   // Course Content State
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
   const [isPostingContent, setIsPostingContent] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [contentFormData, setContentFormData] = useState({
     title: '',
     type: 'announcement',
@@ -180,12 +178,6 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: enrollments } = useCollection(enrollmentsQuery);
 
-  const submissionsQuery = useMemoFirebase(() => {
-    if (!firestore || !courseId) return null;
-    return query(collection(firestore, 'courses', courseId as string, 'submissions'), orderBy('submittedAt', 'desc'));
-  }, [firestore, courseId]);
-  const { data: submissions } = useCollection(submissionsQuery);
-
   const contentQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
     return query(collection(firestore, 'courses', courseId as string, 'content'), orderBy('postedAt', 'desc'));
@@ -197,18 +189,42 @@ export default function CoursePortalPage() {
     router.push('/login');
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
   const handlePostContent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firestore || !user || !courseId) return;
 
     setIsPostingContent(true);
+    let finalAttachmentUrl = contentFormData.url;
+
+    // Convert file to Data URI for prototyping storage
+    if (contentFormData.type === 'file' && selectedFile) {
+      if (selectedFile.size > 1024 * 1024) {
+        toast({ title: "File too large", description: "Please upload files smaller than 1MB for this prototype.", variant: "destructive" });
+        setIsPostingContent(false);
+        return;
+      }
+
+      finalAttachmentUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(selectedFile);
+      });
+    }
+
     const contentData = {
       courseId,
       professorId: user.uid,
       title: contentFormData.title,
       contentType: contentFormData.type,
       content: contentFormData.body,
-      attachmentUrl: contentFormData.type === 'file' || contentFormData.type === 'link' ? contentFormData.url : '',
+      attachmentUrl: finalAttachmentUrl,
+      fileName: selectedFile?.name || '',
       postedAt: serverTimestamp(),
       isPinned: false,
       likesCount: 0,
@@ -221,6 +237,7 @@ export default function CoursePortalPage() {
       toast({ title: "Content Shared", description: "Your post has been shared with the class." });
       setIsContentDialogOpen(false);
       setContentFormData({ title: '', type: 'announcement', body: '', url: '' });
+      setSelectedFile(null);
     } catch (error) {
       toast({ title: "Failed to share", description: "Something went wrong.", variant: "destructive" });
     } finally {
@@ -289,7 +306,7 @@ export default function CoursePortalPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30">
-      {/* Sidebar */}
+      {/* Sidebar - Messages and Audit Log removed as requested */}
       <aside className="w-72 border-r border-border flex flex-col fixed inset-y-0 left-0 bg-card z-30">
         <div className="p-8">
           <Link href="/courses" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs font-bold uppercase tracking-widest mb-10 group">
@@ -341,21 +358,11 @@ export default function CoursePortalPage() {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="relative group hidden lg:block">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <input 
-                placeholder="Search portal..." 
-                className="bg-accent/50 border border-border rounded-full py-2.5 pl-11 pr-6 text-sm w-[360px] focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-muted-foreground/50"
-              />
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              <button className="h-10 w-10 rounded-full bg-accent flex items-center justify-center hover:bg-accent/80 transition-colors relative">
-                <Bell className="h-4 w-4 text-muted-foreground" />
-                <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-primary rounded-full border-2 border-background" />
-              </button>
-            </div>
+            <ThemeToggle />
+            <button className="h-10 w-10 rounded-full bg-accent flex items-center justify-center hover:bg-accent/80 transition-colors relative">
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-primary rounded-full border-2 border-background" />
+            </button>
           </div>
         </header>
 
@@ -393,9 +400,9 @@ export default function CoursePortalPage() {
                   <CardHeader className="p-8 flex flex-row items-center justify-between border-b border-border">
                     <div>
                       <CardTitle className="text-lg font-bold">Weekly Performance Trend</CardTitle>
-                      <p className="text-xs text-muted-foreground mt-1">Class score progression is currently baseline.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Class average progression currently at 0% baseline.</p>
                     </div>
-                    <Badge variant="outline" className="border-border text-xs font-bold text-primary px-3">Live Feed</Badge>
+                    <Badge variant="outline" className="border-border text-xs font-bold text-primary px-3">Syncing</Badge>
                   </CardHeader>
                   <CardContent className="h-[360px] p-8">
                     <ResponsiveContainer width="100%" height="100%">
@@ -458,6 +465,163 @@ export default function CoursePortalPage() {
           </div>
         )}
 
+        {activeTab === 'assignments' && (
+          <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h1 className="text-4xl font-bold tracking-tighter">Assignments</h1>
+                <p className="text-muted-foreground text-sm font-medium">0 active · 0 closed</p>
+              </div>
+              {isProfessor && (
+                <Link href={`/dashboard/professor/assignment/create`}>
+                  <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                    <Plus className="h-5 w-5" /> New Assignment
+                  </Button>
+                </Link>
+              )}
+            </div>
+            <div className="grid gap-6">
+              {assignments && assignments.length > 0 ? (
+                assignments.map((assignment) => (
+                  <Card key={assignment.id} className="bg-card border-border hover:border-primary/40 transition-all rounded-3xl overflow-hidden group">
+                    <CardContent className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex items-start gap-5">
+                        <div className="h-14 w-14 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10 text-primary">
+                          <BookOpen className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-xl font-bold tracking-tight group-hover:text-primary transition-colors">{assignment.title}</h3>
+                          <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Due: {assignment.deadline}</span>
+                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> 0 Submissions</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Button variant="outline" className="rounded-xl font-bold border-border">Details</Button>
+                        <Button className="rounded-xl font-bold shadow-lg">Manage</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="py-24 text-center space-y-6 bg-card/50 border-2 border-dashed border-border rounded-[3rem]">
+                  <div className="bg-primary/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto ring-1 ring-primary/10">
+                    <BookOpen className="h-10 w-10 text-primary/40" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold tracking-tight">No assignments yet</h3>
+                    <p className="text-muted-foreground text-sm font-medium">Create your first task for students to begin evaluation.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'submissions' && (
+          <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold tracking-tighter">Submissions</h1>
+              <p className="text-muted-foreground text-sm font-medium">Central management for student evaluation</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="p-4 border-border bg-card">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Received</div>
+                <div className="text-2xl font-bold">0</div>
+              </Card>
+              <Card className="p-4 border-border bg-card">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Pending Review</div>
+                <div className="text-2xl font-bold text-orange-500">0</div>
+              </Card>
+              <Card className="p-4 border-border bg-card">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">AI Graded</div>
+                <div className="text-2xl font-bold text-blue-500">0</div>
+              </Card>
+              <Card className="p-4 border-border bg-card">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Flagged</div>
+                <div className="text-2xl font-bold text-rose-500">0</div>
+              </Card>
+            </div>
+
+            <Card className="border-border overflow-hidden rounded-3xl">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">Student</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">Assignment</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">AI Score</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="text-right"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-medium italic">
+                      No submissions found for this course.
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-bold tracking-tighter">Class Analytics</h1>
+              <p className="text-muted-foreground text-sm font-medium">Performance benchmarks and insights</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card className="p-6 border-border bg-card relative overflow-hidden group">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Class Average</div>
+                  <div className="text-3xl font-bold text-primary">0%</div>
+                  <div className="text-[10px] font-bold text-muted-foreground">0% this week</div>
+                </div>
+              </Card>
+              <Card className="p-6 border-border bg-card relative overflow-hidden group">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Submission Rate</div>
+                  <div className="text-3xl font-bold text-emerald-500">0%</div>
+                  <div className="text-[10px] font-bold text-muted-foreground">0% this week</div>
+                </div>
+              </Card>
+              <Card className="p-6 border-border bg-card relative overflow-hidden group">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Failing Students</div>
+                  <div className="text-3xl font-bold text-rose-500">0</div>
+                  <div className="text-[10px] font-bold text-muted-foreground">0 this week</div>
+                </div>
+              </Card>
+              <Card className="p-6 border-border bg-card relative overflow-hidden group">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg AI Confidence</div>
+                  <div className="text-3xl font-bold text-blue-500">0%</div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="p-8 border-border bg-card rounded-3xl">
+                <CardTitle className="text-lg font-bold mb-6">Engagement Overview</CardTitle>
+                <div className="h-64 flex items-center justify-center text-muted-foreground italic text-sm">
+                  Insufficient data for visualization.
+                </div>
+              </Card>
+              <Card className="p-8 border-border bg-card rounded-3xl">
+                <CardTitle className="text-lg font-bold mb-6">Conceptual Strength</CardTitle>
+                <div className="h-64 flex items-center justify-center text-muted-foreground italic text-sm">
+                  Insufficient data for visualization.
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'content' && (
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -493,7 +657,10 @@ export default function CoursePortalPage() {
                         <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Content Type</Label>
                         <Select 
                           value={contentFormData.type} 
-                          onValueChange={(val) => setContentFormData({ ...contentFormData, type: val })}
+                          onValueChange={(val) => {
+                            setContentFormData({ ...contentFormData, type: val });
+                            setSelectedFile(null);
+                          }}
                         >
                           <SelectTrigger className="h-11 rounded-xl bg-accent/30 border-none">
                             <SelectValue />
@@ -515,9 +682,47 @@ export default function CoursePortalPage() {
                           onChange={(e) => setContentFormData({ ...contentFormData, body: e.target.value })}
                         />
                       </div>
-                      {(contentFormData.type === 'file' || contentFormData.type === 'link') && (
+                      
+                      {contentFormData.type === 'file' && (
                         <div className="space-y-2">
-                          <Label htmlFor="url" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">URL</Label>
+                          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File from Laptop</Label>
+                          <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-32 rounded-2xl border-2 border-dashed border-muted flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-accent/30 transition-colors"
+                          >
+                            {selectedFile ? (
+                              <div className="flex items-center gap-2 text-primary font-bold">
+                                <FileIcon className="h-5 w-5" />
+                                <span className="text-sm truncate max-w-[200px]">{selectedFile.name}</span>
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="h-6 w-6 rounded-full" 
+                                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <Upload className="h-6 w-6 text-muted-foreground" />
+                                <span className="text-xs font-bold text-muted-foreground">Click to upload PDF or ZIP</span>
+                              </>
+                            )}
+                          </div>
+                          <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleFileChange} 
+                            className="hidden" 
+                            accept=".pdf,.zip"
+                          />
+                        </div>
+                      )}
+
+                      {contentFormData.type === 'link' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="url" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Resource URL</Label>
                           <Input 
                             id="url" 
                             placeholder="https://..." 
@@ -528,6 +733,7 @@ export default function CoursePortalPage() {
                           />
                         </div>
                       )}
+
                       <DialogFooter>
                         <Button 
                           type="submit" 
@@ -614,6 +820,17 @@ export default function CoursePortalPage() {
                         {post.content}
                       </p>
 
+                      {post.attachmentUrl && (
+                        <div className="flex items-center gap-3">
+                          <Button variant="outline" className="h-10 px-4 rounded-xl gap-2 font-bold text-xs" asChild>
+                            <a href={post.attachmentUrl} download={post.fileName || 'attachment'} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-3.5 w-3.5" /> 
+                              {post.contentType === 'file' ? (post.fileName || 'Download Resource') : 'Visit Link'}
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between pt-6 border-t border-border">
                         <div className="flex items-center gap-6">
                           <button 
@@ -632,7 +849,7 @@ export default function CoursePortalPage() {
                           </button>
                         </div>
                         <div className="text-[10px] font-bold text-muted-foreground italic">
-                          by {post.professorId === user.uid ? 'You' : 'Dr. Rajesh Kumar'}
+                          by {post.professorId === user.uid ? 'You' : 'Professor'}
                         </div>
                       </div>
 
