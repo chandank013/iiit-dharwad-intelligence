@@ -3,16 +3,7 @@
 import Link from 'next/link';
 import { useUser, useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { GraduationCap, LayoutDashboard, UserCircle, LogOut, ChevronDown } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { signOut } from 'firebase/auth';
@@ -30,8 +21,6 @@ export function Navbar() {
   };
 
   const isStudent = user.email?.startsWith('24bds');
-  const role = isStudent ? 'student' : 'professor';
-  const name = user.displayName || user.email?.split('@')[0] || 'User';
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -56,32 +45,15 @@ export function Navbar() {
 
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative flex items-center gap-2 h-10 px-2 rounded-full ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <Avatar className="h-8 w-8 border">
-                  <AvatarImage src={user.photoURL || undefined} alt={name} />
-                  <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:flex flex-col items-start leading-none gap-1">
-                  <span className="text-sm font-semibold">{name}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{role}</span>
-                </div>
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
-                <UserCircle className="mr-2 h-4 w-4" /> Profile
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" /> Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground hover:text-destructive gap-2"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Log out</span>
+          </Button>
         </div>
       </div>
     </nav>

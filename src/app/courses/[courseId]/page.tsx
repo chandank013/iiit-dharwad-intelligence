@@ -195,7 +195,7 @@ export default function CoursePortalPage() {
             </Badge>
           </div>
           
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4">
             <div className="relative group hidden lg:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input 
@@ -210,16 +210,6 @@ export default function CoursePortalPage() {
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-primary rounded-full border-2 border-background" />
               </button>
-              <div className="flex items-center gap-3 border-l border-border pl-6 ml-2">
-                <div className="text-right leading-none hidden sm:block">
-                  <div className="text-sm font-bold">{user.displayName || 'User'}</div>
-                  <div className="text-[10px] text-primary uppercase tracking-widest mt-1 font-bold">Professor</div>
-                </div>
-                <Avatar className="h-10 w-10 border border-border ring-4 ring-primary/5">
-                  <AvatarImage src={user.photoURL || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary font-bold">{(user.displayName || 'U').charAt(0)}</AvatarFallback>
-                </Avatar>
-              </div>
             </div>
           </div>
         </header>
