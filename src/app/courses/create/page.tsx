@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -29,7 +28,7 @@ export default function CreateCoursePage() {
     name: '',
     code: '',
     description: '',
-    semester: 'Fall 2024',
+    semester: 'Semester 1',
   });
 
   useEffect(() => {
@@ -157,9 +156,11 @@ export default function CreateCoursePage() {
                       <SelectValue placeholder="Select semester" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Fall 2024">Fall 2024</SelectItem>
-                      <SelectItem value="Spring 2025">Spring 2025</SelectItem>
-                      <SelectItem value="Summer 2025">Summer 2025</SelectItem>
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                        <SelectItem key={num} value={`Semester ${num}`}>
+                          Semester {num}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
