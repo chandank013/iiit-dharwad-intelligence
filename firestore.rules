@@ -54,14 +54,14 @@ service cloud.firestore {
 
     match /professor_roles/{userId} {
       allow get: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow list, update, delete: if false;
+      allow create, update: if isOwner(userId);
+      allow list, delete: if false;
     }
 
     match /student_roles/{userId} {
       allow get: if isSignedIn();
-      allow create: if isOwner(userId);
-      allow list, update, delete: if false;
+      allow create, update: if isOwner(userId);
+      allow list, delete: if false;
     }
 
     match /courses/{courseId} {

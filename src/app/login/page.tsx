@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -79,7 +79,7 @@ export default function LoginPage() {
       // Set user profile
       await setDoc(userRef, userData, { merge: true });
 
-      // Set role sentinel
+      // Set role sentinel - ensure it's written so security rules recognize the role
       await setDoc(roleRef, {
         id: uid,
         email: email,
@@ -89,7 +89,7 @@ export default function LoginPage() {
 
       toast({
         title: isSignUp ? "Account Created" : "Login Successful",
-        description: `Welcome to IIIT Dharwad AIS.`,
+        description: `Welcome back to IIIT Dharwad AIS.`,
       });
       
       router.push('/');

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -65,7 +64,7 @@ export function StudentDashboard() {
 
   const { data: enrollments, isLoading: isEnrollmentsLoading } = useCollection(enrollmentsQuery);
 
-  // Fetch all courses (for display/lookup) - in a real large app we'd fetch only specific IDs
+  // Fetch all courses (for display/lookup)
   const allCoursesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, "courses"), where("isActive", "==", true));
@@ -131,12 +130,23 @@ export function StudentDashboard() {
       setJoinCode('');
       setIsDialogOpen(false);
     } catch (error: any) {
-      const permissionError = new FirestorePermissionError({
-        path: 'course_enrollments',
-        operation: 'create',
-        requestResourceData: { studentId: user?.uid },
-      });
-      errorEmitter.emit('permission-error', permissionError);
+      console.error("Error joining course:", error);
+      
+      // Only emit permission error if it's actually a permission-denied error from Firebase
+      if (error.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+          path: 'course_enrollments',
+          operation: 'create',
+          requestResourceData: { studentId: user?.uid },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      } else {
+        toast({
+          title: "Enrollment Failed",
+          description: "Something went wrong while joining the course. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsJoining(false);
     }
