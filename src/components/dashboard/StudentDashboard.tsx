@@ -9,7 +9,6 @@ import {
   ArrowRight, 
   Zap, 
   Target, 
-  Library, 
   Loader2, 
   Search,
   CheckCircle2,
@@ -173,12 +172,6 @@ export function StudentDashboard() {
           <p className="text-muted-foreground">Track your academic progress and submissions at IIIT Dharwad.</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/courses">
-            <Button variant="outline" className="gap-2">
-              <Library className="h-4 w-4" /> Browse Courses
-            </Button>
-          </Link>
-          
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="font-semibold gap-2 shadow-lg hover:scale-105 transition-transform">
@@ -292,7 +285,7 @@ export function StudentDashboard() {
               </div>
               <h3 className="font-bold text-lg">Not enrolled in any courses</h3>
               <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6">
-                Use a join code from your professor or browse public courses to get started.
+                Use a join code from your professor to get started.
               </p>
               <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
                 Join Your First Course
