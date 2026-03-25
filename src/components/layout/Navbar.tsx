@@ -11,9 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/avatar';
 import { GraduationCap, LayoutDashboard, UserCircle, LogOut, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -47,7 +48,8 @@ export function Navbar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 h-10 px-2 rounded-full ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
