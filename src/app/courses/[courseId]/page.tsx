@@ -45,7 +45,11 @@ import {
   Send,
   Upload,
   X,
-  Share2
+  Share2,
+  MoreVertical,
+  Settings,
+  Calendar,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,6 +104,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -136,6 +148,9 @@ export default function CoursePortalPage() {
     body: '',
     url: '',
   });
+
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const courseRef = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
@@ -211,6 +226,13 @@ export default function CoursePortalPage() {
     const contentRef = doc(firestore, 'courses', courseId as string, 'content', contentId);
     deleteDocumentNonBlocking(contentRef);
     toast({ title: "Post Deleted" });
+  };
+
+  const handleDeleteAssignment = (assignmentId: string) => {
+    if (!firestore || !courseId) return;
+    const assignmentRef = doc(firestore, 'courses', courseId as string, 'assignments', assignmentId);
+    deleteDocumentNonBlocking(assignmentRef);
+    toast({ title: "Assignment Deleted", description: "The task has been removed from the portal." });
   };
 
   const handleAddComment = (contentId: string) => {
@@ -387,7 +409,7 @@ export default function CoursePortalPage() {
                   <CardContent className="p-8 pt-0 space-y-6">
                     {assignments && assignments.length > 0 ? (
                       assignments.slice(0, 3).map((task, i) => (
-                        <div key={i} className="space-y-3 group cursor-pointer">
+                        <div key={i} className="space-y-3 group cursor-pointer" onClick={() => { setSelectedAssignment(task); setIsDetailsOpen(true); }}>
                           <div className="flex items-center justify-between">
                             <div className="text-sm font-bold group-hover:text-primary transition-colors">{task.title}</div>
                             <div className="text-[10px] font-bold text-muted-foreground uppercase">Active</div>
@@ -410,7 +432,7 @@ export default function CoursePortalPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1">
                 <h1 className="text-4xl font-bold tracking-tighter">Assignments</h1>
-                <p className="text-muted-foreground text-sm font-medium">0 active · 0 closed</p>
+                <p className="text-muted-foreground text-sm font-medium">{assignments?.length || 0} active tasks</p>
               </div>
               {isProfessor && (
                 <Link href={`/dashboard/professor/assignment/create?courseId=${courseId}`}>
@@ -432,14 +454,67 @@ export default function CoursePortalPage() {
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold tracking-tight group-hover:text-primary transition-colors">{assignment.title}</h3>
                           <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                            <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Due: {assignment.deadline}</span>
-                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> 0 Submissions</span>
+                            <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Due: {assignment.deadline ? new Date(assignment.deadline).toLocaleString() : 'No deadline'}</span>
+                            <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> {assignment.submissionType}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Button variant="outline" className="rounded-xl font-bold border-border">Details</Button>
-                        <Button className="rounded-xl font-bold shadow-lg">Manage</Button>
+                        <Button 
+                          variant="outline" 
+                          className="rounded-xl font-bold border-border h-11 px-6 hover:bg-accent transition-colors"
+                          onClick={() => {
+                            setSelectedAssignment(assignment);
+                            setIsDetailsOpen(true);
+                          }}
+                        >
+                          <Info className="h-4 w-4 mr-2" /> Details
+                        </Button>
+                        
+                        {isProfessor ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="secondary" className="rounded-xl font-bold h-11 px-4 shadow-sm hover:bg-accent">
+                                <Settings className="h-4 w-4 mr-2" /> Manage
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2">
+                              <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Admin Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem 
+                                    onSelect={(e) => e.preventDefault()} 
+                                    className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer p-3 rounded-xl font-bold"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" /> Delete Task
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="rounded-3xl border-border">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove Assignment?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete "{assignment.title}" and all associated rubrics. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                                      onClick={() => handleDeleteAssignment(assignment.id)}
+                                    >
+                                      Confirm Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <Button className="rounded-xl font-bold h-11 px-8 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all">
+                            Submit Task
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -458,6 +533,62 @@ export default function CoursePortalPage() {
             </div>
           </div>
         )}
+
+        {/* Assignment Details Dialog */}
+        <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+          <DialogContent className="sm:max-w-[600px] rounded-[2rem] overflow-hidden p-0 border-none shadow-2xl">
+            <div className="bg-primary/5 p-8 border-b border-border">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+                  <BookOpen className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight leading-none">{selectedAssignment?.title}</h2>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Assignment ID: {selectedAssignment?.id}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-background/50 p-3 rounded-xl border border-border flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <div>
+                    <div className="text-[8px] font-bold text-muted-foreground uppercase">Deadline</div>
+                    <div className="text-xs font-bold">{selectedAssignment?.deadline ? new Date(selectedAssignment.deadline).toLocaleDateString() : 'None'}</div>
+                  </div>
+                </div>
+                <div className="bg-background/50 p-3 rounded-xl border border-border flex items-center gap-3">
+                  <Upload className="h-4 w-4 text-primary" />
+                  <div>
+                    <div className="text-[8px] font-bold text-muted-foreground uppercase">Format</div>
+                    <div className="text-xs font-bold uppercase">{selectedAssignment?.submissionType}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 space-y-6">
+              <div>
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 block">Description & Instructions</Label>
+                <div className="text-sm font-medium leading-relaxed text-foreground/80 whitespace-pre-wrap bg-accent/30 p-4 rounded-2xl">
+                  {selectedAssignment?.description || 'No description provided.'}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/10 border border-secondary/20">
+                <div className="flex items-center gap-3">
+                  <Info className="h-5 w-5 text-secondary" />
+                  <span className="text-sm font-bold">Policy: {selectedAssignment?.lateSubmissionPolicy || 'Standard'}</span>
+                </div>
+                <Badge className="bg-secondary/20 text-secondary border-none font-bold">
+                  {selectedAssignment?.allowResubmissions ? 'Resubmissions Allowed' : 'Final Submit Only'}
+                </Badge>
+              </div>
+            </div>
+            <DialogFooter className="p-8 pt-0">
+              <Button className="w-full h-12 rounded-xl font-bold text-sm shadow-xl shadow-primary/20" onClick={() => setIsDetailsOpen(false)}>
+                Back to Portal
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {activeTab === 'submissions' && (
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
