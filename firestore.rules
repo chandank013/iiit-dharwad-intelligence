@@ -98,6 +98,11 @@ service cloud.firestore {
           allow read, create: if isSignedIn();
           allow delete: if isProfessor() || (resource != null && resource.data.authorId == request.auth.uid);
         }
+
+        match /likes/{userId} {
+          allow read: if isSignedIn();
+          allow create, delete: if isOwner(userId);
+        }
       }
     }
 

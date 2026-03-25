@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useRef } from 'react';
@@ -17,6 +16,9 @@ import {
   orderBy,
   where,
   addDoc,
+  setDoc,
+  deleteDoc,
+  updateDoc,
   serverTimestamp,
   increment
 } from 'firebase/firestore';
@@ -208,12 +210,6 @@ export default function CoursePortalPage() {
     const contentRef = doc(firestore, 'courses', courseId as string, 'content', contentId);
     deleteDocumentNonBlocking(contentRef);
     toast({ title: "Post Deleted" });
-  };
-
-  const handleLikePost = (contentId: string) => {
-    if (!firestore || !courseId) return;
-    const contentRef = doc(firestore, 'courses', courseId as string, 'content', contentId);
-    updateDocumentNonBlocking(contentRef, { likesCount: increment(1) });
   };
 
   const handleAddComment = (contentId: string) => {
@@ -776,13 +772,12 @@ export default function CoursePortalPage() {
 
                       <div className="flex items-center justify-between pt-6 border-t border-border">
                         <div className="flex items-center gap-6">
-                          <button 
-                            onClick={() => handleLikePost(post.id)}
-                            className="flex items-center gap-2 text-muted-foreground hover:text-rose-500 transition-colors group/like"
-                          >
-                            <Heart className="h-4 w-4 group-hover/like:fill-rose-500 transition-all" />
-                            <span className="text-[10px] font-bold">{post.likesCount || 0}</span>
-                          </button>
+                          <LikeButton 
+                            postId={post.id} 
+                            courseId={courseId as string} 
+                            currentUserId={user.uid} 
+                            initialLikes={post.likesCount} 
+                          />
                           <button 
                             onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)}
                             className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors group/comment"
@@ -814,7 +809,7 @@ export default function CoursePortalPage() {
                             </Button>
                           </div>
 
-                          <PostComments contentId={post.id} courseId={courseId as string} />
+                          <PostComments contentId={post.id} courseId={courseId as string} isProfessor={isProfessor} currentUserId={user.uid} />
                         </div>
                       )}
                     </CardContent>
@@ -838,8 +833,46 @@ export default function CoursePortalPage() {
   );
 }
 
-function PostComments({ contentId, courseId }: { contentId: string, courseId: string }) {
+function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId: string, courseId: string, currentUserId: string, initialLikes: number }) {
   const firestore = useFirestore();
+  const likeRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'courses', courseId, 'content', postId, 'likes', currentUserId);
+  }, [firestore, courseId, postId, currentUserId]);
+  
+  const { data: likeData } = useDoc(likeRef);
+  const isLiked = !!likeData;
+
+  const handleToggleLike = async () => {
+    if (!firestore) return;
+    const postRef = doc(firestore, 'courses', courseId, 'content', postId);
+    
+    if (isLiked) {
+      await deleteDoc(likeRef!);
+      await updateDoc(postRef, { likesCount: increment(-1) });
+    } else {
+      await setDoc(likeRef!, { uid: currentUserId, createdAt: serverTimestamp() });
+      await updateDoc(postRef, { likesCount: increment(1) });
+    }
+  };
+
+  return (
+    <button 
+      onClick={handleToggleLike}
+      className={cn(
+        "flex items-center gap-2 transition-colors group/like",
+        isLiked ? "text-rose-500" : "text-muted-foreground hover:text-rose-500"
+      )}
+    >
+      <Heart className={cn("h-4 w-4 transition-all", isLiked && "fill-rose-500")} />
+      <span className="text-[10px] font-bold">{initialLikes || 0}</span>
+    </button>
+  );
+}
+
+function PostComments({ contentId, courseId, isProfessor, currentUserId }: { contentId: string, courseId: string, isProfessor: boolean, currentUserId: string }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
   const commentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -850,6 +883,13 @@ function PostComments({ contentId, courseId }: { contentId: string, courseId: st
 
   const { data: comments } = useCollection(commentsQuery);
 
+  const handleDeleteComment = (commentId: string) => {
+    if (!firestore) return;
+    const commentRef = doc(firestore, 'courses', courseId, 'content', contentId, 'comments', commentId);
+    deleteDocumentNonBlocking(commentRef);
+    toast({ title: "Comment deleted" });
+  };
+
   return (
     <div className="space-y-4">
       {comments && comments.map((comment) => (
@@ -859,12 +899,24 @@ function PostComments({ contentId, courseId }: { contentId: string, courseId: st
               {comment.authorName?.[0]}
             </AvatarFallback>
           </Avatar>
-          <div className="bg-accent/30 p-4 rounded-2xl rounded-tl-none flex-1">
+          <div className="bg-accent/30 p-4 rounded-2xl rounded-tl-none flex-1 relative group/comment-item">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-bold text-foreground">{comment.authorName}</span>
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {comment.createdAt?.toDate().toLocaleDateString()}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {comment.createdAt?.toDate().toLocaleDateString()}
+                </span>
+                {(isProfessor || comment.authorId === currentUserId) && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 opacity-0 group-hover/comment-item:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeleteComment(comment.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">{comment.text}</p>
           </div>
