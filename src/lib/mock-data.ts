@@ -71,7 +71,7 @@ export interface Announcement {
 
 export const MOCK_USERS: User[] = [
   { id: 'u1', name: 'Dr. Ramesh Kumar', email: 'ramesh.k@iiitdwd.ac.in', role: 'professor', avatar: 'https://picsum.photos/seed/prof1/100/100' },
-  { id: 'u2', name: 'Aryan Sharma', email: 'aryan.s@iiitdwd.ac.in', role: 'student', avatar: 'https://picsum.photos/seed/stud1/100/100' },
+  { id: 'u2', name: 'Aryan Sharma', email: '24bds001@iiitdwd.ac.in', role: 'student', avatar: 'https://picsum.photos/seed/stud1/100/100' },
 ];
 
 export const MOCK_COURSES: Course[] = [
