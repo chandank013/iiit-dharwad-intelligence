@@ -39,17 +39,23 @@ service cloud.firestore {
       );
     }
 
-    /** @description Checks if the user is a member of a list. */
-    function isMember(memberIds) {
-      return isSignedIn() && request.auth.uid in memberIds;
-    }
-
     // --- Collection Rules ---
 
     match /users/{userId} {
       allow get, list: if isSignedIn();
       allow create, update: if isOwner(userId);
       allow delete: if false;
+
+      // Portfolios are owned by students but can be shared/read by others
+      match /portfolio/{portfolioId} {
+        allow read: if isSignedIn();
+        allow write: if isOwner(userId);
+      }
+
+      // Chatbot interactions - private to user
+      match /chatbot_interactions/{interactionId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /professor_roles/{userId} {
@@ -74,12 +80,21 @@ service cloud.firestore {
         allow create, update, delete: if isProfessor() && (request.resource.data.professorId == request.auth.uid || resource.data.professorId == request.auth.uid);
       }
 
-      // Submissions are queried as a direct subcollection of Course for the portal overview
+      // Submissions overview
       match /submissions/{submissionId} {
         allow list: if isSignedIn();
         allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
         allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
         allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+      }
+
+      // FIXED: Added rules for course content (announcements, files, links)
+      match /content/{contentId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isProfessor() && (
+          (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
+          (resource != null && resource.data.professorId == request.auth.uid)
+        );
       }
     }
 
@@ -90,14 +105,21 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.professorId);
     }
     
-    // Allow reading public learning resources
     match /learning_resources/{resourceId} {
       allow get, list: if isSignedIn();
     }
 
-    // Chatbot interactions - private to user
-    match /users/{userId}/chatbot_interactions/{interactionId} {
-      allow read, write: if isOwner(userId);
+    match /private_messages/{messageId} {
+      allow create: if isSignedIn();
+      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.receiverId); // e.g., mark as read
+      allow delete: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow list, get: if isProfessor();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
     }
   }
 }
