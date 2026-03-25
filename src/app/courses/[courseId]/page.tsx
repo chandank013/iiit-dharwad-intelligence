@@ -27,7 +27,7 @@ import {
   BookOpen, 
   FileText, 
   TrendingUp, 
-  FolderRoot, 
+  FolderOpen, 
   ChevronLeft,
   Clock,
   Plus,
@@ -45,7 +45,6 @@ import {
   Upload,
   X,
   Share2,
-  MoreVertical,
   Settings,
   Calendar,
   Info
@@ -114,7 +113,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 // --- Baseline Analytics Data ---
 const weeklyTrendData = [
@@ -270,14 +269,12 @@ export default function CoursePortalPage() {
     );
   }
 
-  const isProfessor = user?.uid === course.professorId;
-
   const sidebarLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
     { id: 'submissions', label: 'Submissions', icon: FileText },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { id: 'content', label: 'Course Content', icon: FolderRoot },
+    { id: 'content', label: 'Course Content', icon: FolderOpen },
   ];
 
   const stats = [
@@ -440,13 +437,11 @@ export default function CoursePortalPage() {
                 <h1 className="text-4xl font-bold tracking-tighter">Assignments</h1>
                 <p className="text-muted-foreground text-sm font-medium">{assignments?.length || 0} active tasks</p>
               </div>
-              {isProfessor && (
-                <Link href={`/dashboard/professor/assignment/create?courseId=${courseId}`}>
-                  <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-                    <Plus className="h-5 w-5" /> New Assignment
-                  </Button>
-                </Link>
-              )}
+              <Link href={`/dashboard/professor/assignment/create?courseId=${courseId}`}>
+                <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                  <Plus className="h-5 w-5" /> New Assignment
+                </Button>
+              </Link>
             </div>
             <div className="grid gap-6">
               {assignments && assignments.length > 0 ? (
@@ -477,50 +472,44 @@ export default function CoursePortalPage() {
                           <Info className="h-4 w-4 mr-2" /> Details
                         </Button>
                         
-                        {isProfessor ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="secondary" className="rounded-xl font-bold h-11 px-4 shadow-sm hover:bg-accent">
-                                <Settings className="h-4 w-4 mr-2" /> Manage
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2">
-                              <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Admin Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem 
-                                    onSelect={(e) => e.preventDefault()} 
-                                    className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer p-3 rounded-xl font-bold"
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="secondary" className="rounded-xl font-bold h-11 px-4 shadow-sm hover:bg-accent">
+                              <Settings className="h-4 w-4 mr-2" /> Manage
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2">
+                            <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Admin Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem 
+                                  onSelect={(e) => e.preventDefault()} 
+                                  className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer p-3 rounded-xl font-bold"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" /> Delete Task
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="rounded-3xl border-border">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remove Assignment?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete "{assignment.title}" and all associated rubrics. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                                    onClick={() => handleDeleteAssignment(assignment.id)}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" /> Delete Task
-                                  </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-3xl border-border">
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remove Assignment?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This will permanently delete "{assignment.title}" and all associated rubrics. This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
-                                      onClick={() => handleDeleteAssignment(assignment.id)}
-                                    >
-                                      Confirm Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          <Button className="rounded-xl font-bold h-11 px-8 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all">
-                            Submit Task
-                          </Button>
-                        )}
+                                    Confirm Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </CardContent>
                   </Card>
@@ -706,124 +695,122 @@ export default function CoursePortalPage() {
                 <h1 className="text-4xl font-bold tracking-tighter">Course Content</h1>
                 <p className="text-muted-foreground text-sm font-medium">{courseContent?.length || 0} posts shared</p>
               </div>
-              {isProfessor && (
-                <Dialog open={isContentDialogOpen} onOpenChange={setIsContentDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-                      <Plus className="h-5 w-5" /> Share Content
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px] rounded-3xl">
-                    <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold tracking-tight">Post Content</DialogTitle>
-                      <DialogDescription className="text-sm font-medium">Share updates, lecture notes, or resources with the class.</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handlePostContent} className="space-y-6 pt-4">
+              <Dialog open={isContentDialogOpen} onOpenChange={setIsContentDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-xl px-8 h-12 gap-3 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+                    <Plus className="h-5 w-5" /> Share Content
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px] rounded-3xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-bold tracking-tight">Post Content</DialogTitle>
+                    <DialogDescription className="text-sm font-medium">Share updates, lecture notes, or resources with the class.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handlePostContent} className="space-y-6 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Title</Label>
+                      <Input 
+                        id="title" 
+                        placeholder="e.g. Lecture 1: Introduction to React" 
+                        className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                        value={contentFormData.title}
+                        onChange={(e) => setContentFormData({ ...contentFormData, title: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Content Type</Label>
+                      <Select 
+                        value={contentFormData.type} 
+                        onValueChange={(val) => {
+                          setContentFormData({ ...contentFormData, type: val });
+                          setSelectedFile(null);
+                        }}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-accent/30 border-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-border">
+                          <SelectItem value="announcement">Announcement</SelectItem>
+                          <SelectItem value="file">File (PDF / ZIP)</SelectItem>
+                          <SelectItem value="link">External Link</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="body" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Description</Label>
+                      <Textarea 
+                        id="body" 
+                        placeholder="Write your message here..." 
+                        className="min-h-[120px] rounded-2xl bg-accent/30 border-none focus-visible:ring-primary/20"
+                        value={contentFormData.body}
+                        onChange={(e) => setContentFormData({ ...contentFormData, body: e.target.value })}
+                      />
+                    </div>
+                    
+                    {contentFormData.type === 'file' && (
                       <div className="space-y-2">
-                        <Label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Title</Label>
+                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File from Laptop (Up to 5GB)</Label>
+                        <div 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="h-32 rounded-2xl border-2 border-dashed border-muted flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-accent/30 transition-colors"
+                        >
+                          {selectedFile ? (
+                            <div className="flex items-center gap-2 text-primary font-bold">
+                              <FileIcon className="h-5 w-5" />
+                              <span className="text-sm truncate max-w-[200px]">{selectedFile.name}</span>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6 rounded-full" 
+                                onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <Upload className="h-6 w-6 text-muted-foreground" />
+                              <span className="text-xs font-bold text-muted-foreground">Click to upload PDF or ZIP</span>
+                            </>
+                          )}
+                        </div>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                          accept=".pdf,.zip"
+                        />
+                      </div>
+                    )}
+
+                    {contentFormData.type === 'link' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="url" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Resource URL</Label>
                         <Input 
-                          id="title" 
-                          placeholder="e.g. Lecture 1: Introduction to React" 
+                          id="url" 
+                          placeholder="https://..." 
                           className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
-                          value={contentFormData.title}
-                          onChange={(e) => setContentFormData({ ...contentFormData, title: e.target.value })}
+                          value={contentFormData.url}
+                          onChange={(e) => setContentFormData({ ...contentFormData, url: e.target.value })}
                           required
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Content Type</Label>
-                        <Select 
-                          value={contentFormData.type} 
-                          onValueChange={(val) => {
-                            setContentFormData({ ...contentFormData, type: val });
-                            setSelectedFile(null);
-                          }}
-                        >
-                          <SelectTrigger className="h-11 rounded-xl bg-accent/30 border-none">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-border">
-                            <SelectItem value="announcement">Announcement</SelectItem>
-                            <SelectItem value="file">File (PDF / ZIP)</SelectItem>
-                            <SelectItem value="link">External Link</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="body" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Description</Label>
-                        <Textarea 
-                          id="body" 
-                          placeholder="Write your message here..." 
-                          className="min-h-[120px] rounded-2xl bg-accent/30 border-none focus-visible:ring-primary/20"
-                          value={contentFormData.body}
-                          onChange={(e) => setContentFormData({ ...contentFormData, body: e.target.value })}
-                        />
-                      </div>
-                      
-                      {contentFormData.type === 'file' && (
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File from Laptop (Up to 5GB)</Label>
-                          <div 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="h-32 rounded-2xl border-2 border-dashed border-muted flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-accent/30 transition-colors"
-                          >
-                            {selectedFile ? (
-                              <div className="flex items-center gap-2 text-primary font-bold">
-                                <FileIcon className="h-5 w-5" />
-                                <span className="text-sm truncate max-w-[200px]">{selectedFile.name}</span>
-                                <Button 
-                                  size="icon" 
-                                  variant="ghost" 
-                                  className="h-6 w-6 rounded-full" 
-                                  onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <>
-                                <Upload className="h-6 w-6 text-muted-foreground" />
-                                <span className="text-xs font-bold text-muted-foreground">Click to upload PDF or ZIP</span>
-                              </>
-                            )}
-                          </div>
-                          <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange} 
-                            className="hidden" 
-                            accept=".pdf,.zip"
-                          />
-                        </div>
-                      )}
+                    )}
 
-                      {contentFormData.type === 'link' && (
-                        <div className="space-y-2">
-                          <Label htmlFor="url" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Resource URL</Label>
-                          <Input 
-                            id="url" 
-                            placeholder="https://..." 
-                            className="h-11 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20"
-                            value={contentFormData.url}
-                            onChange={(e) => setContentFormData({ ...contentFormData, url: e.target.value })}
-                            required
-                          />
-                        </div>
-                      )}
-
-                      <DialogFooter>
-                        <Button 
-                          type="submit" 
-                          className="w-full h-12 rounded-xl font-bold shadow-lg" 
-                          disabled={isPostingContent}
-                        >
-                          {isPostingContent ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Publish Now'}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              )}
+                    <DialogFooter>
+                      <Button 
+                        type="submit" 
+                        className="w-full h-12 rounded-xl font-bold shadow-lg" 
+                        disabled={isPostingContent}
+                      >
+                        {isPostingContent ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Publish Now'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="max-w-4xl space-y-8 mx-auto lg:mx-0">
@@ -859,37 +846,35 @@ export default function CoursePortalPage() {
                           <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                             {post.postedAt?.toDate().toLocaleDateString('en-CA')}
                           </div>
-                          {isProfessor && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-3xl border-border">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the post
+                                  and remove all its data from the course feed.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteContent(post.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="rounded-3xl border-border">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the post
-                                    and remove all its data from the course feed.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => handleDeleteContent(post.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
-                                  >
-                                    Delete Post
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                                  Delete Post
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
 
@@ -947,7 +932,7 @@ export default function CoursePortalPage() {
                             </Button>
                           </div>
 
-                          <PostComments contentId={post.id} courseId={courseId as string} isProfessor={isProfessor} currentUserId={user.uid} />
+                          <PostComments contentId={post.id} courseId={courseId as string} isProfessor={true} currentUserId={user.uid} />
                         </div>
                       )}
                     </CardContent>

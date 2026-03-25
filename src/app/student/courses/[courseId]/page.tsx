@@ -30,7 +30,8 @@ import {
   Sparkles,
   ArrowRight,
   Target,
-  AlertCircle
+  AlertCircle,
+  FolderOpen
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -110,11 +111,8 @@ export default function StudentCoursePage() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
     { id: 'submissions', label: 'My Submissions', icon: FileCheck },
-    { id: 'content', label: 'Content', icon: FolderRoot },
+    { id: 'content', label: 'Content', icon: FolderOpen },
   ];
-
-  // Manual check for FolderRoot icon which was used in sidebarLinks
-  const FolderRoot = BookOpen; // Using BookOpen as a fallback if FolderRoot is missing in some environments
 
   return (
     <div className="flex min-h-screen bg-[#0B0E14] text-slate-200">
