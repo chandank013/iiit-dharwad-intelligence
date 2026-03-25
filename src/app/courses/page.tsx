@@ -18,10 +18,11 @@ export default function CoursesPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
+  // Ensure query is only created when user is authenticated to avoid auth: null errors
   const coursesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, "courses"));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: courses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
 
@@ -31,7 +32,7 @@ export default function CoursesPage() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || isCoursesLoading || !user) {
+  if (isUserLoading || (isCoursesLoading && user) || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
