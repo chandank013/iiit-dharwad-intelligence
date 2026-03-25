@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/store';
+import { useUser, useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,17 +15,33 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
 
+    if (!email.endsWith('@iiitdwd.ac.in')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please use your IIIT Dharwad email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      login(email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: "Login Successful",
         description: `Welcome back to IIIT Dharwad AIS.`,
@@ -33,13 +50,21 @@ export default function LoginPage() {
     } catch (error: any) {
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid credentials. Use @iiitdwd.ac.in",
+        description: "Invalid credentials. Please check your email and password.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F6FAFC] flex items-center justify-center p-4">

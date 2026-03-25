@@ -6,20 +6,20 @@ import { Navbar } from '@/components/layout/Navbar';
 import { ProfessorDashboard } from '@/components/dashboard/ProfessorDashboard';
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard';
 import { AIChatbot } from '@/components/ai-chatbot';
-import { useAuth } from '@/lib/store';
+import { useUser } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, isUserLoading, router]);
 
-  if (loading || !user) {
+  if (isUserLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -27,11 +27,14 @@ export default function Home() {
     );
   }
 
+  // Simple role check based on email pattern
+  const isStudent = user.email?.startsWith('24bds');
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1 container mx-auto px-4">
-        {user.role === 'professor' ? (
+        {!isStudent ? (
           <ProfessorDashboard />
         ) : (
           <StudentDashboard />

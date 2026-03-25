@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useAuth } from '@/lib/store';
+import { useUser, useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,17 +15,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { GraduationCap, LayoutDashboard, UserCircle, LogOut, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { signOut } from 'firebase/auth';
 
 export function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
 
-  if (!user) return null;
+  if (isUserLoading || !user) return null;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut(auth);
     router.push('/login');
   };
+
+  const isStudent = user.email?.startsWith('24bds');
+  const role = isStudent ? 'student' : 'professor';
+  const name = user.displayName || user.email?.split('@')[0] || 'User';
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -42,7 +48,7 @@ export function Navbar() {
               <LayoutDashboard className="h-4 w-4" /> Dashboard
             </Link>
             <Link href="/courses" className="text-muted-foreground transition-colors hover:text-primary">Courses</Link>
-            {user.role === 'student' && (
+            {isStudent && (
               <Link href="/portfolio" className="text-muted-foreground transition-colors hover:text-primary">Portfolio</Link>
             )}
           </div>
@@ -54,12 +60,12 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative flex items-center gap-2 h-10 px-2 rounded-full ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                 <Avatar className="h-8 w-8 border">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={user.photoURL || undefined} alt={name} />
+                  <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="hidden md:flex flex-col items-start leading-none gap-1">
-                  <span className="text-sm font-semibold">{user.name}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{user.role}</span>
+                  <span className="text-sm font-semibold">{name}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{role}</span>
                 </div>
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </Button>
