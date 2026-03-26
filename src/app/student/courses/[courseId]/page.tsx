@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -15,9 +16,6 @@ import {
   query, 
   orderBy,
   where,
-  setDoc,
-  deleteDoc,
-  updateDoc,
   serverTimestamp,
   increment
 } from 'firebase/firestore';
@@ -38,7 +36,6 @@ import {
   ChevronRight,
   ArrowRight,
   FileText,
-  CheckCircle2,
   Inbox,
   Megaphone,
   File as FileIcon,
@@ -47,7 +44,7 @@ import {
   Heart,
   MessageCircle,
   Send,
-  X,
+  Trash2,
   Share2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,7 +68,12 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { 
+  addDocumentNonBlocking, 
+  deleteDocumentNonBlocking, 
+  updateDocumentNonBlocking, 
+  setDocumentNonBlocking 
+} from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
 const scoreProgressData = [
@@ -249,13 +251,15 @@ export default function StudentCoursePage() {
                 <Card className="border-border overflow-hidden">
                   <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border">
                     <CardTitle className="text-sm font-bold text-foreground">Pending Assignments</CardTitle>
-                    <button onClick={() => setActiveTab('assignments')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">View all <ArrowRight className="h-3 w-3" /></button>
+                    <button onClick={() => setActiveTab('assignments')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">
+                      View all <ArrowRight className="h-3 w-3" />
+                    </button>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
                       {assignments && assignments.length > 0 ? (
                         assignments.slice(0, 1).map((task, i) => (
-                          <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer">
+                          <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
                             <div className="space-y-2">
                               <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</div>
                               <div className="flex gap-2">
@@ -403,9 +407,11 @@ export default function StudentCoursePage() {
                               <div className="text-2xl font-bold text-primary">100</div>
                               <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Marks</div>
                             </div>
-                            <Button className="w-full rounded-full bg-gradient-to-r from-primary to-primary/80 hover:scale-105 transition-all font-bold gap-2 py-6">
-                              Submit <ChevronRight className="h-4 w-4" />
-                            </Button>
+                            <Link href={`/student/courses/${courseId}/submit/${assignment.id}`} className="w-full">
+                              <Button className="w-full rounded-full bg-gradient-to-r from-primary to-primary/80 hover:scale-105 transition-all font-bold gap-2 py-6">
+                                Submit <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
                           </div>
                         </CardContent>
                       </Card>
@@ -609,16 +615,16 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
   const { data: likeData } = useDoc(likeRef);
   const isLiked = !!likeData;
 
-  const handleToggleLike = async () => {
-    if (!firestore) return;
+  const handleToggleLike = () => {
+    if (!firestore || !likeRef) return;
     const postRef = doc(firestore, 'courses', courseId, 'content', postId);
     
     if (isLiked) {
-      await deleteDoc(likeRef!);
-      await updateDoc(postRef, { likesCount: increment(-1) });
+      deleteDocumentNonBlocking(likeRef);
+      updateDocumentNonBlocking(postRef, { likesCount: increment(-1) });
     } else {
-      await setDoc(likeRef!, { uid: currentUserId, createdAt: serverTimestamp() });
-      await updateDoc(postRef, { likesCount: increment(1) });
+      setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
+      updateDocumentNonBlocking(postRef, { likesCount: increment(1) });
     }
   };
 
