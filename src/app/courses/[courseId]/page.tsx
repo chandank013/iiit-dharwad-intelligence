@@ -168,9 +168,10 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
-  // Fetch submissions for this course across assignments
+  // Real-time listener for student submissions across this course
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !courseId || !user) return null;
+    // Security Rule Alignment: Requires filter on professorId for collectionGroup list
     return query(
       collectionGroup(firestore, 'submissions'),
       where('professorId', '==', user.uid)

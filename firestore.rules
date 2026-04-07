@@ -45,11 +45,6 @@ service cloud.firestore {
       );
     }
 
-    // --- Global Permissive Rule for Auth Users (Requested Fix) ---
-    match /{collection}/{docId} {
-      allow read, write: if isSignedIn();
-    }
-
     // --- Specific Collection Rules ---
 
     match /users/{userId} {
@@ -75,8 +70,7 @@ service cloud.firestore {
         );
 
         match /submissions/{submissionId} {
-          allow list: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
-          allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+          // Note: collectionGroup rule above covers the 'list' operation across assignments
           allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
           allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
         }

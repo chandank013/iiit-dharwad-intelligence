@@ -33,7 +33,8 @@ export interface InternalQuery extends Query<DocumentData> {
     path: {
       canonicalString(): string;
       toString(): string;
-    }
+    },
+    collectionGroup?: string;
   }
 }
 
@@ -60,9 +61,16 @@ export function useCollection<T = any>(
     }
 
     // Protection against querying root if path is empty
-    const path: string = memoizedTargetRefOrQuery.type === 'collection'
+    const internal = memoizedTargetRefOrQuery as unknown as InternalQuery;
+    const collectionGroupName = internal._query?.collectionGroup;
+    let path: string = memoizedTargetRefOrQuery.type === 'collection'
       ? (memoizedTargetRefOrQuery as CollectionReference).path
-      : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query?.path?.canonicalString() || "";
+      : internal._query?.path?.canonicalString() || "";
+
+    // If it's a collectionGroup query, the path might be empty, so we use the collection name for reporting
+    if (collectionGroupName) {
+      path = `collectionGroup(${collectionGroupName})`;
+    }
 
     if (path === "" && memoizedTargetRefOrQuery.type === 'collection') {
       setIsLoading(false);
@@ -84,10 +92,10 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // Only emit if it's a real permission issue, not a query parameter issue
+        // Only emit if it's a real permission issue
         const contextualError = new FirestorePermissionError({
           operation: 'list',
-          path: path || "collectionGroup query",
+          path: path || "unknown collection group query",
         })
 
         setError(contextualError)

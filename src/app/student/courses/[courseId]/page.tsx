@@ -94,6 +94,7 @@ export default function StudentCoursePage() {
   // Real-time listener for student's submissions across this course
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
+    // Security Rule Alignment: Requires filter on submitterId for collectionGroup list
     return query(
       collectionGroup(firestore, 'submissions'),
       where('submitterId', '==', user.uid)
