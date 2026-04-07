@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { GraduationCap, ArrowRight, Loader2, Mail, Lock } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, Mail, Lock, User as UserIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -120,61 +120,64 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#F6FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="max-w-md w-full animate-in fade-in zoom-in duration-500 relative z-10">
         <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-          <CardHeader className="flex flex-col items-center gap-4 text-center pb-8 pt-10">
-            <div className="bg-primary/10 p-4 rounded-3xl text-primary shadow-xl border border-primary/20">
-              <GraduationCap className="h-12 w-12" />
+          <CardHeader className="flex flex-col items-center gap-3 text-center pb-4 pt-6">
+            <div className="bg-primary/10 p-3 rounded-2xl text-primary shadow-lg border border-primary/20">
+              <GraduationCap className="h-10 w-10" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-4xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
-              <div className="pt-6">
-                <CardTitle className="text-2xl font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
-                <CardDescription className="text-sm font-medium mt-2">
+              <h1 className="text-3xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
+              <div className="pt-2">
+                <CardTitle className="text-xl font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
+                <CardDescription className="text-xs font-medium mt-1">
                   {isSignUp 
                     ? 'Register with your institute email to get started.' 
-                    : 'Enter your institute credentials to access your dashboard.'}
+                    : 'Enter your credentials to access your dashboard.'}
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <form onSubmit={handleAuth}>
-            <CardContent className="space-y-6 px-10">
+            <CardContent className="space-y-4 px-8">
               {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    className="h-12 bg-background/50 border-white/10 rounded-xl"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required={isSignUp}
-                  />
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      className="h-11 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required={isSignUp}
+                    />
+                  </div>
                 </div>
               )}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Institute Email</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Institute Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@iiitdwd.ac.in"
-                    className="h-12 pl-12 bg-background/50 border-white/10 rounded-xl"
+                    className="h-11 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="h-12 pl-12 bg-background/50 border-white/10 rounded-xl"
+                    className="h-11 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -182,20 +185,20 @@ export default function LoginPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-6 pb-10 px-10">
-              <Button type="submit" className="w-full h-14 text-lg font-bold group shadow-xl shadow-primary/20 rounded-2xl" disabled={isLoading}>
+            <CardFooter className="flex flex-col gap-4 pb-6 px-8">
+              <Button type="submit" className="w-full h-12 text-md font-bold group shadow-xl shadow-primary/20 rounded-xl" disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
                     {isSignUp ? 'Create Account' : 'Continue'} 
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </Button>
               <button 
                 type="button" 
-                className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors" 
+                className="text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors" 
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}

@@ -76,24 +76,6 @@ import {
 } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
-const scoreProgressData = [
-  { name: 'Aug', score: 0 },
-  { name: 'Sep', score: 0 },
-  { name: 'Oct', score: 0 },
-  { name: 'Nov', score: 0 },
-  { name: 'Dec', score: 0 },
-  { name: 'Jan', score: 0 },
-];
-
-const subjectStrengthData = [
-  { subject: 'Algorithms', A: 0, fullMark: 100 },
-  { subject: 'Databases', A: 0, fullMark: 100 },
-  { subject: 'Web Dev', A: 0, fullMark: 100 },
-  { subject: 'ML/AI', A: 0, fullMark: 100 },
-  { subject: 'Networks', A: 0, fullMark: 100 },
-  { subject: 'OS', A: 0, fullMark: 100 },
-];
-
 export default function StudentCoursePage() {
   const { courseId } = useParams();
   const router = useRouter();
