@@ -20,7 +20,8 @@ import {
   deleteDoc,
   updateDoc,
   serverTimestamp,
-  increment
+  increment,
+  collectionGroup
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -47,7 +48,8 @@ import {
   Share2,
   Settings,
   Calendar,
-  Info
+  Info,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -181,6 +183,17 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
+  // Fetch all submissions for this course across all assignments
+  const submissionsQuery = useMemoFirebase(() => {
+    if (!firestore || !courseId || !user) return null;
+    return query(
+      collectionGroup(firestore, 'submissions'),
+      where('courseId', '==', courseId as string),
+      where('professorId', '==', user.uid)
+    );
+  }, [firestore, courseId, user]);
+  const { data: allSubmissions } = useCollection(submissionsQuery);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -280,7 +293,7 @@ export default function CoursePortalPage() {
   const stats = [
     { label: 'Total Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Submissions', value: 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Submissions', value: allSubmissions?.length || 0, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Avg. Score', value: '0%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   ];
 
@@ -595,11 +608,11 @@ export default function CoursePortalPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="p-4 border-border bg-card">
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Received</div>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">{allSubmissions?.length || 0}</div>
               </Card>
               <Card className="p-4 border-border bg-card">
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Pending Review</div>
-                <div className="text-2xl font-bold text-orange-500">0</div>
+                <div className="text-2xl font-bold text-orange-500">{allSubmissions?.filter(s => s.status !== 'graded').length || 0}</div>
               </Card>
               <Card className="p-4 border-border bg-card">
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">AI Graded</div>
@@ -617,17 +630,47 @@ export default function CoursePortalPage() {
                   <TableRow>
                     <TableHead className="font-bold text-[11px] uppercase tracking-widest">Student</TableHead>
                     <TableHead className="font-bold text-[11px] uppercase tracking-widest">Assignment</TableHead>
-                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">AI Score</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">Date</TableHead>
                     <TableHead className="font-bold text-[11px] uppercase tracking-widest">Status</TableHead>
                     <TableHead className="text-right"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-medium italic">
-                      No submissions found for this course.
-                    </TableCell>
-                  </TableRow>
+                  {allSubmissions && allSubmissions.length > 0 ? (
+                    allSubmissions.map((sub) => {
+                      const assignment = assignments?.find(a => a.id === sub.assignmentId);
+                      return (
+                        <TableRow key={sub.id} className="group">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">ST</AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-bold truncate max-w-[120px]">{sub.submitterId.substring(0, 8)}...</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">{assignment?.title || 'Unknown Assignment'}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground font-medium">
+                            {sub.submittedAt?.toDate().toLocaleString() || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="bg-blue-500/10 text-blue-500 border-none font-bold text-[10px]">RECEIVED</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity font-bold text-primary">
+                              Evaluate <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-medium italic">
+                        No submissions found for this course.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </Card>

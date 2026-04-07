@@ -32,6 +32,18 @@ service cloud.firestore {
       );
     }
 
+    // --- Collection Group Rules (Critical for Dashboards) ---
+    match /{path=**}/submissions/{submissionId} {
+      allow list: if isSignedIn() && (
+        request.auth.uid == resource.data.submitterId || 
+        request.auth.uid == resource.data.professorId
+      );
+      allow get: if isSignedIn() && (
+        request.auth.uid == resource.data.submitterId || 
+        request.auth.uid == resource.data.professorId
+      );
+    }
+
     // --- Collection Rules ---
 
     match /users/{userId} {
@@ -88,7 +100,7 @@ service cloud.firestore {
         }
 
         match /submissions/{submissionId} {
-          allow list: if isSignedIn();
+          allow list: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
           allow get: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
           allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
           allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);

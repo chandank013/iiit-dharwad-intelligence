@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -17,7 +16,8 @@ import {
   orderBy,
   where,
   serverTimestamp,
-  increment
+  increment,
+  collectionGroup
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -127,6 +127,26 @@ export default function StudentCoursePage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
+  // Real-time listener for student's submissions across this course
+  const submissionsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collectionGroup(firestore, 'submissions'),
+      where('submitterId', '==', user.uid)
+    );
+  }, [firestore, user]);
+  const { data: rawSubmissions } = useCollection(submissionsQuery);
+
+  // Filter submissions for this specific course in memory to satisfy rules without complex indices
+  const mySubmissions = useMemo(() => {
+    if (!rawSubmissions || !courseId) return [];
+    return rawSubmissions.filter(s => s.courseId === courseId);
+  }, [rawSubmissions, courseId]);
+
+  const submittedAssignmentIds = useMemo(() => {
+    return new Set(mySubmissions.map(s => s.assignmentId));
+  }, [mySubmissions]);
+
   const handleAddComment = (contentId: string) => {
     if (!firestore || !courseId || !user || !commentText.trim()) return;
     const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
@@ -223,7 +243,9 @@ export default function StudentCoursePage() {
                     <Clock className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-foreground">1</div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
+                    </div>
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
                   </div>
                 </Card>
@@ -232,7 +254,7 @@ export default function StudentCoursePage() {
                     <FileCheck className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-foreground">0</div>
+                    <div className="text-2xl font-bold text-foreground">{mySubmissions.length}</div>
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Submitted</div>
                   </div>
                 </Card>
@@ -257,8 +279,8 @@ export default function StudentCoursePage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
-                      {assignments && assignments.length > 0 ? (
-                        assignments.slice(0, 1).map((task, i) => (
+                      {assignments && assignments.filter(a => !submittedAssignmentIds.has(a.id)).length > 0 ? (
+                        assignments.filter(a => !submittedAssignmentIds.has(a.id)).slice(0, 3).map((task, i) => (
                           <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
                             <div className="space-y-2">
                               <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</div>
@@ -284,78 +306,21 @@ export default function StudentCoursePage() {
                     <CardTitle className="text-sm font-bold text-foreground">Recent Grades</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="p-10 text-center text-xs text-muted-foreground italic">
-                      No graded submissions yet.
+                    <div className="divide-y divide-border">
+                      {mySubmissions.filter(s => s.status === 'graded').length > 0 ? (
+                        mySubmissions.filter(s => s.status === 'graded').slice(0, 3).map((sub, i) => (
+                          <div key={i} className="p-5 flex items-center justify-between">
+                            <span className="text-sm font-bold">{assignments?.find(a => a.id === sub.assignmentId)?.title}</span>
+                            <Badge className="bg-emerald-500 text-white">{sub.evaluation?.totalScore}%</Badge>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-10 text-center text-xs text-muted-foreground italic">
+                          No graded submissions yet.
+                        </div>
+                      )}
                     </div>
                   </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="border-border p-6 space-y-6">
-                  <CardTitle className="text-xs font-bold text-foreground uppercase tracking-widest">Score Progress</CardTitle>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={scoreProgressData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} vertical={false} />
-                        <XAxis 
-                          dataKey="name" 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 9, fontWeight: 700 }} 
-                          dy={10}
-                        />
-                        <YAxis 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 9, fontWeight: 700 }}
-                          domain={[0, 100]}
-                          dx={-10}
-                        />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '10px' }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="score" 
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={3} 
-                          dot={{ fill: 'hsl(var(--primary))', r: 4 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
-
-                <Card className="border-border p-6 space-y-6">
-                  <CardTitle className="text-xs font-bold text-foreground uppercase tracking-widest">Subject Strength</CardTitle>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={subjectStrengthData}>
-                        <PolarGrid stroke="currentColor" opacity={0.1} />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 8, fontWeight: 700 }} />
-                        <Radar
-                          name="Strength"
-                          dataKey="A"
-                          stroke="hsl(var(--primary))"
-                          fill="hsl(var(--primary))"
-                          fillOpacity={0.4}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
-
-                <Card className="border-border p-6 space-y-6">
-                  <div className="flex items-center gap-2 text-xs font-bold text-foreground uppercase tracking-widest">
-                    <Target className="h-4 w-4 text-orange-500" /> Focus Areas
-                  </div>
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-lg bg-orange-500/5 border border-orange-500/10 flex items-center gap-3">
-                      <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                      <span className="text-[10px] font-bold text-muted-foreground">Start your first assignment to see insights.</span>
-                    </div>
-                  </div>
                 </Card>
               </div>
             </>
@@ -366,9 +331,9 @@ export default function StudentCoursePage() {
               <div className="flex flex-col gap-2">
                 <h1 className="text-3xl font-bold tracking-tight">My Assignments</h1>
                 <div className="flex items-center gap-2 text-sm font-bold">
-                  <span className="text-orange-500">1 pending</span>
+                  <span className="text-orange-500">{assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0} pending</span>
                   <span className="text-muted-foreground/30">•</span>
-                  <span className="text-emerald-500">0 submitted</span>
+                  <span className="text-emerald-500">{submittedAssignmentIds.size} submitted</span>
                 </div>
               </div>
 
@@ -377,8 +342,8 @@ export default function StudentCoursePage() {
                   <AlertCircle className="h-4 w-4" /> Pending Submissions
                 </div>
                 <div className="space-y-4">
-                  {assignments && assignments.length > 0 ? (
-                    assignments.map((assignment, idx) => (
+                  {assignments && assignments.filter(a => !submittedAssignmentIds.has(a.id)).length > 0 ? (
+                    assignments.filter(a => !submittedAssignmentIds.has(a.id)).map((assignment, idx) => (
                       <Card key={assignment.id} className={cn(
                         "border-border bg-card/50 backdrop-blur-sm overflow-hidden border-l-4 transition-all hover:shadow-lg group",
                         idx === 0 ? "border-l-rose-500" : "border-l-orange-500"
@@ -429,9 +394,28 @@ export default function StudentCoursePage() {
                   <CheckCircle className="h-4 w-4" /> Submitted
                 </div>
                 <div className="space-y-4">
-                  <div className="p-8 text-center text-xs text-muted-foreground font-medium italic border-border border rounded-2xl bg-card/30">
-                    No submissions found.
-                  </div>
+                  {assignments && assignments.filter(a => submittedAssignmentIds.has(a.id)).length > 0 ? (
+                    assignments.filter(a => submittedAssignmentIds.has(a.id)).map((assignment) => (
+                      <Card key={assignment.id} className="border-border bg-accent/10 opacity-80">
+                        <CardContent className="p-6 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <CheckCircle className="h-5 w-5 text-emerald-500" />
+                            <div>
+                              <div className="text-sm font-bold">{assignment.title}</div>
+                              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Received</div>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setActiveTab('submissions')} className="font-bold text-xs">
+                            View Feedback <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-xs text-muted-foreground font-medium italic border-border border rounded-2xl bg-card/30">
+                      No submissions found.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -442,7 +426,7 @@ export default function StudentCoursePage() {
               <div className="flex flex-col gap-2">
                 <h1 className="text-4xl font-bold tracking-tight">My Submissions</h1>
                 <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-                  <span>0 total submissions</span>
+                  <span>{mySubmissions.length} total submissions</span>
                   <span className="h-1 w-1 rounded-full bg-border" />
                   <span>Average score: <span className="text-emerald-500 font-bold">0%</span></span>
                 </div>
@@ -450,7 +434,7 @@ export default function StudentCoursePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-primary">0</div>
+                  <div className="text-3xl font-bold text-primary">{mySubmissions.length}</div>
                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Submitted</div>
                 </Card>
                 <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
@@ -464,23 +448,55 @@ export default function StudentCoursePage() {
                 <Card className="p-4 border-border shadow-sm">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Score History</div>
                   <div className="h-12 w-full flex items-center justify-center text-[10px] text-muted-foreground italic">
-                    No data
+                    {mySubmissions.length > 0 ? 'Updating...' : 'No data'}
                   </div>
                 </Card>
               </div>
 
-              <div className="flex flex-col items-center justify-center py-24 bg-card/50 border-2 border-dashed border-border rounded-[2rem] space-y-6">
-                <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 ring-1 ring-primary/10">
-                  <Inbox className="h-10 w-10" />
+              {mySubmissions.length > 0 ? (
+                <div className="grid gap-6">
+                  {mySubmissions.map((sub) => {
+                    const assignment = assignments?.find(a => a.id === sub.assignmentId);
+                    return (
+                      <Card key={sub.id} className="border-border bg-card overflow-hidden">
+                        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
+                          <div>
+                            <CardTitle className="text-lg font-bold">{assignment?.title || 'Unknown Assignment'}</CardTitle>
+                            <CardDescription className="text-xs">Submitted on {sub.submittedAt?.toDate().toLocaleDateString()}</CardDescription>
+                          </div>
+                          <Badge className="bg-primary/10 text-primary border-primary/20">{sub.status || 'RECEIVED'}</Badge>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
+                            <div className="text-sm font-medium text-muted-foreground italic line-clamp-2">
+                              {sub.content.substring(0, 150)}...
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
+                                <div className="h-full bg-primary" style={{ width: sub.evaluation?.totalScore ? `${sub.evaluation.totalScore}%` : '0%' }} />
+                              </div>
+                              <span className="text-sm font-bold">{sub.evaluation?.totalScore || 0}%</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-                <div className="text-center space-y-2">
-                  <h3 className="text-xl font-bold tracking-tight">No submissions yet</h3>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">Your evaluations and feedback will appear here once you submit your first assignment.</p>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 bg-card/50 border-2 border-dashed border-border rounded-[2rem] space-y-6">
+                  <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 ring-1 ring-primary/10">
+                    <Inbox className="h-10 w-10" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold tracking-tight">No submissions yet</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs mx-auto">Your evaluations and feedback will appear here once you submit your first assignment.</p>
+                  </div>
+                  <Button variant="secondary" className="rounded-xl font-bold" onClick={() => setActiveTab('assignments')}>
+                    View Active Assignments
+                  </Button>
                 </div>
-                <Button variant="secondary" className="rounded-xl font-bold" onClick={() => setActiveTab('assignments')}>
-                  View Active Assignments
-                </Button>
-              </div>
+              )}
             </div>
           )}
 

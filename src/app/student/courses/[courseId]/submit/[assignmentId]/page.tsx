@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -29,7 +28,6 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Github, 
-  Link as LinkIcon, 
   FileText, 
   Clock 
 } from 'lucide-react';
@@ -42,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/layout/Navbar';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function SubmitAssignmentPage() {
   const { courseId, assignmentId } = useParams();
@@ -96,9 +95,10 @@ export default function SubmitAssignmentPage() {
     const submissionsCol = collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions');
     
     const submissionData = {
+      courseId: courseId as string,
       assignmentId,
       submitterId: user.uid,
-      submissionNumber: 1, // Simplified for MVP
+      submissionNumber: 1,
       submissionType: assignment.submissionType || 'text',
       content: content,
       submittedAt: serverTimestamp(),
@@ -107,6 +107,7 @@ export default function SubmitAssignmentPage() {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       professorId: assignment.professorId, // Denormalized for rules
+      status: 'submitted'
     };
 
     addDocumentNonBlocking(submissionsCol, submissionData);

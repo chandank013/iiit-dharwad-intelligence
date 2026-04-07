@@ -117,38 +117,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-        <div className="absolute top-10 left-10 w-64 h-64 bg-primary rounded-full blur-[120px]" />
-        <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary rounded-full blur-[120px]" />
-      </div>
-
-      <div className="max-w-md w-full space-y-8 animate-in fade-in zoom-in duration-500 relative z-10">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="bg-primary/10 p-4 rounded-3xl text-primary shadow-xl border border-primary/20">
-            <GraduationCap className="h-12 w-12" />
-          </div>
-          <h1 className="text-4xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
-        </div>
-
-        <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
-            <CardDescription>
-              {isSignUp 
-                ? 'Register with your institute email to get started.' 
-                : 'Enter your institute credentials to access your dashboard.'}
-            </CardDescription>
+    <div className="min-h-screen bg-[#F6FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      <div className="max-w-md w-full animate-in fade-in zoom-in duration-500 relative z-10">
+        <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+          <CardHeader className="flex flex-col items-center gap-4 text-center pb-8 pt-10">
+            <div className="bg-primary/10 p-4 rounded-3xl text-primary shadow-xl border border-primary/20">
+              <GraduationCap className="h-12 w-12" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-4xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
+              <div className="pt-6">
+                <CardTitle className="text-2xl font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
+                <CardDescription className="text-sm font-medium mt-2">
+                  {isSignUp 
+                    ? 'Register with your institute email to get started.' 
+                    : 'Enter your institute credentials to access your dashboard.'}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <form onSubmit={handleAuth}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6 px-10">
               {isSignUp && (
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full Name</Label>
                   <Input
                     id="name"
                     placeholder="John Doe"
-                    className="bg-background/50 border-white/10"
+                    className="h-12 bg-background/50 border-white/10 rounded-xl"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required={isSignUp}
@@ -156,14 +152,14 @@ export default function LoginPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Institute Email</Label>
+                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Institute Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@iiitdwd.ac.in"
-                    className="pl-10 bg-background/50 border-white/10"
+                    className="h-12 pl-12 bg-background/50 border-white/10 rounded-xl"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -171,14 +167,14 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="pl-10 bg-background/50 border-white/10"
+                    className="h-12 pl-12 bg-background/50 border-white/10 rounded-xl"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -186,25 +182,24 @@ export default function LoginPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full h-11 text-sm font-bold group shadow-lg" disabled={isLoading}>
+            <CardFooter className="flex flex-col gap-6 pb-10 px-10">
+              <Button type="submit" className="w-full h-14 text-lg font-bold group shadow-xl shadow-primary/20 rounded-2xl" disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
                     {isSignUp ? 'Create Account' : 'Continue'} 
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </Button>
-              <Button 
-                variant="ghost" 
+              <button 
                 type="button" 
-                className="w-full text-xs text-muted-foreground hover:text-primary" 
+                className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors" 
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-              </Button>
+              </button>
             </CardFooter>
           </form>
         </Card>
