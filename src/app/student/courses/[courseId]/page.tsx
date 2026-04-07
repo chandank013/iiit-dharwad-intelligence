@@ -16,7 +16,6 @@ import {
   orderBy,
   where,
   serverTimestamp,
-  increment,
   collectionGroup
 } from 'firebase/firestore';
 import { 
@@ -28,14 +27,12 @@ import {
   TrendingUp, 
   Loader2, 
   Search, 
-  Target, 
   AlertCircle, 
   FolderOpen,
   User,
   CheckCircle,
   ChevronRight,
   ArrowRight,
-  FileText,
   Inbox,
   Megaphone,
   File as FileIcon,
@@ -50,19 +47,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-} from 'recharts';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -70,9 +54,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
 import { 
   addDocumentNonBlocking, 
-  deleteDocumentNonBlocking, 
-  updateDocumentNonBlocking, 
-  setDocumentNonBlocking 
+  deleteDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
@@ -119,7 +101,7 @@ export default function StudentCoursePage() {
   }, [firestore, user]);
   const { data: rawSubmissions } = useCollection(submissionsQuery);
 
-  // Filter submissions for this specific course in memory to satisfy rules without complex indices
+  // Filter submissions for this specific course in memory
   const mySubmissions = useMemo(() => {
     if (!rawSubmissions || !courseId) return [];
     return rawSubmissions.filter(s => s.courseId === courseId);
@@ -195,10 +177,6 @@ export default function StudentCoursePage() {
         <header className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <h2 className="text-sm font-bold tracking-widest uppercase text-muted-foreground">{activeTab.replace('-', ' ')}</h2>
           <div className="flex items-center gap-6">
-            <div className="relative group hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input placeholder="Search..." className="h-9 w-64 bg-accent/50 border-input text-xs pl-9 focus-visible:ring-primary/20" />
-            </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
             </div>
@@ -350,10 +328,6 @@ export default function StudentCoursePage() {
                           </div>
                           
                           <div className="flex flex-col items-center gap-6 min-w-[120px]">
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-primary">100</div>
-                              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Marks</div>
-                            </div>
                             <Link href={`/student/courses/${courseId}/submit/${assignment.id}`} className="w-full">
                               <Button className="w-full rounded-full bg-gradient-to-r from-primary to-primary/80 hover:scale-105 transition-all font-bold gap-2 py-6">
                                 Submit <ChevronRight className="h-4 w-4" />
@@ -409,30 +383,7 @@ export default function StudentCoursePage() {
                 <h1 className="text-4xl font-bold tracking-tight">My Submissions</h1>
                 <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
                   <span>{mySubmissions.length} total submissions</span>
-                  <span className="h-1 w-1 rounded-full bg-border" />
-                  <span>Average score: <span className="text-emerald-500 font-bold">0%</span></span>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-primary">{mySubmissions.length}</div>
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Submitted</div>
-                </Card>
-                <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-emerald-500">0%</div>
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Average Score</div>
-                </Card>
-                <Card className="p-6 border-border shadow-sm flex flex-col justify-center">
-                  <div className="text-3xl font-bold text-primary">0</div>
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Approved</div>
-                </Card>
-                <Card className="p-4 border-border shadow-sm">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Score History</div>
-                  <div className="h-12 w-full flex items-center justify-center text-[10px] text-muted-foreground italic">
-                    {mySubmissions.length > 0 ? 'Updating...' : 'No data'}
-                  </div>
-                </Card>
               </div>
 
               {mySubmissions.length > 0 ? (
@@ -619,10 +570,8 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
     
     if (isLiked) {
       deleteDocumentNonBlocking(likeRef);
-      updateDocumentNonBlocking(postRef, { likesCount: increment(-1) });
     } else {
-      setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
-      updateDocumentNonBlocking(postRef, { likesCount: increment(1) });
+      addDocumentNonBlocking(collection(firestore, 'courses', courseId, 'content', postId, 'likes'), { uid: currentUserId, createdAt: serverTimestamp() });
     }
   };
 

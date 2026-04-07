@@ -55,9 +55,6 @@ export function Navbar() {
               <LayoutDashboard className="h-3 w-3" /> Dashboard
             </Link>
             <Link href="/courses" className="text-muted-foreground transition-colors hover:text-primary font-bold uppercase tracking-widest text-[10px]">Courses</Link>
-            {isStudent && (
-              <Link href="/portfolio" className="text-muted-foreground transition-colors hover:text-primary font-bold uppercase tracking-widest text-[10px]">Portfolio</Link>
-            )}
           </div>
         </div>
 
@@ -93,12 +90,6 @@ export function Navbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="p-3 cursor-pointer rounded-xl focus:bg-primary/5 focus:text-primary group" asChild>
-                <Link href="/portfolio" className="flex items-center gap-3">
-                  <UserIcon className="h-4 w-4 text-muted-foreground group-focus:text-primary" />
-                  <span className="text-xs font-bold">My Profile</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem 
                 className="p-3 cursor-pointer rounded-xl focus:bg-destructive/5 focus:text-destructive group"
                 onClick={handleSignOut}
