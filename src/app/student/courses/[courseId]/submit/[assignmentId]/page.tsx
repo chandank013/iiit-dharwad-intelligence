@@ -89,7 +89,7 @@ export default function SubmitAssignmentPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore || !user || !assignmentId || !content.trim()) return;
+    if (!firestore || !user || !assignmentId || !content.trim() || !assignment) return;
 
     setIsSubmitting(true);
     const submissionsCol = collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions');
@@ -97,6 +97,7 @@ export default function SubmitAssignmentPage() {
     const submissionData = {
       courseId: courseId as string,
       assignmentId,
+      assignmentTitle: assignment.title, // Denormalized for listing
       submitterId: user.uid,
       submissionNumber: 1,
       submissionType: assignment.submissionType || 'text',
@@ -106,7 +107,7 @@ export default function SubmitAssignmentPage() {
       aiQualityWarning: qualityFeedback?.summaryFeedback || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      professorId: assignment.professorId, // Denormalized for rules
+      professorId: assignment.professorId, // Denormalized for rules and queries
       status: 'submitted'
     };
 

@@ -637,33 +637,30 @@ export default function CoursePortalPage() {
                 </TableHeader>
                 <TableBody>
                   {allSubmissions && allSubmissions.length > 0 ? (
-                    allSubmissions.map((sub) => {
-                      const assignment = assignments?.find(a => a.id === sub.assignmentId);
-                      return (
-                        <TableRow key={sub.id} className="group">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">ST</AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm font-bold truncate max-w-[120px]">{sub.submitterId.substring(0, 8)}...</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">{assignment?.title || 'Unknown Assignment'}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground font-medium">
-                            {sub.submittedAt?.toDate().toLocaleString() || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-blue-500/10 text-blue-500 border-none font-bold text-[10px]">RECEIVED</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity font-bold text-primary">
-                              Evaluate <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
+                    allSubmissions.map((sub) => (
+                      <TableRow key={sub.id} className="group">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">ST</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-bold truncate max-w-[120px]">{sub.submitterId.substring(0, 8)}...</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">{sub.assignmentTitle || 'Assignment'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-medium">
+                          {sub.submittedAt?.toDate().toLocaleString() || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-500/10 text-blue-500 border-none font-bold text-[10px] uppercase">{sub.status || 'RECEIVED'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity font-bold text-primary">
+                            Evaluate <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="h-48 text-center text-muted-foreground font-medium italic">
@@ -731,7 +728,7 @@ export default function CoursePortalPage() {
           </div>
         )}
 
-        {activeTab === 'content' && (
+        {activeTab === 'content' && (activeTab === 'content' && (
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1">
@@ -993,7 +990,7 @@ export default function CoursePortalPage() {
               )}
             </div>
           </div>
-        )}
+        ))}
       </main>
     </div>
   );
