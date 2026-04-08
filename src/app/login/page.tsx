@@ -120,7 +120,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#F6FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="max-w-md w-full animate-in fade-in zoom-in duration-500 relative z-10">
         <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl rounded-[1.5rem] overflow-hidden">
-          <CardHeader className="flex flex-col items-center gap-1 text-center p-6">
+          <CardHeader className="flex flex-col items-center gap-1 text-center p-8">
             <div className="bg-primary/10 p-3 rounded-2xl text-primary shadow-lg border border-primary/20">
               <GraduationCap className="h-6 w-6" />
             </div>
@@ -133,7 +133,7 @@ export default function LoginPage() {
             </div>
           </CardHeader>
           <form onSubmit={handleAuth}>
-            <CardContent className="space-y-4 px-8">
+            <CardContent className="space-y-4 px-10">
               {isSignUp && (
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full Name</Label>
@@ -142,7 +142,7 @@ export default function LoginPage() {
                     <Input
                       id="name"
                       placeholder="John Doe"
-                      className="h-10 pl-10 bg-background/50 border-white/10 rounded-xl"
+                      className="h-12 pl-10 bg-background/50 border-white/10 rounded-xl"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required={isSignUp}
@@ -158,7 +158,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     placeholder="name@iiitdwd.ac.in"
-                    className="h-10 pl-10 bg-background/50 border-white/10 rounded-xl"
+                    className="h-12 pl-10 bg-background/50 border-white/10 rounded-xl"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -173,7 +173,7 @@ export default function LoginPage() {
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="h-10 pl-10 bg-background/50 border-white/10 rounded-xl"
+                    className="h-12 pl-10 bg-background/50 border-white/10 rounded-xl"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -181,13 +181,13 @@ export default function LoginPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 p-8">
-              <Button type="submit" className="w-full h-11 font-bold group shadow-lg rounded-xl" disabled={isLoading}>
+            <CardFooter className="flex flex-col gap-4 p-10">
+              <Button type="submit" className="w-full h-12 font-bold group shadow-lg rounded-xl text-lg" disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{isSignUp ? 'Sign Up' : 'Continue'} <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" /></>}
               </Button>
               <button 
                 type="button" 
-                className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors" 
+                className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors" 
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}

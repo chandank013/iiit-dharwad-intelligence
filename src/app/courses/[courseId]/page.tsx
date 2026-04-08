@@ -38,9 +38,7 @@ import {
   ArrowRight,
   Info,
   Sparkles,
-  Search,
   CheckCircle2,
-  XCircle,
   BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -86,8 +84,6 @@ export default function CoursePortalPage() {
     body: '',
   });
 
-  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
 
   useEffect(() => {
@@ -215,7 +211,7 @@ export default function CoursePortalPage() {
       const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('busy');
       toast({ 
         title: "Evaluation Failed", 
-        description: isUnavailable ? "AI service is currently busy. Please try again in a moment." : "AI could not process this submission.", 
+        description: isUnavailable ? "AI service is currently busy. Retrying if possible..." : "AI could not process this submission.", 
         variant: "destructive" 
       });
     } finally {
@@ -234,7 +230,7 @@ export default function CoursePortalPage() {
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
     { id: 'submissions', label: 'Submissions', icon: FileText },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { id: 'content', label: 'Course Feed', icon: FolderOpen },
+    { id: 'content', label: 'Content', icon: FolderOpen },
   ];
 
   return (
@@ -338,7 +334,7 @@ export default function CoursePortalPage() {
                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'assignments', assignment.id))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" className="rounded-xl font-bold" onClick={() => { setSelectedAssignment(assignment); setIsDetailsOpen(true); }}>
+                      <Button variant="outline" className="rounded-xl font-bold">
                         Manage
                       </Button>
                     </div>
@@ -419,7 +415,7 @@ export default function CoursePortalPage() {
         {activeTab === 'content' && (
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold tracking-tighter">Course Feed</h1>
+              <h1 className="text-3xl font-bold tracking-tighter">Content</h1>
               <Button className="rounded-xl px-6 font-bold" onClick={() => setIsContentDialogOpen(true)}>
                 <Plus className="h-5 w-5 mr-2" /> New Post
               </Button>
