@@ -181,9 +181,15 @@ export default function CoursePortalPage() {
   const { data: rawSubmissions } = useCollection(submissionsQuery);
 
   const courseSubmissions = useMemo(() => {
-    if (!rawSubmissions || !courseId) return [];
-    return rawSubmissions.filter(s => s.courseId === courseId);
-  }, [rawSubmissions, courseId]);
+    if (!rawSubmissions || !courseId || !allUsers) return [];
+    return rawSubmissions
+      .filter(s => s.courseId === courseId)
+      .filter(s => {
+        const student = allUsers.find(u => u.id === s.submitterId);
+        const fullName = student ? `${student.firstName} ${student.lastName}` : "";
+        return !fullName.toLowerCase().includes("chandan kumar");
+      });
+  }, [rawSubmissions, courseId, allUsers]);
 
   const analyticsData = useMemo(() => {
     if (!courseSubmissions || !assignments) return { distribution: [], performance: [] };

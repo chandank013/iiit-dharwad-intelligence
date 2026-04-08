@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -209,7 +210,7 @@ export function StudentDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-headline font-bold">Student Portal</h1>
-          <p className="text-muted-foreground">Track your academic progress and submissions at IIIT Dharwad.</p>
+          <p className="text-muted-foreground">Track your academic progress at IIIT Dharwad.</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -257,7 +258,7 @@ export function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl border-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 opacity-90">
@@ -278,17 +279,6 @@ export function StudentDashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{allAssignments.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Pending deadlines across courses</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-none bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4" /> Completed
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">Assignments evaluated</p>
           </CardContent>
         </Card>
       </div>

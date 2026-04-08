@@ -23,13 +23,11 @@ import {
 import { 
   LayoutDashboard, 
   BookOpen, 
-  FileCheck, 
   ChevronLeft, 
   Clock, 
   TrendingUp, 
   Loader2, 
   FolderOpen,
-  CheckCircle,
   ChevronRight,
   ArrowRight,
   Megaphone,
@@ -39,7 +37,6 @@ import {
   MessageCircle,
   Send,
   Trash2,
-  Undo2,
   FileArchive,
   AlertTriangle,
   Download
@@ -112,27 +109,6 @@ export default function StudentCoursePage() {
     return new Set(mySubmissions.map(s => s.assignmentId));
   }, [mySubmissions]);
 
-  const handleUnsubmit = (submission: any) => {
-    if (!firestore || !courseId) return;
-
-    const assignment = assignments?.find(a => a.id === submission.assignmentId);
-    const deadlinePassed = assignment?.deadline && new Date() > new Date(assignment.deadline);
-
-    if (deadlinePassed) {
-      toast({ title: "Deadline Passed", description: "You cannot unsubmit after the deadline.", variant: "destructive" });
-      return;
-    }
-
-    if (submission.status === 'graded') {
-      toast({ title: "Already Graded", description: "You cannot unsubmit a graded assignment.", variant: "destructive" });
-      return;
-    }
-
-    const subRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
-    deleteDocumentNonBlocking(subRef);
-    toast({ title: "Submission Withdrawn" });
-  };
-
   const handleViewContent = (url: string) => {
     if (!url) return;
     if (url.startsWith('data:')) {
@@ -178,7 +154,6 @@ export default function StudentCoursePage() {
   const sidebarLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
-    { id: 'submissions', label: 'My Submissions', icon: FileCheck },
     { id: 'content', label: 'Content', icon: FolderOpen },
   ];
 
@@ -235,7 +210,7 @@ export default function StudentCoursePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="border-border p-6 flex items-center gap-6">
                   <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
                     <Clock className="h-6 w-6" />
@@ -245,15 +220,6 @@ export default function StudentCoursePage() {
                       {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
                     </div>
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
-                  </div>
-                </Card>
-                <Card className="border-border p-6 flex items-center gap-6">
-                  <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
-                    <FileCheck className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">{mySubmissions.length}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Submitted</div>
                   </div>
                 </Card>
                 <Card className="border-border p-6 flex items-center gap-6">
@@ -326,8 +292,6 @@ export default function StudentCoursePage() {
                               <span className={cn("flex items-center gap-1.5", deadlinePassed ? "text-rose-500" : "text-orange-500")}>
                                 <Clock className="h-3.5 w-3.5" /> {deadlinePassed ? 'Missed' : 'Due'}: {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'N/A'}
                               </span>
-                              {isSubmitted && <span className="flex items-center gap-1.5 text-emerald-500"><CheckCircle className="h-3.5 w-3.5" /> Submitted</span>}
-                              {!isSubmitted && deadlinePassed && <span className="flex items-center gap-1.5 text-rose-500 font-black"><AlertTriangle className="h-3.5 w-3.5" /> Missing</span>}
                             </div>
                           </div>
                           {!isSubmitted && !deadlinePassed && (
@@ -350,71 +314,6 @@ export default function StudentCoursePage() {
                   <div className="p-12 text-center text-muted-foreground border-2 border-dashed rounded-3xl">No assignments assigned.</div>
                 )}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'submissions' && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h1 className="text-3xl font-bold tracking-tight">My Submissions</h1>
-              {mySubmissions.length > 0 ? (
-                <div className="grid gap-6">
-                  {mySubmissions.map((sub) => {
-                    const assignment = assignments?.find(a => a.id === sub.assignmentId);
-                    const isGraded = sub.status === 'graded';
-                    const deadlinePassed = assignment?.deadline && new Date() > new Date(assignment.deadline);
-
-                    return (
-                      <Card key={sub.id} className="border-border overflow-hidden rounded-2xl">
-                        <CardHeader className="flex flex-row items-center justify-between bg-muted/20 border-b p-6">
-                          <div className="space-y-1">
-                            <CardTitle className="text-lg font-bold">{assignment?.title || 'Unknown Assignment'}</CardTitle>
-                            <CardDescription className="text-xs">Submitted on {sub.submittedAt?.toDate().toLocaleString()}</CardDescription>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={cn(
-                              "font-bold px-3 py-1 border-none",
-                              isGraded ? "bg-emerald-500 text-white" : "bg-primary/10 text-primary"
-                            )}>
-                              {isGraded ? `${sub.evaluation?.totalScore}%` : 'RECEIVED'}
-                            </Badge>
-                            {!isGraded && !deadlinePassed && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 gap-2 font-bold h-8 px-3 rounded-lg"
-                                onClick={() => handleUnsubmit(sub)}
-                              >
-                                <Undo2 className="h-3.5 w-3.5" /> Unsubmit
-                              </Button>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-4">
-                          {isGraded ? (
-                            <div className="space-y-4">
-                              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-sm leading-relaxed text-muted-foreground italic font-medium">
-                                "{sub.evaluation?.writtenFeedback}"
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {sub.evaluation?.weakAreas?.map((area: string, i: number) => (
-                                  <Badge key={i} variant="outline" className="text-[10px] font-bold uppercase tracking-wider">{area}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-4">
-                                <p className="text-sm text-muted-foreground font-medium italic flex-1">Awaiting evaluation by professor.</p>
-                                {deadlinePassed && <Badge variant="outline" className="text-[9px] font-bold opacity-50">FINAL SUBMISSION (DEADLINE PASSED)</Badge>}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-12 text-center text-muted-foreground border-2 border-dashed rounded-3xl">No submissions yet.</div>
-              )}
             </div>
           )}
 
