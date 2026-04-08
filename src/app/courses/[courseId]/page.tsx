@@ -209,11 +209,34 @@ export default function CoursePortalPage() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      // Auto-update type based on file extension
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (ext === 'pdf') setContentFormData(prev => ({ ...prev, type: 'file' }));
       else if (ext === 'zip' || ext === 'rar') setContentFormData(prev => ({ ...prev, type: 'zip' }));
       else if (ext === 'ppt' || ext === 'pptx') setContentFormData(prev => ({ ...prev, type: 'ppt' }));
+    }
+  };
+
+  const handleViewContent = (url: string) => {
+    if (!url) return;
+    if (url.startsWith('data:')) {
+      try {
+        const parts = url.split(',');
+        const byteString = atob(parts[1]);
+        const mimeString = parts[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      } catch (err) {
+        toast({ title: "View Error", description: "Could not open document.", variant: "destructive" });
+      }
+    } else {
+      window.open(url, '_blank');
     }
   };
 
@@ -224,7 +247,6 @@ export default function CoursePortalPage() {
     setIsPostingContent(true);
     let attachmentUrl = contentFormData.attachmentUrl;
 
-    // Handle local file upload (Simulated via Data URI for MVP/Prototype)
     if (selectedFile) {
       const reader = new FileReader();
       attachmentUrl = await new Promise((resolve) => {
@@ -673,9 +695,9 @@ export default function CoursePortalPage() {
                     <p className="text-muted-foreground leading-relaxed text-sm">{post.content}</p>
                     {post.attachmentUrl && (
                       <div className="flex items-center gap-4">
-                        <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
+                        <button onClick={() => handleViewContent(post.attachmentUrl)} className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
                           <LinkIcon className="h-3 w-3" /> View Content
-                        </a>
+                        </button>
                         <a href={post.attachmentUrl} download={post.title} className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:underline">
                           <Download className="h-3 w-3" /> Download
                         </a>

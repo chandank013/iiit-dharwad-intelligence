@@ -133,6 +133,30 @@ export default function StudentCoursePage() {
     toast({ title: "Submission Withdrawn" });
   };
 
+  const handleViewContent = (url: string) => {
+    if (!url) return;
+    if (url.startsWith('data:')) {
+      try {
+        const parts = url.split(',');
+        const byteString = atob(parts[1]);
+        const mimeString = parts[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      } catch (err) {
+        toast({ title: "View Error", description: "Could not open document.", variant: "destructive" });
+      }
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleAddComment = (contentId: string) => {
     if (!firestore || !courseId || !user || !commentText.trim()) return;
     const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
@@ -419,9 +443,9 @@ export default function StudentCoursePage() {
                         <p className="text-muted-foreground text-sm leading-relaxed">{post.content}</p>
                         {post.attachmentUrl && (
                           <div className="flex items-center gap-4">
-                            <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
-                              <LinkIcon className="h-3 w-3" /> View Resource
-                            </a>
+                            <button onClick={() => handleViewContent(post.attachmentUrl)} className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
+                              <LinkIcon className="h-3 w-3" /> View Content
+                            </button>
                             <a href={post.attachmentUrl} download={post.title} className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:underline">
                               <Download className="h-3 w-3" /> Download
                             </a>
