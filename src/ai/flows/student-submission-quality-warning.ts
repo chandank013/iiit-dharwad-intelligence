@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file provides an AI tool to evaluate a student's assignment submission draft and provide quality warnings or feedback before final submission.
@@ -42,7 +43,21 @@ const studentSubmissionQualityWarningFlow = ai.defineFlow(
     outputSchema: StudentSubmissionQualityWarningOutputSchema,
   },
   async (input) => {
-    const { output } = await submissionQualityPrompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 5;
+    while (attempts < maxAttempts) {
+      try {
+        const { output } = await submissionQualityPrompt(input);
+        return output!;
+      } catch (error: any) {
+        attempts++;
+        const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
+        if (attempts >= maxAttempts || !isUnavailable) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, attempts * 3000));
+      }
+    }
+    throw new Error('AI Service is currently experiencing high demand. Please try again later.');
   }
 );

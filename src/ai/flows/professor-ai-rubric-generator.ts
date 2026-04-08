@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for professors to auto-generate a comprehensive rubric based on an assignment description.
@@ -72,7 +73,21 @@ const professorAIRubricGeneratorFlow = ai.defineFlow(
     outputSchema: ProfessorAIRubricGeneratorOutputSchema,
   },
   async (input) => {
-    const {output} = await professorAIRubricGeneratorPrompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 5;
+    while (attempts < maxAttempts) {
+      try {
+        const { output } = await professorAIRubricGeneratorPrompt(input);
+        return output!;
+      } catch (error: any) {
+        attempts++;
+        const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
+        if (attempts >= maxAttempts || !isUnavailable) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, attempts * 3000));
+      }
+    }
+    throw new Error('AI Service is currently experiencing high demand. Please try again.');
   }
 );

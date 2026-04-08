@@ -866,7 +866,7 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
       setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
       updateDocumentNonBlocking(parentRef, { 
         likesCount: increment(1),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp() 
       });
     }
   };
