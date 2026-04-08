@@ -78,6 +78,20 @@ service cloud.firestore {
         match /submissions/{submissionId} {
           allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
           allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+          allow read: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
+        }
+        
+        match /rubrics/{rubricId} {
+          allow read: if isSignedIn();
+          allow write: if isProfessor() && (
+            (request.resource != null && request.resource.data.professorId == request.auth.uid) || 
+            (resource != null && resource.data.professorId == request.auth.uid)
+          );
+          
+          match /criteria/{criterionId} {
+             allow read: if isSignedIn();
+             allow write: if isProfessor();
+          }
         }
       }
 

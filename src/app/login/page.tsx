@@ -130,8 +130,8 @@ export default function LoginPage() {
                 <CardTitle className="text-lg font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
                 <CardDescription className="text-[10px] font-medium">
                   {isSignUp 
-                    ? 'Register with your institute email to get started.' 
-                    : 'Enter your credentials to access your dashboard.'}
+                    ? 'Register with your institute email.' 
+                    : 'Access your academic dashboard.'}
                 </CardDescription>
               </div>
             </div>
