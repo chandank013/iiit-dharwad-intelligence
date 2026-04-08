@@ -22,7 +22,8 @@ import {
   collectionGroup,
   getDocs,
   getDoc,
-  increment
+  increment,
+  deleteDoc
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -50,9 +51,10 @@ import {
   Users,
   User,
   AlertCircle,
-  Lock,
   Upload,
-  Download
+  Download,
+  RotateCcw,
+  Settings2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -134,6 +136,7 @@ export default function CoursePortalPage() {
 
   // State for Deletion Dialog
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' } | null>(null);
+  const [itemToReturn, setItemToReturn] = useState<any | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -327,10 +330,6 @@ export default function CoursePortalPage() {
 
     setIsEvaluating(submission.id);
     try {
-      const assignmentRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId);
-      const assignmentSnap = await getDoc(assignmentRef);
-      const assignmentData = assignmentSnap.data();
-
       const rubricsRef = collection(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'rubrics');
       const rubricsSnap = await getDocs(rubricsRef);
       const rubricDoc = rubricsSnap.docs[0];
@@ -342,7 +341,7 @@ export default function CoursePortalPage() {
       }
 
       const evaluation = await aiSubmissionEvaluationAndPlagiarismDetection({
-        assignmentDescription: assignmentData?.description || "No description",
+        assignmentDescription: assignment?.description || "No description",
         assignmentRubric: rubricText,
         submissionText: submission.content,
         allOtherSubmissionsText: courseSubmissions.filter(s => s.id !== submission.id).map(s => s.content)
@@ -402,6 +401,23 @@ export default function CoursePortalPage() {
       title: "Bulk Evaluation Finished", 
       description: `Successfully graded ${successCount} out of ${pending.length} submissions.` 
     });
+  };
+
+  const handleReturnForRevision = async () => {
+    if (!itemToReturn || !firestore || !courseId) return;
+
+    try {
+      const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', itemToReturn.assignmentId, 'submissions', itemToReturn.id);
+      await updateDoc(submissionRef, {
+        status: 'returned',
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: "Submission Returned", description: "The student can now revise and resubmit their work." });
+    } catch (error) {
+      toast({ title: "Failed to Return", variant: "destructive" });
+    } finally {
+      setItemToReturn(null);
+    }
   };
 
   const getStudentName = (uid: string) => {
@@ -538,9 +554,11 @@ export default function CoursePortalPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button variant="outline" className="rounded-xl font-bold">
-                        Manage
-                      </Button>
+                      <Link href={`/dashboard/professor/assignment/edit/${assignment.id}?courseId=${courseId}`}>
+                        <Button variant="outline" className="rounded-xl font-bold gap-2">
+                          <Settings2 className="h-4 w-4" /> Manage
+                        </Button>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>
@@ -599,25 +617,39 @@ export default function CoursePortalPage() {
                               <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold text-[10px]">
                                 {sub.evaluation.totalScore}% AI SCORING
                               </Badge>
+                            ) : sub.status === 'returned' ? (
+                              <Badge variant="secondary" className="text-rose-500 bg-rose-500/5 text-[10px] font-bold uppercase">RETURNED</Badge>
                             ) : !deadlinePassed ? (
                               <Badge variant="outline" className="text-amber-500 border-amber-500/20 text-[10px] font-bold flex items-center gap-1">
-                                <Clock className="h-3 w-3" /> AWAITING DEADLINE
+                                <Clock className="h-3 w-3" /> EARLY SUBMISSION
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-muted-foreground text-[10px] font-bold">READY FOR EVALUATION</Badge>
+                              <Badge variant="outline" className="text-muted-foreground text-[10px] font-bold uppercase">READY FOR EVALUATION</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="font-bold text-primary gap-2 text-xs"
-                              onClick={() => handleAIEvaluate(sub)}
-                              disabled={isEvaluating === sub.id || !deadlinePassed}
-                            >
-                              {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                              {deadlinePassed ? 'AI Evaluation' : 'Locked'}
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              {!deadlinePassed && sub.status === 'submitted' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-[10px] font-bold text-muted-foreground hover:text-rose-500 gap-1.5"
+                                  onClick={() => setItemToReturn(sub)}
+                                >
+                                  <RotateCcw className="h-3 w-3" /> Return
+                                </Button>
+                              )}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="font-bold text-primary gap-2 text-xs"
+                                onClick={() => handleAIEvaluate(sub)}
+                                disabled={isEvaluating === sub.id || !deadlinePassed || sub.status === 'returned'}
+                              >
+                                {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                {deadlinePassed ? 'AI Evaluation' : 'Locked'}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -810,6 +842,30 @@ export default function CoursePortalPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Return Confirmation */}
+      <AlertDialog open={!!itemToReturn} onOpenChange={(open) => !open && setItemToReturn(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-primary" />
+              Return for Revision?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will notify the student that their submission requires work. They will be able to revise and resubmit their assignment before the deadline.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReturnForRevision}
+              className="rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Confirm Return
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Deletion Confirmation Pop-up */}
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>

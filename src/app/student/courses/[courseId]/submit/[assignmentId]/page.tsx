@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,12 +7,16 @@ import {
   useUser, 
   useFirestore, 
   useDoc, 
-  useMemoFirebase 
+  useMemoFirebase,
+  useCollection
 } from '@/firebase';
 import { 
   doc, 
   collection, 
-  serverTimestamp 
+  serverTimestamp,
+  query,
+  where,
+  updateDoc
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking 
@@ -29,7 +34,8 @@ import {
   CheckCircle2, 
   Github, 
   FileText, 
-  Clock 
+  Clock,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,9 +72,22 @@ export default function SubmitAssignmentPage() {
   }, [firestore, courseId, assignmentId]);
   const { data: assignment, isLoading: isAssignmentLoading } = useDoc(assignmentRef);
 
+  const existingSubmissionQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !assignmentId) return null;
+    return query(
+      collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions'),
+      where('submitterId', '==', user.uid)
+    );
+  }, [firestore, user, courseId, assignmentId]);
+  const { data: submissions } = useCollection(existingSubmissionQuery);
+  const currentSubmission = submissions?.[0];
+
   useEffect(() => {
     if (!isUserLoading && !user) router.push('/login');
-  }, [user, isUserLoading, router]);
+    if (currentSubmission && !content) {
+      setContent(currentSubmission.content);
+    }
+  }, [user, isUserLoading, router, currentSubmission, content]);
 
   const handleQualityCheck = async () => {
     if (!content.trim() || !assignment) return;
@@ -92,33 +111,44 @@ export default function SubmitAssignmentPage() {
     if (!firestore || !user || !assignmentId || !content.trim() || !assignment) return;
 
     setIsSubmitting(true);
-    const submissionsCol = collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions');
     
     const submissionData = {
       courseId: courseId as string,
       assignmentId,
       assignmentTitle: assignment.title,
       submitterId: user.uid,
-      submissionNumber: 1,
+      submissionNumber: currentSubmission ? (currentSubmission.submissionNumber + 1) : 1,
       submissionType: assignment.submissionType || 'text',
       content: content,
       submittedAt: serverTimestamp(),
       isLate: assignment.deadline ? new Date() > new Date(assignment.deadline) : false,
       aiQualityWarning: qualityFeedback?.summaryFeedback || '',
-      createdAt: serverTimestamp(),
+      createdAt: currentSubmission ? currentSubmission.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
       professorId: assignment.professorId,
       status: 'submitted'
     };
 
-    addDocumentNonBlocking(submissionsCol, submissionData);
-    toast({ title: "Submission Received" });
-    router.push(`/student/courses/${courseId}`);
+    if (currentSubmission) {
+      const subRef = doc(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions', currentSubmission.id);
+      updateDoc(subRef, submissionData).then(() => {
+        toast({ title: "Resubmission Received" });
+        router.push(`/student/courses/${courseId}`);
+      }).finally(() => setIsSubmitting(false));
+    } else {
+      const submissionsCol = collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions');
+      addDocumentNonBlocking(submissionsCol, submissionData);
+      toast({ title: "Submission Received" });
+      router.push(`/student/courses/${courseId}`);
+    }
   };
 
   if (isUserLoading || isAssignmentLoading || !user || !assignment) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
   }
+
+  const isGraded = currentSubmission?.status === 'graded';
+  const isReturned = currentSubmission?.status === 'returned';
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -131,9 +161,21 @@ export default function SubmitAssignmentPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8 space-y-8">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tighter">Submit Assignment</h1>
+              <h1 className="text-4xl font-bold tracking-tighter">
+                {currentSubmission ? (isReturned ? 'Revise Work' : 'Resubmit Work') : 'Submit Assignment'}
+              </h1>
               <p className="text-muted-foreground font-medium">{assignment.title}</p>
             </div>
+
+            {isReturned && (
+              <Card className="border-rose-200 bg-rose-50 text-rose-700 rounded-3xl p-6 flex items-start gap-4 shadow-sm">
+                <RotateCcw className="h-6 w-6 shrink-0" />
+                <div className="space-y-1">
+                  <h4 className="font-bold">Returned for Revision</h4>
+                  <p className="text-sm opacity-90">Your professor has sent this back for improvements. You can modify your work and re-submit it below.</p>
+                </div>
+              </Card>
+            )}
 
             <Card className="border-border shadow-xl rounded-3xl overflow-hidden">
               <CardHeader className="bg-primary/5 border-b border-border p-8">
@@ -152,41 +194,49 @@ export default function SubmitAssignmentPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      Submission Content
-                    </Label>
-                    <Textarea 
-                      placeholder="Type or paste your submission here..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className="min-h-[300px] rounded-2xl bg-accent/30 border-none focus-visible:ring-primary/20 p-6 leading-relaxed"
-                      required
-                    />
+                {isGraded ? (
+                  <div className="text-center py-12 space-y-4">
+                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+                    <h3 className="text-xl font-bold">Work is Graded</h3>
+                    <p className="text-muted-foreground text-sm">This assignment has already been evaluated and cannot be resubmitted.</p>
                   </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                        Submission Content
+                      </Label>
+                      <Textarea 
+                        placeholder="Type or paste your submission here..."
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        className="min-h-[300px] rounded-2xl bg-accent/30 border-none focus-visible:ring-primary/20 p-6 leading-relaxed"
+                        required
+                      />
+                    </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    <Button 
-                      type="button"
-                      variant="secondary"
-                      className="flex-1 h-14 rounded-2xl font-bold gap-2 shadow-sm"
-                      onClick={handleQualityCheck}
-                      disabled={isCheckingQuality || !content.trim()}
-                    >
-                      {isCheckingQuality ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                      Check Quality
-                    </Button>
-                    <Button 
-                      type="submit"
-                      className="flex-1 h-14 rounded-2xl font-bold gap-2 shadow-xl shadow-primary/20"
-                      disabled={isSubmitting || !content.trim()}
-                    >
-                      {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                      Finalize Submission
-                    </Button>
-                  </div>
-                </form>
+                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                      <Button 
+                        type="button"
+                        variant="secondary"
+                        className="flex-1 h-14 rounded-2xl font-bold gap-2 shadow-sm"
+                        onClick={handleQualityCheck}
+                        disabled={isCheckingQuality || !content.trim()}
+                      >
+                        {isCheckingQuality ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
+                        Check Quality
+                      </Button>
+                      <Button 
+                        type="submit"
+                        className="flex-1 h-14 rounded-2xl font-bold gap-2 shadow-xl shadow-primary/20"
+                        disabled={isSubmitting || !content.trim()}
+                      >
+                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                        {currentSubmission ? 'Finalize Resubmission' : 'Finalize Submission'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </CardContent>
             </Card>
 
