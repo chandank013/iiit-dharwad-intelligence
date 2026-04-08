@@ -82,6 +82,16 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 
 export default function CoursePortalPage() {
   const { courseId } = useParams();
@@ -147,6 +157,41 @@ export default function CoursePortalPage() {
     if (!rawSubmissions || !courseId) return [];
     return rawSubmissions.filter(s => s.courseId === courseId);
   }, [rawSubmissions, courseId]);
+
+  const analyticsData = useMemo(() => {
+    if (!courseSubmissions || !assignments) return { distribution: [], performance: [] };
+
+    const graded = courseSubmissions.filter(s => s.status === 'graded');
+    
+    // Grade Distribution
+    const distribution = [
+      { range: '0-50', count: 0, color: '#ef4444' },
+      { range: '50-75', count: 0, color: '#f59e0b' },
+      { range: '75-90', count: 0, color: '#10b981' },
+      { range: '90-100', count: 0, color: '#3b82f6' },
+    ];
+    graded.forEach(s => {
+      const score = s.evaluation?.totalScore || 0;
+      if (score < 50) distribution[0].count++;
+      else if (score < 75) distribution[1].count++;
+      else if (score < 90) distribution[2].count++;
+      else distribution[3].count++;
+    });
+
+    // Average Performance per Assignment
+    const performance = assignments.map(a => {
+      const subs = graded.filter(s => s.assignmentId === a.id);
+      const avg = subs.length > 0 
+        ? Math.round(subs.reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / subs.length)
+        : 0;
+      return { 
+        name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title, 
+        average: avg 
+      };
+    }).reverse();
+
+    return { distribution, performance };
+  }, [courseSubmissions, assignments]);
 
   const handlePostContent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -428,11 +473,52 @@ export default function CoursePortalPage() {
         {activeTab === 'analytics' && (
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
             <h1 className="text-3xl font-bold tracking-tighter">Analytics Engine</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <Card className="border-border bg-primary/5 rounded-2xl">
-                 <CardHeader><CardTitle className="text-sm font-bold flex items-center gap-2"><BarChart3 className="h-4 w-4" /> Academic Progress</CardTitle></CardHeader>
-                 <CardContent className="h-48 flex items-center justify-center italic text-muted-foreground text-xs">
-                    Synthesizing class data...
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+               <Card className="border-border bg-card rounded-2xl shadow-sm">
+                 <CardHeader>
+                   <CardTitle className="text-sm font-bold flex items-center gap-2">
+                     <BarChart3 className="h-4 w-4 text-primary" /> Grade Distribution
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData.distribution}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis dataKey="range" fontSize={10} axisLine={false} tickLine={false} />
+                        <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                        />
+                        <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                          {analyticsData.distribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                 </CardContent>
+               </Card>
+
+               <Card className="border-border bg-card rounded-2xl shadow-sm">
+                 <CardHeader>
+                   <CardTitle className="text-sm font-bold flex items-center gap-2">
+                     <TrendingUp className="h-4 w-4 text-primary" /> Performance Trend
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData.performance} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" fontSize={9} width={80} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                        />
+                        <Bar dataKey="average" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
                  </CardContent>
                </Card>
             </div>
