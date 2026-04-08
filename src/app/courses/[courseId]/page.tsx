@@ -526,9 +526,6 @@ export default function CoursePortalPage() {
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
               <div className="flex items-center gap-4">
-                <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 bg-accent/50 px-3 py-1.5 rounded-lg border">
-                  <Lock className="h-3 w-3" /> Evaluation opens after deadline
-                </p>
                 <Button 
                   variant="secondary" 
                   className="rounded-xl px-6 gap-2 font-bold"
@@ -536,7 +533,7 @@ export default function CoursePortalPage() {
                   disabled={isBulkEvaluating}
                 >
                   {isBulkEvaluating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
-                  Evaluate Eligible
+                  Evaluate All
                 </Button>
               </div>
             </div>
