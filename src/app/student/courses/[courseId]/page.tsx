@@ -41,7 +41,8 @@ import {
   Trash2,
   Undo2,
   FileArchive,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -417,9 +418,14 @@ export default function StudentCoursePage() {
                         </div>
                         <p className="text-muted-foreground text-sm leading-relaxed">{post.content}</p>
                         {post.attachmentUrl && (
-                          <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
-                            <LinkIcon className="h-3 w-3" /> {post.attachmentUrl.startsWith('data:') ? 'View Attached File' : 'View Resource'}
-                          </a>
+                          <div className="flex items-center gap-4">
+                            <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
+                              <LinkIcon className="h-3 w-3" /> View Resource
+                            </a>
+                            <a href={post.attachmentUrl} download={post.title} className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:underline">
+                              <Download className="h-3 w-3" /> Download
+                            </a>
+                          </div>
                         )}
                         <div className="flex items-center justify-between pt-6 border-t border-border">
                           <LikeButton postId={post.id} courseId={courseId as string} currentUserId={user.uid} initialLikes={post.likesCount} />
