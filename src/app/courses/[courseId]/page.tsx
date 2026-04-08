@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   useUser, 
@@ -59,7 +59,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function CoursePortalPage() {
   const { courseId } = useParams();

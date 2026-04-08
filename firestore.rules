@@ -33,7 +33,7 @@ service cloud.firestore {
     }
 
     // --- Collection Group Rules ---
-    // Critical for real-time dashboards filtering across different assignment paths
+    // Required for collectionGroup queries used in dashboards
     match /{path=**}/submissions/{submissionId} {
       allow list, get: if isSignedIn() && (
         request.auth.uid == resource.data.submitterId || 

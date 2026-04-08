@@ -59,29 +59,25 @@ export function useCollection<T = any>(
       return;
     }
 
-    // 🔍 Extract path safely
+    // 🔍 Extract path safely for debugging
     let path = "";
 
     try {
       if (memoizedTargetRefOrQuery.type === 'collection') {
         path = (memoizedTargetRefOrQuery as CollectionReference).path;
       } else {
-        path =
-          (memoizedTargetRefOrQuery as unknown as InternalQuery)?._query?.path?.canonicalString?.() ||
-          "collectionGroup query";
+        // collectionGroup queries often have an empty path canonicalString
+        const q = memoizedTargetRefOrQuery as unknown as InternalQuery;
+        path = q?._query?.path?.canonicalString?.() || "collectionGroup query";
       }
     } catch {
       path = "unknown";
     }
 
     // 🛑 Guard 2: Prevent invalid root query
-    if (!path || path === "") {
-      console.warn("❌ Invalid Firestore query path detected:", path);
-      setIsLoading(false);
-      return;
+    if (path === "") {
+      console.warn("❌ Empty Firestore query path detected. Ensure collectionGroup or collection name is valid.");
     }
-
-    console.log("🔥 Firestore Query Path:", path);
 
     setIsLoading(true);
     setError(null);

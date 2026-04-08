@@ -39,8 +39,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/layout/Navbar';
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function SubmitAssignmentPage() {
   const { courseId, assignmentId } = useParams();
