@@ -70,6 +70,9 @@ export default function StudentCoursePage() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
 
+  // Check if user is Chandan to hide specific data
+  const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
+
   useEffect(() => {
     if (!isUserLoading && user && !user.email?.startsWith('24bds')) {
       router.push(`/courses/${courseId}`);
@@ -104,9 +107,9 @@ export default function StudentCoursePage() {
   const { data: rawSubmissions } = useCollection(submissionsQuery);
 
   const mySubmissions = useMemo(() => {
-    if (!rawSubmissions || !courseId) return [];
+    if (!rawSubmissions || !courseId || isChandan) return []; // Filter out data for Chandan
     return rawSubmissions.filter(s => s.courseId === courseId);
-  }, [rawSubmissions, courseId]);
+  }, [rawSubmissions, courseId, isChandan]);
 
   const submittedAssignmentIds = useMemo(() => {
     return new Set(mySubmissions.map(s => s.assignmentId));
@@ -215,51 +218,60 @@ export default function StudentCoursePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="border-border p-6 flex items-center gap-6">
-                  <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
-                    <Clock className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">
-                      {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
-                    </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
-                  </div>
-                </Card>
-                <Card className="border-border p-6 flex items-center gap-6">
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                    <TrendingUp className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">
-                      {mySubmissions.filter(s => s.status === 'graded').length > 0 
-                        ? `${Math.round(mySubmissions.filter(s => s.status === 'graded').reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / mySubmissions.filter(s => s.status === 'graded').length)}%` 
-                        : '0%'}
-                    </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg Score</div>
-                  </div>
-                </Card>
+                {!isChandan && (
+                  <>
+                    <Card className="border-border p-6 flex items-center gap-6">
+                      <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                        <Clock className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-foreground">
+                          {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
+                        </div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
+                      </div>
+                    </Card>
+                    <Card className="border-border p-6 flex items-center gap-6">
+                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                        <TrendingUp className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-foreground">
+                          {mySubmissions.filter(s => s.status === 'graded').length > 0 
+                            ? `${Math.round(mySubmissions.filter(s => s.status === 'graded').reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / mySubmissions.filter(s => s.status === 'graded').length)}%` 
+                            : '0%'}
+                        </div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg Score</div>
+                      </div>
+                    </Card>
+                  </>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <Card className="border-border overflow-hidden rounded-2xl">
                   <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border">
-                    <CardTitle className="text-sm font-bold text-foreground">Pending Work</CardTitle>
+                    <CardTitle className="text-sm font-bold text-foreground">Work List</CardTitle>
                     <button onClick={() => setActiveTab('assignments')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">
                       View all <ArrowRight className="h-3 w-3" />
                     </button>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
-                      {assignments && assignments.filter(a => !submittedAssignmentIds.has(a.id)).length > 0 ? (
-                        assignments.filter(a => !submittedAssignmentIds.has(a.id)).slice(0, 3).map((task, i) => {
+                      {assignments && assignments.length > 0 ? (
+                        assignments.slice(0, 3).map((task, i) => {
+                          const isSubmitted = submittedAssignmentIds.has(task.id);
                           const deadlinePassed = task.deadline && new Date() > new Date(task.deadline);
                           return (
                             <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
                               <div className="space-y-1">
                                 <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                                   {task.title}
-                                  {deadlinePassed && <Badge variant="destructive" className="text-[8px] h-4 font-bold uppercase">Missing</Badge>}
+                                  {isSubmitted ? (
+                                    <Badge variant="outline" className="text-[8px] h-4 font-bold bg-emerald-50 text-emerald-600 border-emerald-100 uppercase">Done</Badge>
+                                  ) : deadlinePassed ? (
+                                    <Badge variant="destructive" className="text-[8px] h-4 font-bold uppercase">Missing</Badge>
+                                  ) : null}
                                 </div>
                                 <div className="text-[10px] text-muted-foreground font-medium">Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'}</div>
                               </div>
@@ -270,7 +282,7 @@ export default function StudentCoursePage() {
                           );
                         })
                       ) : (
-                        <div className="p-10 text-center text-xs text-muted-foreground italic">No pending work!</div>
+                        <div className="p-10 text-center text-xs text-muted-foreground italic">No tasks available.</div>
                       )}
                     </div>
                   </CardContent>
@@ -374,7 +386,9 @@ export default function StudentCoursePage() {
                       <FileText className="h-10 w-10 text-primary/40" />
                     </div>
                     <h3 className="text-lg font-bold">No submissions found</h3>
-                    <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6">You haven't submitted any work for this course yet.</p>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6">
+                      {isChandan ? "Submissions for this account are restricted from viewing." : "You haven't submitted any work for this course yet."}
+                    </p>
                     <Button onClick={() => setActiveTab('assignments')} variant="outline" className="font-bold">Browse Assignments</Button>
                   </div>
                 )}
