@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { ProfessorDashboard } from '@/components/dashboard/ProfessorDashboard';
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard';
-import { AIChatbot } from '@/components/ai-chatbot';
 import { useUser } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 
@@ -39,7 +38,6 @@ export default function Home() {
           <StudentDashboard />
         )}
       </main>
-      <AIChatbot />
       <footer className="py-6 border-t bg-muted/30 text-center text-xs text-muted-foreground">
         &copy; 2024 IIIT Dharwad. All rights reserved.
       </footer>

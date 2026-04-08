@@ -18,6 +18,7 @@ const MessageSchema = z.object({
 const AcademicAssistantInputSchema = z.object({
   history: z.array(MessageSchema).optional(),
   query: z.string(),
+  pageContext: z.string().optional().describe('Details about the current page the user is viewing.'),
 });
 export type AcademicAssistantInput = z.infer<typeof AcademicAssistantInputSchema>;
 
@@ -39,10 +40,17 @@ const academicAssistantChatFlow = ai.defineFlow(
   async (input) => {
     const {text} = await ai.generate({
       system: `You are the IIIT Dharwad Academic Assistant. 
-      You help students and professors with queries related to courses, assignments, and academic progress at the Indian Institute of Information Technology, Dharwad.
-      Be professional, helpful, and concise. 
-      If you don't know something specifically about the user's data (like their specific grades), advise them to check their dashboard.
-      Do not hallucinate facts about the institute.`,
+      You help students and professors with queries related to courses, assignments, and academic progress.
+      
+      CURRENT CONTEXT: The user is currently on the following page: {{{pageContext}}}
+      
+      Instructions:
+      1. Be professional, helpful, and concise. 
+      2. Use the provided page context to give more relevant answers.
+      3. If the user is on an assignment page, offer help with submission guidelines or rubric clarification.
+      4. If the user is on a course page, offer help with announcements or content discovery.
+      5. Do not hallucinate data. If you don't know something specific about their grades or private records, advise them to check the dashboard.
+      6. Maintain the institute's professional tone.`,
       prompt: input.query,
       history: input.history?.map(m => ({
         role: m.role,

@@ -3,6 +3,7 @@ import './globals.css';
 import {Toaster} from '@/components/ui/toaster';
 import {ThemeProvider} from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { AIChatbot } from '@/components/ai-chatbot';
 
 export const metadata: Metadata = {
   title: 'IIIT Dharwad Portal',
@@ -30,6 +31,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <AIChatbot />
             <Toaster />
           </ThemeProvider>
         </FirebaseClientProvider>
