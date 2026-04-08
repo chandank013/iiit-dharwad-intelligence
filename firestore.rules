@@ -112,7 +112,7 @@ service cloud.firestore {
     
     match /private_messages/{messageId} {
       allow create: if isSignedIn();
-      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow get, list: if isSignedIn() && (request.auth.uid == request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
     }
 
     match /learning_resources/{resourceId} {
