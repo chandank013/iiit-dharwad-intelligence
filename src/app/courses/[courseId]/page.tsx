@@ -21,7 +21,8 @@ import {
   serverTimestamp,
   collectionGroup,
   getDocs,
-  getDoc
+  getDoc,
+  increment
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -37,7 +38,6 @@ import {
   Trash2,
   Megaphone,
   ArrowRight,
-  Info,
   Sparkles,
   CheckCircle2,
   BarChart3,
@@ -45,10 +45,11 @@ import {
   FileArchive,
   File as FileIcon,
   MessageCircle,
-  Heart
+  Heart,
+  Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -78,8 +79,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function CoursePortalPage() {
   const { courseId } = useParams();
@@ -98,6 +100,8 @@ export default function CoursePortalPage() {
     attachmentUrl: ''
   });
 
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
 
   useEffect(() => {
@@ -173,6 +177,19 @@ export default function CoursePortalPage() {
     }
   };
 
+  const handleAddComment = (contentId: string) => {
+    if (!firestore || !courseId || !user || !commentText.trim()) return;
+    const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
+    addDocumentNonBlocking(commentsRef, {
+      text: commentText,
+      authorId: user.uid,
+      authorName: user.displayName || user.email?.split('@')[0] || 'Professor',
+      professorId: user.uid,
+      createdAt: serverTimestamp(),
+    });
+    setCommentText('');
+  };
+
   const handleAIEvaluate = async (submission: any) => {
     if (!firestore || !courseId || isEvaluating) return;
 
@@ -219,10 +236,9 @@ export default function CoursePortalPage() {
       toast({ title: "Evaluation Complete", description: `Score: ${evaluation.totalScore}% assigned.` });
     } catch (error: any) {
       console.error(error);
-      const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('busy');
       toast({ 
         title: "Evaluation Failed", 
-        description: isUnavailable ? "AI service is currently busy. Retrying if possible..." : "AI could not process this submission.", 
+        description: "AI service is currently busy or unavailable. Please try again in a moment.", 
         variant: "destructive" 
       });
     } finally {
@@ -433,7 +449,7 @@ export default function CoursePortalPage() {
             </div>
             <div className="grid gap-6">
               {courseContent?.map((post) => (
-                <Card key={post.id} className="rounded-2xl border-border hover:shadow-lg transition-all">
+                <Card key={post.id} className="rounded-2xl border-border hover:shadow-lg transition-all overflow-hidden">
                   <CardContent className="p-8 space-y-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
@@ -458,14 +474,21 @@ export default function CoursePortalPage() {
                         <LinkIcon className="h-3 w-3" /> {post.attachmentUrl}
                       </a>
                     )}
-                    <div className="flex items-center gap-6 pt-4 border-t border-border">
-                      <div className="flex items-center gap-2 text-muted-foreground text-[10px] font-bold">
-                        <Heart className="h-4 w-4" /> {post.likesCount || 0} Likes
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground text-[10px] font-bold">
+                    <div className="flex items-center justify-between pt-6 border-t border-border">
+                      <LikeButton postId={post.id} courseId={courseId as string} currentUserId={user.uid} initialLikes={post.likesCount} />
+                      <button onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
                         <MessageCircle className="h-4 w-4" /> Comments
-                      </div>
+                      </button>
                     </div>
+                    {expandedPostId === post.id && (
+                      <div className="mt-6 pt-6 border-t border-border space-y-6">
+                        <div className="flex gap-4">
+                          <Input placeholder="Comment as Professor..." value={commentText} onChange={(e) => setCommentText(e.target.value)} className="rounded-xl border-none bg-accent/30" />
+                          <Button size="icon" className="rounded-xl" onClick={() => handleAddComment(post.id)}><Send className="h-4 w-4" /></Button>
+                        </div>
+                        <PostComments contentId={post.id} courseId={courseId as string} currentUserId={user.uid} isProfessor={true} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -513,6 +536,73 @@ export default function CoursePortalPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId: string, courseId: string, currentUserId: string, initialLikes: number }) {
+  const firestore = useFirestore();
+  const likeRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'courses', courseId, 'content', postId, 'likes', currentUserId);
+  }, [firestore, courseId, postId, currentUserId]);
+  const { data: likeData } = useDoc(likeRef);
+  const isLiked = !!likeData;
+
+  const handleToggleLike = () => {
+    if (!firestore || !likeRef) return;
+    const parentRef = doc(firestore, 'courses', courseId, 'content', postId);
+    if (isLiked) {
+      deleteDocumentNonBlocking(likeRef);
+      updateDocumentNonBlocking(parentRef, { likesCount: increment(-1) });
+    } else {
+      setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
+      updateDocumentNonBlocking(parentRef, { likesCount: increment(1) });
+    }
+  };
+
+  return (
+    <button onClick={handleToggleLike} className={cn("flex items-center gap-2 transition-colors", isLiked ? "text-rose-500" : "text-muted-foreground hover:text-rose-500")}>
+      <Heart className={cn("h-4 w-4", isLiked && "fill-rose-500")} />
+      <span className="text-[10px] font-bold">{initialLikes || 0}</span>
+    </button>
+  );
+}
+
+function PostComments({ contentId, courseId, currentUserId, isProfessor }: { contentId: string, courseId: string, currentUserId: string, isProfessor?: boolean }) {
+  const firestore = useFirestore();
+  const commentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'courses', courseId, 'content', contentId, 'comments'), orderBy('createdAt', 'desc'));
+  }, [firestore, contentId, courseId]);
+  const { data: comments } = useCollection(commentsQuery);
+
+  const handleDeleteComment = (commentId: string) => {
+    if (!firestore) return;
+    deleteDocumentNonBlocking(doc(firestore, 'courses', courseId, 'content', contentId, 'comments', commentId));
+  };
+
+  return (
+    <div className="space-y-4">
+      {comments?.map((comment) => (
+        <div key={comment.id} className="flex gap-3">
+          <Avatar className="h-8 w-8"><AvatarFallback className="text-[10px] font-bold">{comment.authorName?.[0]}</AvatarFallback></Avatar>
+          <div className="bg-accent/30 p-4 rounded-2xl flex-1 relative group">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs font-bold flex items-center gap-2">
+                {comment.authorName}
+                {comment.professorId && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">STAFF</Badge>}
+              </span>
+              {(comment.authorId === currentUserId || isProfessor) && (
+                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => handleDeleteComment(comment.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">{comment.text}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

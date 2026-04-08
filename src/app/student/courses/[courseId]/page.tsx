@@ -17,7 +17,8 @@ import {
   orderBy,
   where,
   serverTimestamp,
-  collectionGroup
+  collectionGroup,
+  increment
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -27,22 +28,17 @@ import {
   Clock, 
   TrendingUp, 
   Loader2, 
-  AlertCircle, 
   FolderOpen,
-  User,
   CheckCircle,
   ChevronRight,
   ArrowRight,
-  Inbox,
   Megaphone,
   File as FileIcon,
   Link as LinkIcon,
-  Download,
   Heart,
   MessageCircle,
   Send,
   Trash2,
-  Share2,
   Undo2,
   FileArchive
 } from 'lucide-react';
@@ -57,7 +53,8 @@ import { Input } from '@/components/ui/input';
 import { 
   addDocumentNonBlocking, 
   deleteDocumentNonBlocking,
-  setDocumentNonBlocking
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
@@ -444,10 +441,13 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
 
   const handleToggleLike = () => {
     if (!firestore || !likeRef) return;
+    const parentRef = doc(firestore, 'courses', courseId, 'content', postId);
     if (isLiked) {
       deleteDocumentNonBlocking(likeRef);
+      updateDocumentNonBlocking(parentRef, { likesCount: increment(-1) });
     } else {
       setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
+      updateDocumentNonBlocking(parentRef, { likesCount: increment(1) });
     }
   };
 
@@ -479,7 +479,10 @@ function PostComments({ contentId, courseId, currentUserId }: { contentId: strin
           <Avatar className="h-8 w-8"><AvatarFallback className="text-[10px] font-bold">{comment.authorName?.[0]}</AvatarFallback></Avatar>
           <div className="bg-accent/30 p-4 rounded-2xl flex-1 relative group">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-bold">{comment.authorName}</span>
+              <span className="text-xs font-bold flex items-center gap-2">
+                {comment.authorName}
+                {comment.professorId && <Badge variant="outline" className="text-[8px] border-primary/20 text-primary">STAFF</Badge>}
+              </span>
               {comment.authorId === currentUserId && <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => handleDeleteComment(comment.id)}><Trash2 className="h-3 w-3" /></Button>}
             </div>
             <p className="text-sm text-muted-foreground">{comment.text}</p>
