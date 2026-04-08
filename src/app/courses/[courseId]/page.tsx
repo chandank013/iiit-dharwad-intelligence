@@ -46,7 +46,9 @@ import {
   File as FileIcon,
   MessageCircle,
   Heart,
-  Send
+  Send,
+  Users,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,6 +115,7 @@ export default function CoursePortalPage() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
+  const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -137,6 +140,12 @@ export default function CoursePortalPage() {
     return query(collection(firestore, 'course_enrollments'), where('courseId', '==', courseId));
   }, [firestore, courseId]);
   const { data: enrollments } = useCollection(enrollmentsQuery);
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'));
+  }, [firestore]);
+  const { data: allUsers } = useCollection(usersQuery);
 
   const contentQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
@@ -163,7 +172,6 @@ export default function CoursePortalPage() {
 
     const graded = courseSubmissions.filter(s => s.status === 'graded');
     
-    // Grade Distribution
     const distribution = [
       { range: '0-50', count: 0, color: '#ef4444' },
       { range: '50-75', count: 0, color: '#f59e0b' },
@@ -178,7 +186,6 @@ export default function CoursePortalPage() {
       else distribution[3].count++;
     });
 
-    // Average Performance per Assignment
     const performance = assignments.map(a => {
       const subs = graded.filter(s => s.assignmentId === a.id);
       const avg = subs.length > 0 
@@ -236,11 +243,9 @@ export default function CoursePortalPage() {
   };
 
   const handleAIEvaluate = async (submission: any) => {
-    if (!firestore || !courseId || isEvaluating) return;
+    if (!firestore || !courseId) return;
 
     setIsEvaluating(submission.id);
-    toast({ title: "AI Evaluation Started", description: "Analyzing submission based on rubric..." });
-
     try {
       const assignmentRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId);
       const assignmentSnap = await getDoc(assignmentRef);
@@ -277,18 +282,42 @@ export default function CoursePortalPage() {
         },
         updatedAt: serverTimestamp()
       });
-
-      toast({ title: "Evaluation Complete", description: `Score: ${evaluation.totalScore}% assigned.` });
-    } catch (error: any) {
+      return true;
+    } catch (error) {
       console.error(error);
-      toast({ 
-        title: "Evaluation Failed", 
-        description: "AI service is currently busy or unavailable. Please try again in a moment.", 
-        variant: "destructive" 
-      });
+      return false;
     } finally {
       setIsEvaluating(null);
     }
+  };
+
+  const handleBulkEvaluate = async () => {
+    const pending = courseSubmissions.filter(s => s.status !== 'graded');
+    if (pending.length === 0) {
+      toast({ title: "No Pending Submissions", description: "All submissions are already graded." });
+      return;
+    }
+
+    setIsBulkEvaluating(true);
+    toast({ title: "Bulk Evaluation Started", description: `Processing ${pending.length} submissions...` });
+
+    let successCount = 0;
+    for (const sub of pending) {
+      const success = await handleAIEvaluate(sub);
+      if (success) successCount++;
+    }
+
+    setIsBulkEvaluating(false);
+    toast({ 
+      title: "Bulk Evaluation Finished", 
+      description: `Successfully graded ${successCount} out of ${pending.length} submissions.` 
+    });
+  };
+
+  const getStudentName = (uid: string) => {
+    const foundUser = allUsers?.find(u => u.id === uid);
+    if (!foundUser) return "Unknown Student";
+    return `${foundUser.firstName} ${foundUser.lastName}`;
   };
 
   if (isUserLoading || isCourseLoading || !user) {
@@ -396,7 +425,12 @@ export default function CoursePortalPage() {
                         <BookOpen className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{assignment.title}</h3>
+                        <div className="flex items-center gap-2">
+                           <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{assignment.title}</h3>
+                           <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest border-primary/20 text-primary">
+                             {assignment.isGroupProject ? 'Group' : 'Individual'}
+                           </Badge>
+                        </div>
                         <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                           <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Due: {assignment.deadline ? new Date(assignment.deadline).toLocaleString() : 'N/A'}</span>
                         </div>
@@ -419,49 +453,72 @@ export default function CoursePortalPage() {
 
         {activeTab === 'submissions' && (
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
-            <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
+              <Button 
+                variant="secondary" 
+                className="rounded-xl px-6 gap-2 font-bold"
+                onClick={handleBulkEvaluate}
+                disabled={isBulkEvaluating || courseSubmissions.filter(s => s.status !== 'graded').length === 0}
+              >
+                {isBulkEvaluating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                Evaluate All Pending
+              </Button>
+            </div>
             <Card className="border-border overflow-hidden rounded-2xl">
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-widest">Student ID</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest">Student Name</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-widest">Task</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase tracking-widest">Type</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-widest">Status</TableHead>
                     <TableHead className="font-bold text-[10px] uppercase tracking-widest text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {courseSubmissions.length > 0 ? (
-                    courseSubmissions.map((sub) => (
-                      <TableRow key={sub.id} className="group">
-                        <TableCell className="font-bold text-xs">{sub.submitterId.substring(0, 8)}...</TableCell>
-                        <TableCell className="text-xs font-medium">{sub.assignmentTitle || 'Assignment'}</TableCell>
-                        <TableCell>
-                          {sub.evaluation?.totalScore !== undefined ? (
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold text-[10px]">
-                              {sub.evaluation.totalScore}% AI SCORING
+                    courseSubmissions.map((sub) => {
+                      const assignment = assignments?.find(a => a.id === sub.assignmentId);
+                      return (
+                        <TableRow key={sub.id} className="group">
+                          <TableCell className="font-bold text-xs flex items-center gap-2">
+                             <Avatar className="h-6 w-6"><AvatarFallback className="text-[8px]">{getStudentName(sub.submitterId)[0]}</AvatarFallback></Avatar>
+                             {getStudentName(sub.submitterId)}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium">{sub.assignmentTitle || 'Assignment'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest">
+                              {assignment?.isGroupProject ? <><Users className="h-3 w-3 mr-1" /> Group</> : <><User className="h-3 w-3 mr-1" /> Individual</>}
                             </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground text-[10px] font-bold">AWAITING EVALUATION</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="font-bold text-primary gap-2 text-xs"
-                            onClick={() => handleAIEvaluate(sub)}
-                            disabled={isEvaluating === sub.id}
-                          >
-                            {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            AI Evaluation
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            {sub.evaluation?.totalScore !== undefined ? (
+                              <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold text-[10px]">
+                                {sub.evaluation.totalScore}% AI SCORING
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground text-[10px] font-bold">AWAITING EVALUATION</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="font-bold text-primary gap-2 text-xs"
+                              onClick={() => handleAIEvaluate(sub)}
+                              disabled={isEvaluating === sub.id}
+                            >
+                              {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                              AI Evaluation
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center text-muted-foreground italic text-xs">No work submitted yet.</TableCell>
+                      <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic text-xs">No work submitted yet.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>

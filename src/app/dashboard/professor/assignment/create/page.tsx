@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -84,11 +85,9 @@ export default function CreateAssignmentPage() {
 
     setPublishing(true);
 
-    // 1. Generate IDs client-side to ensure atomicity and avoid deep awaiting
     const assignmentRef = doc(collection(firestore, 'courses', courseId, 'assignments'));
     const assignmentId = assignmentRef.id;
 
-    // 2. Prepare Assignment Data
     const assignmentData = {
       id: assignmentId,
       courseId,
@@ -96,6 +95,7 @@ export default function CreateAssignmentPage() {
       description,
       deadline: deadline || null,
       submissionType,
+      isGroupProject,
       lateSubmissionPolicy: "none",
       allowResubmissions: allowResubmission,
       maxResubmissions: 3,
@@ -106,10 +106,8 @@ export default function CreateAssignmentPage() {
       updatedAt: serverTimestamp(),
     };
 
-    // 3. Queue Assignment Write
     setDocumentNonBlocking(assignmentRef, assignmentData, { merge: true });
 
-    // 4. Handle Rubric and Criteria if they exist
     if (rubric.length > 0) {
       const rubricRef = doc(collection(firestore, 'courses', courseId, 'assignments', assignmentId, 'rubrics'));
       const rubricId = rubricRef.id;
@@ -117,7 +115,7 @@ export default function CreateAssignmentPage() {
       const rubricData = {
         id: rubricId,
         assignmentId,
-        professorId: user.uid, // Denormalized for rules
+        professorId: user.uid,
         name: `Rubric for ${title}`,
         description: `Grading criteria for ${title}`,
         createdAt: serverTimestamp(),
@@ -131,7 +129,7 @@ export default function CreateAssignmentPage() {
         const criterionData = {
           id: criterionRef.id,
           rubricId,
-          professorId: user.uid, // Denormalized for rules
+          professorId: user.uid,
           description: `${item.criterion}: ${item.description}`,
           maxScore: item.maxPoints,
           order: i,
@@ -147,7 +145,6 @@ export default function CreateAssignmentPage() {
       description: `Successfully initiated the ${isDraft ? 'save' : 'publish'} of your assignment.` 
     });
 
-    // Navigate immediately to reflect optimistic UI state
     router.push(`/courses/${courseId}`);
   };
 
@@ -155,8 +152,8 @@ export default function CreateAssignmentPage() {
     <div className="min-h-screen bg-[#F6FAFC]">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
-        <Link href={courseId ? `/courses/${courseId}` : "/courses"} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6 transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to Course
+        <Link href={courseId ? `/courses/${courseId}` : "/courses"} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6 transition-colors group">
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Course
         </Link>
         <div className="max-w-4xl mx-auto space-y-8">
           <div>
