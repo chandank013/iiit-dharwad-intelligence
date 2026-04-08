@@ -33,9 +33,14 @@ service cloud.firestore {
     }
 
     // --- Collection Group Rules ---
-    // Required for collectionGroup queries used in dashboards
+    // Critical for dashboard queries that list across assignments
     match /{path=**}/submissions/{submissionId} {
       allow list, get: if isSignedIn() && (
+        request.auth.uid == resource.data.submitterId || 
+        request.auth.uid == resource.data.professorId
+      );
+      // Allow updates for AI evaluation results from professor side
+      allow update: if isSignedIn() && (
         request.auth.uid == resource.data.submitterId || 
         request.auth.uid == resource.data.professorId
       );

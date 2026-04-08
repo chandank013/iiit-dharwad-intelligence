@@ -16,8 +16,10 @@ import {
   orderBy,
   where,
   addDoc,
+  updateDoc,
   serverTimestamp,
-  collectionGroup
+  collectionGroup,
+  getDocs
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -33,7 +35,11 @@ import {
   Trash2,
   Megaphone,
   ArrowRight,
-  Info
+  Info,
+  Sparkles,
+  Search,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +66,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
 
 export default function CoursePortalPage() {
   const { courseId } = useParams();
@@ -80,6 +87,7 @@ export default function CoursePortalPage() {
 
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -150,6 +158,62 @@ export default function CoursePortalPage() {
       setContentFormData({ title: '', type: 'announcement', body: '', url: '' });
     } finally {
       setIsPostingContent(false);
+    }
+  };
+
+  const handleAIEvaluate = async (submission: any) => {
+    if (!firestore || !courseId || isEvaluating) return;
+
+    setIsEvaluating(submission.id);
+    toast({ title: "AI Evaluation Started", description: "Analyzing submission based on rubric..." });
+
+    try {
+      // 1. Fetch assignment details
+      const assignmentRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId);
+      const assignmentSnap = await getDocs(query(collection(firestore, 'courses', courseId as string, 'assignments'), where('id', '==', submission.assignmentId)));
+      const assignmentData = assignmentSnap.docs[0]?.data();
+
+      // 2. Fetch rubric criteria
+      const rubricQuery = query(collection(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'rubrics'));
+      const rubricSnap = await getDocs(rubricQuery);
+      const rubricDoc = rubricSnap.docs[0];
+      
+      let rubricText = "No specific rubric defined.";
+      if (rubricDoc) {
+        const criteriaSnap = await getDocs(collection(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'rubrics', rubricDoc.id, 'criteria'));
+        rubricText = criteriaSnap.docs.map(d => `- ${d.data().description} (Max: ${d.data().maxScore})`).join('\n');
+      }
+
+      // 3. Run AI Flow
+      const evaluation = await aiSubmissionEvaluationAndPlagiarismDetection({
+        assignmentDescription: assignmentData?.description || "No description",
+        assignmentRubric: rubricText,
+        submissionText: submission.content,
+        allOtherSubmissionsText: courseSubmissions.filter(s => s.id !== submission.id).map(s => s.content)
+      });
+
+      // 4. Update submission with results
+      const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
+      await updateDoc(submissionRef, {
+        status: 'graded',
+        evaluation: {
+          totalScore: evaluation.totalScore,
+          writtenFeedback: evaluation.writtenFeedback,
+          weakAreas: evaluation.weakAreas,
+          plagiarismDetected: evaluation.plagiarismDetected,
+          plagiarismDetails: evaluation.plagiarismDetails,
+          rubricScores: evaluation.rubricScores,
+          evaluatedAt: serverTimestamp()
+        },
+        updatedAt: serverTimestamp()
+      });
+
+      toast({ title: "Evaluation Complete", description: `Score: ${evaluation.totalScore}% assigned.` });
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: "Evaluation Failed", description: "AI could not process this submission.", variant: "destructive" });
+    } finally {
+      setIsEvaluating(null);
     }
   };
 
@@ -316,7 +380,8 @@ export default function CoursePortalPage() {
                     <TableHead className="font-bold text-[11px] uppercase tracking-widest">Student</TableHead>
                     <TableHead className="font-bold text-[11px] uppercase tracking-widest">Assignment</TableHead>
                     <TableHead className="font-bold text-[11px] uppercase tracking-widest">Date</TableHead>
-                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">Score</TableHead>
+                    <TableHead className="font-bold text-[11px] uppercase tracking-widest">AI Result</TableHead>
                     <TableHead className="text-right"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -330,18 +395,42 @@ export default function CoursePortalPage() {
                           {sub.submittedAt?.toDate().toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          <Badge className="bg-blue-500/10 text-blue-500 border-none">{sub.status || 'RECEIVED'}</Badge>
+                          {sub.evaluation?.totalScore !== undefined ? (
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold">
+                              {sub.evaluation.totalScore}%
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">PENDING</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {sub.evaluation?.plagiarismDetected ? (
+                            <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                              <XCircle className="h-3 w-3" /> Flagged
+                            </Badge>
+                          ) : sub.evaluation?.totalScore !== undefined ? (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-none flex items-center gap-1 w-fit">
+                              <CheckCircle2 className="h-3 w-3" /> Clean
+                            </Badge>
+                          ) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="font-bold text-primary">
-                            Evaluate <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="font-bold text-primary gap-2"
+                            onClick={() => handleAIEvaluate(sub)}
+                            disabled={isEvaluating === sub.id}
+                          >
+                            {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            AI Evaluate
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">No submissions found.</TableCell>
+                      <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No submissions found.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
