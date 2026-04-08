@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -39,10 +40,15 @@ import {
   Info,
   Sparkles,
   CheckCircle2,
-  BarChart3
+  BarChart3,
+  Link as LinkIcon,
+  FileArchive,
+  File as FileIcon,
+  MessageCircle,
+  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -64,6 +70,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
@@ -82,6 +95,7 @@ export default function CoursePortalPage() {
     title: '',
     type: 'announcement',
     body: '',
+    attachmentUrl: ''
   });
 
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
@@ -141,6 +155,7 @@ export default function CoursePortalPage() {
       title: contentFormData.title,
       contentType: contentFormData.type,
       content: contentFormData.body,
+      attachmentUrl: contentFormData.attachmentUrl,
       postedAt: serverTimestamp(),
       isPinned: false,
       likesCount: 0,
@@ -150,9 +165,9 @@ export default function CoursePortalPage() {
 
     try {
       await addDoc(collection(firestore, 'courses', courseId as string, 'content'), contentData);
-      toast({ title: "Content Shared" });
+      toast({ title: "Content Published" });
       setIsContentDialogOpen(false);
-      setContentFormData({ title: '', type: 'announcement', body: '' });
+      setContentFormData({ title: '', type: 'announcement', body: '', attachmentUrl: '' });
     } finally {
       setIsPostingContent(false);
     }
@@ -165,12 +180,10 @@ export default function CoursePortalPage() {
     toast({ title: "AI Evaluation Started", description: "Analyzing submission based on rubric..." });
 
     try {
-      // 1. Fetch assignment details
       const assignmentRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId);
       const assignmentSnap = await getDoc(assignmentRef);
       const assignmentData = assignmentSnap.data();
 
-      // 2. Fetch rubric criteria
       const rubricsRef = collection(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'rubrics');
       const rubricsSnap = await getDocs(rubricsRef);
       const rubricDoc = rubricsSnap.docs[0];
@@ -181,7 +194,6 @@ export default function CoursePortalPage() {
         rubricText = criteriaSnap.docs.map(d => `- ${d.data().description} (Max Points: ${d.data().maxScore})`).join('\n');
       }
 
-      // 3. Run AI Flow
       const evaluation = await aiSubmissionEvaluationAndPlagiarismDetection({
         assignmentDescription: assignmentData?.description || "No description",
         assignmentRubric: rubricText,
@@ -189,7 +201,6 @@ export default function CoursePortalPage() {
         allOtherSubmissionsText: courseSubmissions.filter(s => s.id !== submission.id).map(s => s.content)
       });
 
-      // 4. Update submission with results
       const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
       await updateDoc(submissionRef, {
         status: 'graded',
@@ -417,25 +428,44 @@ export default function CoursePortalPage() {
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold tracking-tighter">Content</h1>
               <Button className="rounded-xl px-6 font-bold" onClick={() => setIsContentDialogOpen(true)}>
-                <Plus className="h-5 w-5 mr-2" /> New Post
+                <Plus className="h-5 w-5 mr-2" /> New Entry
               </Button>
             </div>
             <div className="grid gap-6">
               {courseContent?.map((post) => (
                 <Card key={post.id} className="rounded-2xl border-border hover:shadow-lg transition-all">
-                  <CardContent className="p-8 space-y-4">
-                    <div className="flex items-center justify-between">
+                  <CardContent className="p-8 space-y-6">
+                    <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
                         <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                          <Megaphone className="h-5 w-5" />
+                          {post.contentType === 'link' ? <LinkIcon className="h-5 w-5" /> : 
+                           post.contentType === 'file' ? <FileIcon className="h-5 w-5" /> :
+                           post.contentType === 'zip' ? <FileArchive className="h-5 w-5" /> :
+                           <Megaphone className="h-5 w-5" />}
                         </div>
-                        <h3 className="text-xl font-bold">{post.title}</h3>
+                        <div>
+                          <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest mb-1">{post.contentType}</Badge>
+                          <h3 className="text-xl font-bold">{post.title}</h3>
+                        </div>
                       </div>
                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', post.id))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                     <p className="text-muted-foreground leading-relaxed text-sm">{post.content}</p>
+                    {post.attachmentUrl && (
+                      <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
+                        <LinkIcon className="h-3 w-3" /> {post.attachmentUrl}
+                      </a>
+                    )}
+                    <div className="flex items-center gap-6 pt-4 border-t border-border">
+                      <div className="flex items-center gap-2 text-muted-foreground text-[10px] font-bold">
+                        <Heart className="h-4 w-4" /> {post.likesCount || 0} Likes
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground text-[10px] font-bold">
+                        <MessageCircle className="h-4 w-4" /> Comments
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -445,19 +475,40 @@ export default function CoursePortalPage() {
       </main>
 
       <Dialog open={isContentDialogOpen} onOpenChange={setIsContentDialogOpen}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader><DialogTitle>Create Course Update</DialogTitle></DialogHeader>
-          <form onSubmit={handlePostContent} className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest">Post Title</Label>
-              <Input value={contentFormData.title} onChange={(e) => setContentFormData({...contentFormData, title: e.target.value})} placeholder="e.g. Lab Update" required />
+        <DialogContent className="rounded-3xl max-w-2xl">
+          <DialogHeader><DialogTitle>Distribute Academic Content</DialogTitle></DialogHeader>
+          <form onSubmit={handlePostContent} className="space-y-6 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest">Entry Title</Label>
+                <Input value={contentFormData.title} onChange={(e) => setContentFormData({...contentFormData, title: e.target.value})} placeholder="e.g. Week 4 Lab Manual" required />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest">Content Type</Label>
+                <Select value={contentFormData.type} onValueChange={(v) => setContentFormData({...contentFormData, type: v})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="announcement">Announcement</SelectItem>
+                    <SelectItem value="link">URL / Link</SelectItem>
+                    <SelectItem value="file">PDF / Document</SelectItem>
+                    <SelectItem value="zip">ZIP / Archive</SelectItem>
+                    <SelectItem value="ppt">Presentation (PPT)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest">Message</Label>
-              <Textarea value={contentFormData.body} onChange={(e) => setContentFormData({...contentFormData, body: e.target.value})} placeholder="Detailed update for the class..." required />
+              <Label className="text-[10px] font-bold uppercase tracking-widest">Resource Link (if applicable)</Label>
+              <Input value={contentFormData.attachmentUrl} onChange={(e) => setContentFormData({...contentFormData, attachmentUrl: e.target.value})} placeholder="https://..." />
             </div>
-            <Button type="submit" className="w-full h-12 rounded-xl font-bold text-lg" disabled={isPostingContent}>
-              {isPostingContent ? <Loader2 className="animate-spin" /> : 'Broadcast to Class'}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase tracking-widest">Detailed Context</Label>
+              <Textarea value={contentFormData.body} onChange={(e) => setContentFormData({...contentFormData, body: e.target.value})} placeholder="Explain the importance of this resource..." required className="min-h-[120px]" />
+            </div>
+            <Button type="submit" className="w-full h-14 rounded-xl font-bold text-lg shadow-xl shadow-primary/20" disabled={isPostingContent}>
+              {isPostingContent ? <Loader2 className="animate-spin" /> : 'Publish to Course'}
             </Button>
           </form>
         </DialogContent>

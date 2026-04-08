@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -10,7 +11,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Role detection based on email pattern or role collections
     function isProfessor() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/professor_roles/$(request.auth.uid)) ||
@@ -31,7 +31,7 @@ service cloud.firestore {
         request.auth.uid == resource.data.submitterId || 
         request.auth.uid == resource.data.professorId
       );
-      // Allow AI updates from professor side and deletion (unsubmit) from student side
+      allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.professorId || 
         (request.auth.uid == resource.data.submitterId && resource.data.status != 'graded')
@@ -89,7 +89,8 @@ service cloud.firestore {
         allow create, update, delete: if isProfessor();
 
         match /comments/{commentId} {
-          allow read, create: if isSignedIn();
+          allow read: if isSignedIn();
+          allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
           allow delete: if isProfessor() || (resource != null && resource.data.authorId == request.auth.uid);
         }
 

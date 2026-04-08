@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -42,7 +43,8 @@ import {
   Send,
   Trash2,
   Share2,
-  Undo2
+  Undo2,
+  FileArchive
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -127,7 +129,7 @@ export default function StudentCoursePage() {
 
     const subRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
     deleteDocumentNonBlocking(subRef);
-    toast({ title: "Submission Withdrawn", description: "You can now resubmit your work." });
+    toast({ title: "Submission Withdrawn" });
   };
 
   const handleAddComment = (contentId: string) => {
@@ -190,7 +192,7 @@ export default function StudentCoursePage() {
 
       <main className="flex-1 ml-64 min-h-screen flex flex-col relative">
         <header className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
-          <h2 className="text-sm font-bold tracking-widest uppercase text-muted-foreground">{activeTab.replace('-', ' ')}</h2>
+          <h2 className="text-sm font-bold tracking-widest uppercase text-muted-foreground">{activeTab}</h2>
           <div className="flex items-center gap-4">
             <ThemeToggle />
           </div>
@@ -326,7 +328,7 @@ export default function StudentCoursePage() {
                         <CardHeader className="flex flex-row items-center justify-between bg-muted/20 border-b p-6">
                           <div className="space-y-1">
                             <CardTitle className="text-lg font-bold">{assignment?.title || 'Unknown Assignment'}</CardTitle>
-                            <CardDescription className="text-xs font-medium">Submitted on {sub.submittedAt?.toDate().toLocaleString()}</CardDescription>
+                            <CardDescription className="text-xs">Submitted on {sub.submittedAt?.toDate().toLocaleString()}</CardDescription>
                           </div>
                           <div className="flex items-center gap-3">
                             <Badge className={cn(
@@ -360,7 +362,7 @@ export default function StudentCoursePage() {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground font-medium italic">Your submission is awaiting evaluation by your professor.</p>
+                            <p className="text-sm text-muted-foreground font-medium italic">Awaiting evaluation.</p>
                           )}
                         </CardContent>
                       </Card>
@@ -384,15 +386,23 @@ export default function StudentCoursePage() {
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-4">
                             <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                              {post.contentType === 'announcement' ? <Megaphone className="h-5 w-5" /> : <FileIcon className="h-5 w-5" />}
+                              {post.contentType === 'link' ? <LinkIcon className="h-5 w-5" /> : 
+                               post.contentType === 'zip' ? <FileArchive className="h-5 w-5" /> :
+                               post.contentType === 'file' ? <FileIcon className="h-5 w-5" /> :
+                               <Megaphone className="h-5 w-5" />}
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">{post.contentType}</div>
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">{post.contentType}</Badge>
                               <h3 className="text-xl font-bold">{post.title}</h3>
                             </div>
                           </div>
                         </div>
                         <p className="text-muted-foreground text-sm leading-relaxed">{post.content}</p>
+                        {post.attachmentUrl && (
+                          <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
+                            <LinkIcon className="h-3 w-3" /> View Resource
+                          </a>
+                        )}
                         <div className="flex items-center justify-between pt-6 border-t border-border">
                           <LikeButton postId={post.id} courseId={courseId as string} currentUserId={user.uid} initialLikes={post.likesCount} />
                           <button onClick={() => setExpandedPostId(expandedPostId === post.id ? null : post.id)} className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
@@ -434,8 +444,11 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
 
   const handleToggleLike = () => {
     if (!firestore || !likeRef) return;
-    if (isLiked) deleteDocumentNonBlocking(likeRef);
-    else setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
+    if (isLiked) {
+      deleteDocumentNonBlocking(likeRef);
+    } else {
+      setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
+    }
   };
 
   return (
