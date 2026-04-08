@@ -128,16 +128,13 @@ Other Submissions for Plagiarism Check:
 ---
 
 Instructions for Evaluation and Plagiarism Detection:
-1.  **Rubric Evaluation**: Go through each item in the 'Assignment Rubric'. Assign a 'score' (an integer between 0 and 100) and provide detailed 'feedback'. The feedback should explain the score and offer constructive advice for improvement.
+1.  **Rubric Evaluation**: Go through each item in the 'Assignment Rubric'. Assign a 'score' (an integer between 0 and 100) and provide detailed 'feedback'.
 2.  **Total Score Calculation**: Based on your assessment of each rubric item, calculate an 'totalScore' for the entire submission. This must be an integer between 0 and 100.
-3.  **Comprehensive Written Feedback**: Write overall 'writtenFeedback' for the student, highlighting the main strengths, addressing significant weaknesses, and suggesting concrete steps for improvement.
-4.  **Identification of Weak Areas**: List specific conceptual or technical 'weakAreas' (as an array of strings) where the student's submission indicates a lack of understanding or skill, based on the assignment requirements and rubric.
-5.  **Plagiarism Check**:
-    *   Carefully compare the 'Student's Submission' (text, file/media, and links) against ALL 'Other Submissions for Plagiarism Check'.
-    *   Set 'plagiarismDetected' to 'true' if you find substantial similarities, direct copying, or unacknowledged rephrasing that constitutes plagiarism.
-    *   If plagiarism is detected, fill 'plagiarismDetails' with a clear explanation of what was plagiarized, the extent of the plagiarism, and specifically identify which other submission(s) or parts thereof were involved. If no plagiarism is found, ensure 'plagiarismDetails' is an empty string.
+3.  **Comprehensive Written Feedback**: Write overall 'writtenFeedback' for the student.
+4.  **Identification of Weak Areas**: List specific conceptual or technical 'weakAreas'.
+5.  **Plagiarism Check**: Carefully compare the 'Student's Submission' against ALL 'Other Submissions'.
 
-Ensure your output strictly adheres to the JSON schema provided, including correct data types and ranges for scores.
+Ensure your output strictly adheres to the JSON schema provided.
 `
 });
 
@@ -154,10 +151,18 @@ const aiSubmissionEvaluationAndPlagiarismDetectionFlow = ai.defineFlow(
     while (attempts < maxAttempts) {
       try {
         const { output } = await evaluationPrompt(input);
-        return output!;
+        if (!output) throw new Error('AI returned empty evaluation');
+        return output;
       } catch (error: any) {
         attempts++;
-        const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
+        const errorMessage = error.message || '';
+        const isUnavailable = 
+          errorMessage.includes('503') || 
+          errorMessage.includes('high demand') || 
+          errorMessage.includes('UNAVAILABLE') || 
+          errorMessage.includes('overloaded') ||
+          errorMessage.includes('deadline');
+
         if (attempts >= maxAttempts || !isUnavailable) {
           throw error;
         }

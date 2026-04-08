@@ -132,7 +132,7 @@ export default function CoursePortalPage() {
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
   const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
 
-  // State for Confirmation Dialog (now strictly for content as assignments are permanent)
+  // State for Deletion Dialog
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' } | null>(null);
 
   useEffect(() => {
@@ -359,6 +359,7 @@ export default function CoursePortalPage() {
       return true;
     } catch (error) {
       console.error(error);
+      toast({ title: "Evaluation Failed", description: "AI service error. Please try again.", variant: "destructive" });
       return false;
     } finally {
       setIsEvaluating(null);
@@ -735,7 +736,7 @@ export default function CoursePortalPage() {
                     {expandedPostId === post.id && (
                       <div className="mt-6 pt-6 border-t border-border space-y-6">
                         <div className="flex gap-4">
-                          <Input placeholder="Comment as Professor..." value={commentText} onChange={(e) => setCommentText(e.target.value)} className="rounded-xl border-none bg-accent/30" />
+                          <Input placeholder="Comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} className="rounded-xl border-none bg-accent/30" />
                           <Button size="icon" className="rounded-xl" onClick={() => handleAddComment(post.id)}><Send className="h-4 w-4" /></Button>
                         </div>
                         <PostComments contentId={post.id} courseId={courseId as string} currentUserId={user.uid} isProfessor={true} />

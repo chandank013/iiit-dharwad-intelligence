@@ -55,15 +55,22 @@ const professorAIRubricGeneratorPrompt = ai.definePrompt({
   name: 'professorAIRubricGeneratorPrompt',
   input: {schema: ProfessorAIRubricGeneratorInputSchema},
   output: {schema: ProfessorAIRubricGeneratorOutputSchema},
-  prompt: `You are an expert in creating detailed and fair grading rubrics for academic assignments.
-Based on the following assignment description, generate a comprehensive rubric in JSON format.
-Each rubric item should include a 'criterion', a 'description' of what is expected for this criterion, and 'maxPoints'.
-Ensure the rubric covers all essential aspects of the assignment and is suitable for evaluating student submissions.
+  prompt: `You are an expert academic assistant specializing in creating detailed, fair, and comprehensive grading rubrics.
+
+Based on the assignment description provided below, generate a professional rubric. 
+The rubric should be balanced, covering technical accuracy, clarity, and adherence to requirements.
 
 Assignment Description:
+---
 {{{description}}}
+---
 
-Generate the rubric here:`,
+Instructions:
+1. Break down the grading into 4-6 distinct criteria.
+2. For each criterion, provide a clear title and a detailed description of what a student must demonstrate to earn full points.
+3. Assign 'maxPoints' to each criterion such that they are proportional to the importance of that task.
+
+Generate the rubric now:`,
 });
 
 const professorAIRubricGeneratorFlow = ai.defineFlow(
@@ -75,19 +82,32 @@ const professorAIRubricGeneratorFlow = ai.defineFlow(
   async (input) => {
     let attempts = 0;
     const maxAttempts = 5;
+    
     while (attempts < maxAttempts) {
       try {
         const { output } = await professorAIRubricGeneratorPrompt(input);
-        return output!;
+        if (!output) throw new Error('AI returned empty output');
+        return output;
       } catch (error: any) {
         attempts++;
-        const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
-        if (attempts >= maxAttempts || !isUnavailable) {
-          throw error;
+        const errorMessage = error.message || '';
+        const isRetryable = 
+          errorMessage.includes('503') || 
+          errorMessage.includes('high demand') || 
+          errorMessage.includes('UNAVAILABLE') || 
+          errorMessage.includes('overloaded') ||
+          errorMessage.includes('deadline');
+
+        if (attempts >= maxAttempts || !isRetryable) {
+          console.error(`AI Rubric Generation failed after ${attempts} attempts:`, error);
+          throw new Error('The AI service is currently overloaded. Please refine your description or try again in a few minutes.');
         }
-        await new Promise(resolve => setTimeout(resolve, attempts * 3000));
+
+        // Exponential backoff: 3s, 6s, 9s, 12s...
+        const delay = attempts * 3000;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    throw new Error('AI Service is currently experiencing high demand. Please try again.');
+    throw new Error('AI Service is currently unavailable. Please try again later.');
   }
 );
