@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -15,9 +14,10 @@ import { professorAIRubricGenerator } from '@/ai/flows/professor-ai-rubric-gener
 import { Sparkles, Trash2, Plus, Loader2, ArrowLeft, Save, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, serverTimestamp, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function EditAssignmentPage() {
   const { toast } = useToast();
