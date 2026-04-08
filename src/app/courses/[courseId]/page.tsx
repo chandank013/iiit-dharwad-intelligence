@@ -247,7 +247,6 @@ export default function CoursePortalPage() {
   const handleAIEvaluate = async (submission: any) => {
     if (!firestore || !courseId) return;
 
-    // Deadline check
     const assignment = assignments?.find(a => a.id === submission.assignmentId);
     if (assignment?.deadline && new Date() < new Date(assignment.deadline)) {
       toast({ 
