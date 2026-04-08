@@ -42,17 +42,27 @@ export default function CreateAssignmentPage() {
 
   const handleGenerateRubric = async () => {
     if (!description || description.length < 20) {
-      toast({ title: "Detailed Description Required", description: "Please provide a more detailed assignment description for the AI.", variant: "destructive" });
+      toast({ 
+        title: "Detailed Description Required", 
+        description: "Please provide a more detailed assignment description (at least 20 chars) for the AI.", 
+        variant: "destructive" 
+      });
       return;
     }
 
     setLoading(true);
     try {
       const result = await professorAIRubricGenerator({ description });
-      setRubric(result.rubric);
-      toast({ title: "Rubric Generated", description: "AI has suggested a rubric based on your description." });
-    } catch (error) {
-      toast({ title: "Generation Failed", description: "Could not generate rubric. Please try again.", variant: "destructive" });
+      if (result && result.rubric) {
+        setRubric(result.rubric);
+        toast({ title: "Rubric Generated", description: "AI has successfully suggested a rubric based on your description." });
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Generation Failed", 
+        description: error.message || "Could not generate rubric. The AI service may be busy.", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
