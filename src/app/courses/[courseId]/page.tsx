@@ -75,6 +75,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -121,6 +131,9 @@ export default function CoursePortalPage() {
   const [commentText, setCommentText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
   const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
+
+  // State for Confirmation Dialog
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'assignment' | 'content' } | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -390,6 +403,20 @@ export default function CoursePortalPage() {
     return `${foundUser.firstName} ${foundUser.lastName}`;
   };
 
+  const handleConfirmDelete = () => {
+    if (!itemToDelete || !firestore || !courseId) return;
+
+    if (itemToDelete.type === 'assignment') {
+      deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'assignments', itemToDelete.id));
+      toast({ title: "Assignment Deleted", description: "The task and all its data have been removed." });
+    } else if (itemToDelete.type === 'content') {
+      deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', itemToDelete.id));
+      toast({ title: "Content Removed", description: "The entry has been deleted from the course feed." });
+    }
+    
+    setItemToDelete(null);
+  };
+
   if (isUserLoading || isCourseLoading || !user) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
@@ -507,7 +534,12 @@ export default function CoursePortalPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'assignments', assignment.id))}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-muted-foreground hover:text-rose-500" 
+                        onClick={() => setItemToDelete({ id: assignment.id, type: 'assignment' })}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" className="rounded-xl font-bold">
@@ -685,7 +717,12 @@ export default function CoursePortalPage() {
                           <h3 className="text-xl font-bold">{post.title}</h3>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', post.id))}>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-muted-foreground hover:text-rose-500" 
+                        onClick={() => setItemToDelete({ id: post.id, type: 'content' })}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -723,6 +760,7 @@ export default function CoursePortalPage() {
         )}
       </main>
 
+      {/* Content Distribution Dialog */}
       <Dialog open={isContentDialogOpen} onOpenChange={setIsContentDialogOpen}>
         <DialogContent className="rounded-3xl max-w-2xl">
           <DialogHeader><DialogTitle>Distribute Academic Content</DialogTitle></DialogHeader>
@@ -776,6 +814,32 @@ export default function CoursePortalPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Deletion Confirmation Pop-up */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {itemToDelete?.type === 'assignment' 
+                ? "This will permanently delete the assignment, all associated rubrics, and all student submissions. This action cannot be undone." 
+                : "This content entry will be removed from the course feed for all students."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="rounded-xl font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Continue Deletion
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
