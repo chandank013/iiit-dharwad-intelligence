@@ -107,7 +107,8 @@ export default function StudentCoursePage() {
   const { data: rawSubmissions } = useCollection(submissionsQuery);
 
   const mySubmissions = useMemo(() => {
-    if (!rawSubmissions || !courseId || isChandan) return []; // Filter out data for Chandan
+    if (!rawSubmissions || !courseId) return [];
+    if (isChandan) return []; // Filter out data for Chandan as requested
     return rawSubmissions.filter(s => s.courseId === courseId);
   }, [rawSubmissions, courseId, isChandan]);
 
@@ -218,34 +219,30 @@ export default function StudentCoursePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {!isChandan && (
-                  <>
-                    <Card className="border-border p-6 flex items-center gap-6">
-                      <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
-                        <Clock className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-foreground">
-                          {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
-                        </div>
-                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
-                      </div>
-                    </Card>
-                    <Card className="border-border p-6 flex items-center gap-6">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                        <TrendingUp className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-foreground">
-                          {mySubmissions.filter(s => s.status === 'graded').length > 0 
-                            ? `${Math.round(mySubmissions.filter(s => s.status === 'graded').reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / mySubmissions.filter(s => s.status === 'graded').length)}%` 
-                            : '0%'}
-                        </div>
-                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg Score</div>
-                      </div>
-                    </Card>
-                  </>
-                )}
+                <Card className="border-border p-6 flex items-center gap-6">
+                  <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
+                    </div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
+                  </div>
+                </Card>
+                <Card className="border-border p-6 flex items-center gap-6">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                    <TrendingUp className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {mySubmissions.filter(s => s.status === 'graded').length > 0 
+                        ? `${Math.round(mySubmissions.filter(s => s.status === 'graded').reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / mySubmissions.filter(s => s.status === 'graded').length)}%` 
+                        : '0%'}
+                    </div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg Score</div>
+                  </div>
+                </Card>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -14,7 +14,7 @@ export function ProfessorDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // Check if user is Chandan to hide specific stats
+  // Check if user is Chandan to hide specific stats if necessary
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   // 1. Fetch Professor's Courses
@@ -97,19 +97,16 @@ export function ProfessorDashboard() {
           </CardContent>
         </Card>
 
-        {/* Hide Pending Tasks count for Chandan if requested */}
-        {!isChandan && (
-          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-500">0</div>
-              <p className="text-xs text-muted-foreground">Awaiting evaluation</p>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">0</div>
+            <p className="text-xs text-muted-foreground">Awaiting evaluation</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
