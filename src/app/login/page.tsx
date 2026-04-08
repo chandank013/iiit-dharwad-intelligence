@@ -120,15 +120,15 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#F6FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="max-w-md w-full animate-in fade-in zoom-in duration-500 relative z-10">
         <Card className="shadow-2xl border-white/5 bg-card/50 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-          <CardHeader className="flex flex-col items-center gap-3 text-center pb-4 pt-6">
-            <div className="bg-primary/10 p-3 rounded-2xl text-primary shadow-lg border border-primary/20">
-              <GraduationCap className="h-10 w-10" />
+          <CardHeader className="flex flex-col items-center gap-2 text-center pb-2 pt-6">
+            <div className="bg-primary/10 p-2.5 rounded-2xl text-primary shadow-lg border border-primary/20">
+              <GraduationCap className="h-8 w-8" />
             </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
-              <div className="pt-2">
-                <CardTitle className="text-xl font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
-                <CardDescription className="text-xs font-medium mt-1">
+            <div className="space-y-0.5">
+              <h1 className="text-2xl font-headline font-bold text-foreground tracking-tighter">IIIT Dharwad</h1>
+              <div className="pt-1">
+                <CardTitle className="text-lg font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
+                <CardDescription className="text-[10px] font-medium">
                   {isSignUp 
                     ? 'Register with your institute email to get started.' 
                     : 'Enter your credentials to access your dashboard.'}
@@ -137,16 +137,16 @@ export default function LoginPage() {
             </div>
           </CardHeader>
           <form onSubmit={handleAuth}>
-            <CardContent className="space-y-4 px-8">
+            <CardContent className="space-y-3 px-8 pb-4 pt-2">
               {isSignUp && (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Full Name</Label>
                   <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       id="name"
                       placeholder="John Doe"
-                      className="h-11 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
+                      className="h-10 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required={isSignUp}
@@ -154,30 +154,30 @@ export default function LoginPage() {
                   </div>
                 </div>
               )}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Institute Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@iiitdwd.ac.in"
-                    className="h-11 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
+                    className="h-10 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
-                    className="h-11 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
+                    className="h-10 pl-11 bg-background/50 border-white/10 rounded-xl text-sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -185,10 +185,10 @@ export default function LoginPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 pb-6 px-8">
-              <Button type="submit" className="w-full h-12 text-md font-bold group shadow-xl shadow-primary/20 rounded-xl" disabled={isLoading}>
+            <CardFooter className="flex flex-col gap-3 pb-6 px-8">
+              <Button type="submit" className="w-full h-11 text-sm font-bold group shadow-xl shadow-primary/20 rounded-xl" disabled={isLoading}>
                 {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
                     {isSignUp ? 'Create Account' : 'Continue'} 
@@ -198,7 +198,7 @@ export default function LoginPage() {
               </Button>
               <button 
                 type="button" 
-                className="text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors" 
+                className="text-[10px] font-semibold text-muted-foreground hover:text-primary transition-colors" 
                 onClick={() => setIsSignUp(!isSignUp)}
               >
                 {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
