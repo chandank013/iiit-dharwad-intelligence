@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview AI-driven submission evaluation and plagiarism detection.
@@ -53,17 +52,25 @@ const aiSubmissionEvaluationAndPlagiarismDetectionFlow = ai.defineFlow(
   },
   async (input) => {
     let attempts = 0;
-    while (attempts < 3) {
+    const maxAttempts = 5;
+    while (attempts < maxAttempts) {
       try {
         const { output } = await evaluationPrompt(input);
         if (output) return output;
         throw new Error('Empty evaluation');
       } catch (error: any) {
         attempts++;
-        if (attempts >= 3) throw error;
-        await new Promise(resolve => setTimeout(resolve, 3000 * attempts));
+        const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+        const isServiceError = error.message?.includes('503') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
+        
+        if (attempts >= maxAttempts || (!isQuotaError && !isServiceError)) {
+          throw error;
+        }
+        
+        const delay = isQuotaError ? 6000 * attempts : 3000 * attempts;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    throw new Error('AI Evaluation Service busy.');
+    throw new Error('AI Evaluation Service busy. Please try grading again in a few moments.');
   }
 );
