@@ -69,7 +69,7 @@ export function Navbar() {
                     {displayName[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col items-start leading-none gap-0.5">
+                <div className="flex items-start flex-col leading-none gap-0.5">
                   <span className="text-xs font-bold tracking-tight">{nameDisplay}</span>
                   <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{role}</span>
                 </div>
@@ -80,7 +80,7 @@ export function Navbar() {
               <DropdownMenuLabel className="p-3">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                    <IdCard className="h-3 w-3" /> User Identity
+                    <IdCard className="h-3 w-3" /> Identity
                   </div>
                   <div className="text-sm font-bold truncate">{displayName}</div>
                   <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">

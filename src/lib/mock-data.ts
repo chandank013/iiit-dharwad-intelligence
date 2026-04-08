@@ -61,14 +61,6 @@ export interface Submission {
   };
 }
 
-export interface Announcement {
-  id: string;
-  courseId: string;
-  title: string;
-  content: string;
-  date: string;
-}
-
 export const MOCK_USERS: User[] = [];
 export const MOCK_COURSES: Course[] = [];
 export const MOCK_ASSIGNMENTS: Assignment[] = [];
