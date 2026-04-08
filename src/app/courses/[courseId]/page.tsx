@@ -212,7 +212,12 @@ export default function CoursePortalPage() {
       toast({ title: "Evaluation Complete", description: `Score: ${evaluation.totalScore}% assigned.` });
     } catch (error: any) {
       console.error(error);
-      toast({ title: "Evaluation Failed", description: "AI could not process this submission.", variant: "destructive" });
+      const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('busy');
+      toast({ 
+        title: "Evaluation Failed", 
+        description: isUnavailable ? "AI service is currently busy. Please try again in a moment." : "AI could not process this submission.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsEvaluating(null);
     }
@@ -330,7 +335,7 @@ export default function CoursePortalPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => handleDeleteAssignment(assignment.id)}>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'assignments', assignment.id))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" className="rounded-xl font-bold" onClick={() => { setSelectedAssignment(assignment); setIsDetailsOpen(true); }}>
@@ -430,7 +435,7 @@ export default function CoursePortalPage() {
                         </div>
                         <h3 className="text-xl font-bold">{post.title}</h3>
                       </div>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => handleDeleteContent(post.id)}>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-rose-500" onClick={() => deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', post.id))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -463,12 +468,4 @@ export default function CoursePortalPage() {
       </Dialog>
     </div>
   );
-}
-
-function handleDeleteAssignment(id: string) {
-  // Logic already defined in parent component or passed via props
-}
-
-function handleDeleteContent(id: string) {
-  // Logic already defined in parent component or passed via props
 }

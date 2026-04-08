@@ -68,15 +68,11 @@ export function useCollection<T = any>(
       } else {
         // collectionGroup queries often have an empty path canonicalString
         const q = memoizedTargetRefOrQuery as unknown as InternalQuery;
-        path = q?._query?.path?.canonicalString?.() || "collectionGroup query";
+        const canonical = q?._query?.path?.canonicalString?.();
+        path = canonical ? canonical : "collectionGroup query";
       }
     } catch {
       path = "unknown";
-    }
-
-    // 🛑 Guard 2: Prevent invalid root query
-    if (path === "") {
-      console.warn("❌ Empty Firestore query path detected. Ensure collectionGroup or collection name is valid.");
     }
 
     setIsLoading(true);

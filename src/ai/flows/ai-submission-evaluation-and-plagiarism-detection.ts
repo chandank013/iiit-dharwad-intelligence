@@ -65,10 +65,82 @@ const evaluationPrompt = ai.definePrompt({
   name: 'submissionEvaluationAndPlagiarismDetectionPrompt',
   input: { schema: AISubmissionEvaluationInputSchema },
   output: { schema: AISubmissionEvaluationOutputSchema },
-  prompt: `You are an expert academic evaluator and plagiarism detector.\nYour task is to thoroughly evaluate a student's submission for an assignment based on the provided assignment description and rubric. You must identify specific weak areas and detect any plagiarism by comparing the student's work against other submissions provided.\n\n---\nAssignment Description:\n{{{assignmentDescription}}}\n\n---\nAssignment Rubric:\n{{{assignmentRubric}}}\n\n---\nStudent's Submission:\n{{#if submissionText}}\n  Submission Content (Text):\n  {{{submissionText}}}\n{{/if}}\n{{#if submissionFileDataUri}}\n  Submission Content (File/Media):\n  {{media url=submissionFileDataUri}}\n{{/if}}\n{{#if submissionLink}}\n  Submission Link (e.g., GitHub, Google Drive):\n  {{{submissionLink}}}\n  Note: Assume content at this link is relevant to the assignment.\n{{/if}}\n\n---\nOther Submissions for Plagiarism Check:\n{{#if allOtherSubmissionsText}}\n  Text-based submissions for comparison:\n  {{#each allOtherSubmissionsText}}\n    --- Other Submission:\n    {{{this}}}\n  {{/each}}\n{{/if}}\n{{#if allOtherSubmissionsMedia}}\n  File/Media-based submissions for comparison:\n  {{#each allOtherSubmissionsMedia}}\n    --- Other Submission File/Media:\n    {{media url=this}}\n  {{/each}}\n{{/if}}\n{{#if allOtherSubmissionsLinks}}\n  Link-based submissions for comparison:\n  {{#each allOtherSubmissionsLinks}}\n    --- Other Submission Link:\n    {{{this}}}\n    Note: Assume content at this link is relevant to the assignment.\n  {{/each}}\n{{/if}}\n{{#unless allOtherSubmissionsText}}\n  {{#unless allOtherSubmissionsMedia}}\n    {{#unless allOtherSubmissionsLinks}}\n      No other submissions provided for plagiarism check.\n    {{/unless}}\n  {{/unless}}\n{{/unless}}\n\n---\n\nInstructions for Evaluation and Plagiarism Detection:\n1.  **Rubric Evaluation**: Go through each item in the 'Assignment Rubric'. Assign a 'score' (an integer between 0 and 100) and provide detailed 'feedback'. The feedback should explain the score and offer constructive advice for improvement.\n2.  **Total Score Calculation**: Based on your assessment of each rubric item, calculate an 'totalScore' for the entire submission. This must be an integer between 0 and 100.\n3.  **Comprehensive Written Feedback**: Write overall 'writtenFeedback' for the student, highlighting the main strengths, addressing significant weaknesses, and suggesting concrete steps for improvement.\n4.  **Identification of Weak Areas**: List specific conceptual or technical 'weakAreas' (as an array of strings) where the student's submission indicates a lack of understanding or skill, based on the assignment requirements and rubric.\n5.  **Plagiarism Check**:\n    *   Carefully compare the 'Student\'s Submission' (text, file/media, and links) against ALL 'Other Submissions for Plagiarism Check'.\n    *   Set 'plagiarismDetected' to 'true' if you find substantial similarities, direct copying, or unacknowledged rephrasing that constitutes plagiarism.\n    *   If plagiarism is detected, fill 'plagiarismDetails' with a clear explanation of what was plagiarized, the extent of the plagiarism, and specifically identify which other submission(s) or parts thereof were involved. If no plagiarism is found, ensure 'plagiarismDetails' is an empty string.\n\nEnsure your output strictly adheres to the JSON schema provided, including correct data types and ranges for scores.\n`
+  prompt: `You are an expert academic evaluator and plagiarism detector.
+Your task is to thoroughly evaluate a student's submission for an assignment based on the provided assignment description and rubric. You must identify specific weak areas and detect any plagiarism by comparing the student's work against other submissions provided.
+
+---
+Assignment Description:
+{{{assignmentDescription}}}
+
+---
+Assignment Rubric:
+{{{assignmentRubric}}}
+
+---
+Student's Submission:
+{{#if submissionText}}
+  Submission Content (Text):
+  {{{submissionText}}}
+{{/if}}
+{{#if submissionFileDataUri}}
+  Submission Content (File/Media):
+  {{media url=submissionFileDataUri}}
+{{/if}}
+{{#if submissionLink}}
+  Submission Link (e.g., GitHub, Google Drive):
+  {{{submissionLink}}}
+  Note: Assume content at this link is relevant to the assignment.
+{{/if}}
+
+---
+Other Submissions for Plagiarism Check:
+{{#if allOtherSubmissionsText}}
+  Text-based submissions for comparison:
+  {{#each allOtherSubmissionsText}}
+    --- Other Submission:
+    {{{this}}}
+  {{/each}}
+{{/if}}
+{{#if allOtherSubmissionsMedia}}
+  File/Media-based submissions for comparison:
+  {{#each allOtherSubmissionsMedia}}
+    --- Other Submission File/Media:
+    {{media url=this}}
+  {{/each}}
+{{/if}}
+{{#if allOtherSubmissionsLinks}}
+  Link-based submissions for comparison:
+  {{#each allOtherSubmissionsLinks}}
+    --- Other Submission Link:
+    {{{this}}}
+    Note: Assume content at this link is relevant to the assignment.
+  {{/each}}
+{{/if}}
+{{#unless allOtherSubmissionsText}}
+  {{#unless allOtherSubmissionsMedia}}
+    {{#unless allOtherSubmissionsLinks}}
+      No other submissions provided for plagiarism check.
+    {{/unless}}
+  {{/unless}}
+{{/unless}}
+
+---
+
+Instructions for Evaluation and Plagiarism Detection:
+1.  **Rubric Evaluation**: Go through each item in the 'Assignment Rubric'. Assign a 'score' (an integer between 0 and 100) and provide detailed 'feedback'. The feedback should explain the score and offer constructive advice for improvement.
+2.  **Total Score Calculation**: Based on your assessment of each rubric item, calculate an 'totalScore' for the entire submission. This must be an integer between 0 and 100.
+3.  **Comprehensive Written Feedback**: Write overall 'writtenFeedback' for the student, highlighting the main strengths, addressing significant weaknesses, and suggesting concrete steps for improvement.
+4.  **Identification of Weak Areas**: List specific conceptual or technical 'weakAreas' (as an array of strings) where the student's submission indicates a lack of understanding or skill, based on the assignment requirements and rubric.
+5.  **Plagiarism Check**:
+    *   Carefully compare the 'Student's Submission' (text, file/media, and links) against ALL 'Other Submissions for Plagiarism Check'.
+    *   Set 'plagiarismDetected' to 'true' if you find substantial similarities, direct copying, or unacknowledged rephrasing that constitutes plagiarism.
+    *   If plagiarism is detected, fill 'plagiarismDetails' with a clear explanation of what was plagiarized, the extent of the plagiarism, and specifically identify which other submission(s) or parts thereof were involved. If no plagiarism is found, ensure 'plagiarismDetails' is an empty string.
+
+Ensure your output strictly adheres to the JSON schema provided, including correct data types and ranges for scores.
+`
 });
 
-// Define the flow
+// Define the flow with retry logic for high demand (503 errors)
 const aiSubmissionEvaluationAndPlagiarismDetectionFlow = ai.defineFlow(
   {
     name: 'aiSubmissionEvaluationAndPlagiarismDetectionFlow',
@@ -76,7 +148,22 @@ const aiSubmissionEvaluationAndPlagiarismDetectionFlow = ai.defineFlow(
     outputSchema: AISubmissionEvaluationOutputSchema,
   },
   async (input) => {
-    const { output } = await evaluationPrompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 3;
+    while (attempts < maxAttempts) {
+      try {
+        const { output } = await evaluationPrompt(input);
+        return output!;
+      } catch (error: any) {
+        attempts++;
+        const isUnavailable = error.message?.includes('503') || error.message?.includes('high demand') || error.message?.includes('UNAVAILABLE');
+        if (attempts >= maxAttempts || !isUnavailable) {
+          throw error;
+        }
+        // Wait exponentially before retry
+        await new Promise(resolve => setTimeout(resolve, attempts * 2000));
+      }
+    }
+    throw new Error('AI Service is currently experiencing high demand. Please try again in a few moments.');
   }
 );
