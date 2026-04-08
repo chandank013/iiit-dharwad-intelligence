@@ -218,7 +218,7 @@ export default function StudentCoursePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card className="border-border p-6 flex items-center gap-6">
                   <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
                     <Clock className="h-6 w-6" />
@@ -228,6 +228,17 @@ export default function StudentCoursePage() {
                       {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
                     </div>
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
+                  </div>
+                </Card>
+                <Card className="border-border p-6 flex items-center gap-6">
+                  <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {mySubmissions.length}
+                    </div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Submitted</div>
                   </div>
                 </Card>
                 <Card className="border-border p-6 flex items-center gap-6">
