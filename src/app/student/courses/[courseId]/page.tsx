@@ -39,7 +39,10 @@ import {
   Trash2,
   FileArchive,
   AlertTriangle,
-  Download
+  Download,
+  FileText,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -154,6 +157,7 @@ export default function StudentCoursePage() {
   const sidebarLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
+    { id: 'submissions', label: 'My Submissions', icon: FileText },
     { id: 'content', label: 'Content', icon: FolderOpen },
   ];
 
@@ -306,12 +310,73 @@ export default function StudentCoursePage() {
                               DEADLINE CROSSED
                             </Badge>
                           )}
+                          {isSubmitted && (
+                             <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-bold px-4 py-2 gap-2">
+                               <CheckCircle2 className="h-4 w-4" /> SUBMITTED
+                             </Badge>
+                          )}
                         </CardContent>
                       </Card>
                     );
                   })
                 ) : (
                   <div className="p-12 text-center text-muted-foreground border-2 border-dashed rounded-3xl">No assignments assigned.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'submissions' && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <h1 className="text-3xl font-bold tracking-tight">My Submissions</h1>
+              <div className="grid gap-6">
+                {mySubmissions.length > 0 ? (
+                  mySubmissions.map((sub) => (
+                    <Card key={sub.id} className="border-border overflow-hidden group hover:border-primary/20 transition-all">
+                      <CardContent className="p-8 space-y-6">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{sub.assignmentTitle}</h3>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                              <Clock className="h-3.5 w-3.5" /> Submitted on {sub.submittedAt ? new Date(sub.submittedAt.seconds * 1000).toLocaleString() : 'Just now'}
+                            </div>
+                          </div>
+                          {sub.status === 'graded' ? (
+                            <div className="text-right">
+                              <div className="text-3xl font-bold text-primary">{sub.evaluation?.totalScore}%</div>
+                              <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">AI Evaluated</div>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-amber-500 border-amber-500/20 font-bold uppercase text-[9px]">Awaiting Grade</Badge>
+                          )}
+                        </div>
+
+                        {sub.status === 'graded' && sub.evaluation?.writtenFeedback && (
+                          <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                            <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+                              <TrendingUp className="h-3.5 w-3.5" /> AI Personalized Feedback
+                            </h4>
+                            <p className="text-sm leading-relaxed text-muted-foreground">{sub.evaluation.writtenFeedback}</p>
+                          </div>
+                        )}
+
+                        <div className="pt-4 border-t border-border flex justify-between items-center">
+                           <button className="text-xs font-bold text-primary flex items-center gap-2 hover:underline">
+                             <ExternalLink className="h-3.5 w-3.5" /> View Submission
+                           </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="p-20 text-center border-2 border-dashed rounded-[2rem] bg-card">
+                    <div className="p-4 bg-primary/5 rounded-full w-fit mx-auto mb-4">
+                      <FileText className="h-10 w-10 text-primary/40" />
+                    </div>
+                    <h3 className="text-lg font-bold">No submissions found</h3>
+                    <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6">You haven't submitted any work for this course yet.</p>
+                    <Button onClick={() => setActiveTab('assignments')} variant="outline" className="font-bold">Browse Assignments</Button>
+                  </div>
                 )}
               </div>
             </div>

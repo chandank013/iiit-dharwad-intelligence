@@ -60,6 +60,9 @@ export function StudentDashboard() {
   const [allAssignments, setAllAssignments] = useState<any[]>([]);
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
 
+  // Check if user is Chandan to hide specific stats
+  const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
+
   // Fetch student's enrollments
   const enrollmentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -166,6 +169,17 @@ export function StudentDashboard() {
 
       await addDoc(collection(firestore, 'course_enrollments'), enrollmentData);
 
+      // Audit Log for enrollment
+      addDoc(collection(firestore, 'audit_logs'), {
+        actorId: user.uid,
+        actionType: 'course_enrolled',
+        entityType: 'Course',
+        entityId: courseDoc.id,
+        timestamp: serverTimestamp(),
+        description: `Student enrolled in ${courseData.name}`,
+        createdAt: serverTimestamp()
+      });
+
       toast({
         title: "Successfully Enrolled!",
         description: `You have joined ${courseData.name}.`,
@@ -270,17 +284,21 @@ export function StudentDashboard() {
             <p className="text-xs opacity-75 mt-1">Based on {enrollments?.length || 0} enrolled courses</p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-none bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Active Assignments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{allAssignments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pending deadlines across courses</p>
-          </CardContent>
-        </Card>
+        
+        {/* Hide Active Assignments count for Chandan as requested */}
+        {!isChandan && (
+          <Card className="shadow-sm border-none bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-4 w-4" /> Active Assignments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{allAssignments.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">Pending deadlines across courses</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

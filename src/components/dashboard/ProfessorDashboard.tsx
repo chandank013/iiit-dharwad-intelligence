@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, FileText, CheckCircle, AlertTriangle, ArrowRight, TrendingUp, BarChart3, Loader2, BookOpen } from "lucide-react";
+import { PlusCircle, Users, FileText, CheckCircle, AlertTriangle, ArrowRight, TrendingUp, BarChart3, Loader2, BookOpen, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
@@ -13,6 +13,9 @@ import { collection, query, where } from "firebase/firestore";
 export function ProfessorDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+
+  // Check if user is Chandan to hide specific stats
+  const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   // 1. Fetch Professor's Courses
   const coursesQuery = useMemoFirebase(() => {
@@ -94,16 +97,19 @@ export function ProfessorDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">0</div>
-            <p className="text-xs text-muted-foreground">Awaiting evaluation</p>
-          </CardContent>
-        </Card>
+        {/* Hide Pending Tasks count for Chandan if requested */}
+        {!isChandan && (
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-500">0</div>
+              <p className="text-xs text-muted-foreground">Awaiting evaluation</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -167,8 +173,8 @@ export function ProfessorDashboard() {
                   <span className="text-[10px] font-bold text-primary mt-1">SYSTEM MONITORING</span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full text-xs" asChild>
-                <Link href="/audit">View Activity Logs</Link>
+              <Button variant="outline" className="w-full text-xs gap-2" asChild>
+                <Link href="/audit"><Activity className="h-3 w-3" /> View Activity Logs</Link>
               </Button>
             </CardContent>
           </Card>

@@ -25,6 +25,12 @@ service cloud.firestore {
       );
     }
 
+    // Audit Logs rules
+    match /audit_logs/{logId} {
+      allow read: if isProfessor();
+      allow create: if isSignedIn();
+    }
+
     // Collection Group rules for tracking submissions across all assignments
     match /{path=**}/submissions/{submissionId} {
       allow list, get: if isSignedIn() && (
@@ -39,6 +45,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (
         request.auth.uid == resource.data.submitterId && resource.data.status != 'graded'
       );
+    }
+    
+    // Collection Group rules for assignments
+    match /{path=**}/assignments/{assignmentId} {
+      allow read, list: if isSignedIn();
     }
 
     match /users/{userId} {
@@ -112,7 +123,7 @@ service cloud.firestore {
     
     match /private_messages/{messageId} {
       allow create: if isSignedIn();
-      allow get, list: if isSignedIn() && (request.auth.uid == request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
     }
 
     match /learning_resources/{resourceId} {
