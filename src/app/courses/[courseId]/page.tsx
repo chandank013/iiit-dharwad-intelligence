@@ -132,8 +132,8 @@ export default function CoursePortalPage() {
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
   const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
 
-  // State for Confirmation Dialog
-  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'assignment' | 'content' } | null>(null);
+  // State for Confirmation Dialog (now strictly for content as assignments are permanent)
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' } | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -406,10 +406,7 @@ export default function CoursePortalPage() {
   const handleConfirmDelete = () => {
     if (!itemToDelete || !firestore || !courseId) return;
 
-    if (itemToDelete.type === 'assignment') {
-      deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'assignments', itemToDelete.id));
-      toast({ title: "Assignment Deleted", description: "The task and all its data have been removed." });
-    } else if (itemToDelete.type === 'content') {
+    if (itemToDelete.type === 'content') {
       deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', itemToDelete.id));
       toast({ title: "Content Removed", description: "The entry has been deleted from the course feed." });
     }
@@ -534,14 +531,6 @@ export default function CoursePortalPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-muted-foreground hover:text-rose-500" 
-                        onClick={() => setItemToDelete({ id: assignment.id, type: 'assignment' })}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
                       <Button variant="outline" className="rounded-xl font-bold">
                         Manage
                       </Button>
@@ -824,9 +813,7 @@ export default function CoursePortalPage() {
               Are you absolutely sure?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {itemToDelete?.type === 'assignment' 
-                ? "This will permanently delete the assignment, all associated rubrics, and all student submissions. This action cannot be undone." 
-                : "This content entry will be removed from the course feed for all students."}
+              This content entry will be permanently removed from the course feed for all students. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
