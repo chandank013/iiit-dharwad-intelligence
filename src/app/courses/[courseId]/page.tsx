@@ -48,7 +48,9 @@ import {
   Heart,
   Send,
   Users,
-  User
+  User,
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,7 +72,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -245,6 +247,17 @@ export default function CoursePortalPage() {
   const handleAIEvaluate = async (submission: any) => {
     if (!firestore || !courseId) return;
 
+    // Deadline check
+    const assignment = assignments?.find(a => a.id === submission.assignmentId);
+    if (assignment?.deadline && new Date() < new Date(assignment.deadline)) {
+      toast({ 
+        title: "Evaluation Locked", 
+        description: "You can only evaluate submissions after the assignment deadline.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsEvaluating(submission.id);
     try {
       const assignmentRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId);
@@ -292,14 +305,23 @@ export default function CoursePortalPage() {
   };
 
   const handleBulkEvaluate = async () => {
-    const pending = courseSubmissions.filter(s => s.status !== 'graded');
+    const pending = courseSubmissions.filter(s => {
+      const assignment = assignments?.find(a => a.id === s.assignmentId);
+      const deadlinePassed = assignment?.deadline ? new Date() > new Date(assignment.deadline) : true;
+      return s.status !== 'graded' && deadlinePassed;
+    });
+
     if (pending.length === 0) {
-      toast({ title: "No Pending Submissions", description: "All submissions are already graded." });
+      toast({ 
+        title: "No Eligible Submissions", 
+        description: "There are no ungraded submissions whose assignment deadlines have passed.", 
+        variant: "destructive"
+      });
       return;
     }
 
     setIsBulkEvaluating(true);
-    toast({ title: "Bulk Evaluation Started", description: `Processing ${pending.length} submissions...` });
+    toast({ title: "Bulk Evaluation Started", description: `Processing ${pending.length} eligible submissions...` });
 
     let successCount = 0;
     for (const sub of pending) {
@@ -321,7 +343,7 @@ export default function CoursePortalPage() {
   };
 
   if (isUserLoading || isCourseLoading || !user) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
   if (!course) return <div className="min-h-screen flex items-center justify-center">Course not found.</div>;
@@ -455,15 +477,20 @@ export default function CoursePortalPage() {
           <div className="p-10 space-y-10 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
-              <Button 
-                variant="secondary" 
-                className="rounded-xl px-6 gap-2 font-bold"
-                onClick={handleBulkEvaluate}
-                disabled={isBulkEvaluating || courseSubmissions.filter(s => s.status !== 'graded').length === 0}
-              >
-                {isBulkEvaluating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
-                Evaluate All Pending
-              </Button>
+              <div className="flex items-center gap-4">
+                <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 bg-accent/50 px-3 py-1.5 rounded-lg border">
+                  <Lock className="h-3 w-3" /> Evaluation opens after deadline
+                </p>
+                <Button 
+                  variant="secondary" 
+                  className="rounded-xl px-6 gap-2 font-bold"
+                  onClick={handleBulkEvaluate}
+                  disabled={isBulkEvaluating}
+                >
+                  {isBulkEvaluating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                  Evaluate Eligible
+                </Button>
+              </div>
             </div>
             <Card className="border-border overflow-hidden rounded-2xl">
               <Table>
@@ -480,6 +507,8 @@ export default function CoursePortalPage() {
                   {courseSubmissions.length > 0 ? (
                     courseSubmissions.map((sub) => {
                       const assignment = assignments?.find(a => a.id === sub.assignmentId);
+                      const deadlinePassed = assignment?.deadline ? new Date() > new Date(assignment.deadline) : true;
+                      
                       return (
                         <TableRow key={sub.id} className="group">
                           <TableCell className="font-bold text-xs flex items-center gap-2">
@@ -497,8 +526,12 @@ export default function CoursePortalPage() {
                               <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-bold text-[10px]">
                                 {sub.evaluation.totalScore}% AI SCORING
                               </Badge>
+                            ) : !deadlinePassed ? (
+                              <Badge variant="outline" className="text-amber-500 border-amber-500/20 text-[10px] font-bold flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> AWAITING DEADLINE
+                              </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-muted-foreground text-[10px] font-bold">AWAITING EVALUATION</Badge>
+                              <Badge variant="outline" className="text-muted-foreground text-[10px] font-bold">READY FOR EVALUATION</Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
@@ -507,10 +540,10 @@ export default function CoursePortalPage() {
                               size="sm" 
                               className="font-bold text-primary gap-2 text-xs"
                               onClick={() => handleAIEvaluate(sub)}
-                              disabled={isEvaluating === sub.id}
+                              disabled={isEvaluating === sub.id || !deadlinePassed}
                             >
                               {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                              AI Evaluation
+                              {deadlinePassed ? 'AI Evaluation' : 'Locked'}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -674,7 +707,7 @@ export default function CoursePortalPage() {
               <Textarea value={contentFormData.body} onChange={(e) => setContentFormData({...contentFormData, body: e.target.value})} placeholder="Explain the importance of this resource..." required className="min-h-[120px]" />
             </div>
             <Button type="submit" className="w-full h-14 rounded-xl font-bold text-lg shadow-xl shadow-primary/20" disabled={isPostingContent}>
-              {isPostingContent ? <Loader2 className="animate-spin" /> : 'Publish to Course'}
+              {isPostingContent ? <Loader2 className="animate-spin text-white" /> : 'Publish to Course'}
             </Button>
           </form>
         </DialogContent>

@@ -40,7 +40,8 @@ import {
   Send,
   Trash2,
   Undo2,
-  FileArchive
+  FileArchive,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -114,7 +115,9 @@ export default function StudentCoursePage() {
     if (!firestore || !courseId) return;
 
     const assignment = assignments?.find(a => a.id === submission.assignmentId);
-    if (assignment?.deadline && new Date() > new Date(assignment.deadline)) {
+    const deadlinePassed = assignment?.deadline && new Date() > new Date(assignment.deadline);
+
+    if (deadlinePassed) {
       toast({ title: "Deadline Passed", description: "You cannot unsubmit after the deadline.", variant: "destructive" });
       return;
     }
@@ -254,17 +257,23 @@ export default function StudentCoursePage() {
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
                       {assignments && assignments.filter(a => !submittedAssignmentIds.has(a.id)).length > 0 ? (
-                        assignments.filter(a => !submittedAssignmentIds.has(a.id)).slice(0, 3).map((task, i) => (
-                          <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
-                            <div className="space-y-1">
-                              <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{task.title}</div>
-                              <div className="text-[10px] text-muted-foreground font-medium">Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'}</div>
+                        assignments.filter(a => !submittedAssignmentIds.has(a.id)).slice(0, 3).map((task, i) => {
+                          const deadlinePassed = task.deadline && new Date() > new Date(task.deadline);
+                          return (
+                            <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
+                              <div className="space-y-1">
+                                <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                                  {task.title}
+                                  {deadlinePassed && <Badge variant="destructive" className="text-[8px] h-4 font-bold uppercase">Missing</Badge>}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-medium">Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'}</div>
+                              </div>
+                              <Button size="sm" variant="ghost" className="rounded-full h-8 w-8 p-0">
+                                 <ChevronRight className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <Button size="sm" variant="ghost" className="rounded-full h-8 w-8 p-0">
-                               <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="p-10 text-center text-xs text-muted-foreground italic">No pending work!</div>
                       )}
@@ -282,22 +291,31 @@ export default function StudentCoursePage() {
                 {assignments && assignments.length > 0 ? (
                   assignments.map((assignment) => {
                     const isSubmitted = submittedAssignmentIds.has(assignment.id);
+                    const deadlinePassed = assignment.deadline && new Date() > new Date(assignment.deadline);
                     return (
-                      <Card key={assignment.id} className={cn("border-border overflow-hidden", isSubmitted && "opacity-60")}>
+                      <Card key={assignment.id} className={cn("border-border overflow-hidden", (isSubmitted || deadlinePassed) && "opacity-60")}>
                         <CardContent className="p-8 flex items-center justify-between">
                           <div className="space-y-2">
                             <h3 className="text-xl font-bold">{assignment.title}</h3>
                             <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                              <span className="flex items-center gap-1.5 text-orange-500"><Clock className="h-3.5 w-3.5" /> Due: {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'N/A'}</span>
+                              <span className={cn("flex items-center gap-1.5", deadlinePassed ? "text-rose-500" : "text-orange-500")}>
+                                <Clock className="h-3.5 w-3.5" /> {deadlinePassed ? 'Missed' : 'Due'}: {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'N/A'}
+                              </span>
                               {isSubmitted && <span className="flex items-center gap-1.5 text-emerald-500"><CheckCircle className="h-3.5 w-3.5" /> Submitted</span>}
+                              {!isSubmitted && deadlinePassed && <span className="flex items-center gap-1.5 text-rose-500 font-black"><AlertTriangle className="h-3.5 w-3.5" /> Missing</span>}
                             </div>
                           </div>
-                          {!isSubmitted && (
+                          {!isSubmitted && !deadlinePassed && (
                             <Link href={`/student/courses/${courseId}/submit/${assignment.id}`}>
                               <Button className="rounded-xl font-bold gap-2">
                                 Start Work <ArrowRight className="h-4 w-4" />
                               </Button>
                             </Link>
+                          )}
+                          {deadlinePassed && !isSubmitted && (
+                            <Badge variant="secondary" className="bg-rose-50 text-rose-600 border-rose-100 font-bold px-4 py-2">
+                              DEADLINE CROSSED
+                            </Badge>
                           )}
                         </CardContent>
                       </Card>
@@ -359,7 +377,10 @@ export default function StudentCoursePage() {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground font-medium italic">Awaiting evaluation.</p>
+                            <div className="flex items-center gap-4">
+                                <p className="text-sm text-muted-foreground font-medium italic flex-1">Awaiting evaluation by professor.</p>
+                                {deadlinePassed && <Badge variant="outline" className="text-[9px] font-bold opacity-50">FINAL SUBMISSION (DEADLINE PASSED)</Badge>}
+                            </div>
                           )}
                         </CardContent>
                       </Card>
