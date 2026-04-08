@@ -50,7 +50,8 @@ import {
   Users,
   User,
   AlertCircle,
-  Lock
+  Lock,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,6 +114,7 @@ export default function CoursePortalPage() {
     body: '',
     attachmentUrl: ''
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
@@ -202,18 +204,41 @@ export default function CoursePortalPage() {
     return { distribution, performance };
   }, [courseSubmissions, assignments]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      // Auto-update type based on file extension
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext === 'pdf') setContentFormData(prev => ({ ...prev, type: 'file' }));
+      else if (ext === 'zip' || ext === 'rar') setContentFormData(prev => ({ ...prev, type: 'zip' }));
+      else if (ext === 'ppt' || ext === 'pptx') setContentFormData(prev => ({ ...prev, type: 'ppt' }));
+    }
+  };
+
   const handlePostContent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firestore || !user || !courseId) return;
 
     setIsPostingContent(true);
+    let attachmentUrl = contentFormData.attachmentUrl;
+
+    // Handle local file upload (Simulated via Data URI for MVP/Prototype)
+    if (selectedFile) {
+      const reader = new FileReader();
+      attachmentUrl = await new Promise((resolve) => {
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(selectedFile);
+      });
+    }
+
     const contentData = {
       courseId,
       professorId: user.uid,
       title: contentFormData.title,
       contentType: contentFormData.type,
       content: contentFormData.body,
-      attachmentUrl: contentFormData.attachmentUrl,
+      attachmentUrl: attachmentUrl,
       postedAt: serverTimestamp(),
       isPinned: false,
       likesCount: 0,
@@ -226,6 +251,7 @@ export default function CoursePortalPage() {
       toast({ title: "Content Published" });
       setIsContentDialogOpen(false);
       setContentFormData({ title: '', type: 'announcement', body: '', attachmentUrl: '' });
+      setSelectedFile(null);
     } finally {
       setIsPostingContent(false);
     }
@@ -646,7 +672,7 @@ export default function CoursePortalPage() {
                     <p className="text-muted-foreground leading-relaxed text-sm">{post.content}</p>
                     {post.attachmentUrl && (
                       <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
-                        <LinkIcon className="h-3 w-3" /> {post.attachmentUrl}
+                        <LinkIcon className="h-3 w-3" /> {post.attachmentUrl.startsWith('data:') ? 'View Attached File' : post.attachmentUrl}
                       </a>
                     )}
                     <div className="flex items-center justify-between pt-6 border-t border-border">
@@ -697,10 +723,24 @@ export default function CoursePortalPage() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest">Resource Link (if applicable)</Label>
-              <Input value={contentFormData.attachmentUrl} onChange={(e) => setContentFormData({...contentFormData, attachmentUrl: e.target.value})} placeholder="https://..." />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest">External Link</Label>
+                <Input value={contentFormData.attachmentUrl} onChange={(e) => setContentFormData({...contentFormData, attachmentUrl: e.target.value})} placeholder="https://..." disabled={!!selectedFile} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest">Local File Upload</Label>
+                <div className="relative">
+                  <Input type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
+                  <Label htmlFor="file-upload" className="flex items-center justify-center gap-2 h-10 border border-dashed rounded-md cursor-pointer hover:bg-accent/50 transition-colors">
+                    <Upload className="h-4 w-4" />
+                    <span className="text-xs">{selectedFile ? selectedFile.name : 'Choose local file'}</span>
+                  </Label>
+                </div>
+              </div>
             </div>
+
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest">Detailed Context</Label>
               <Textarea value={contentFormData.body} onChange={(e) => setContentFormData({...contentFormData, body: e.target.value})} placeholder="Explain the importance of this resource..." required className="min-h-[120px]" />
@@ -729,10 +769,16 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
     const parentRef = doc(firestore, 'courses', courseId, 'content', postId);
     if (isLiked) {
       deleteDocumentNonBlocking(likeRef);
-      updateDocumentNonBlocking(parentRef, { likesCount: increment(-1) });
+      updateDocumentNonBlocking(parentRef, { 
+        likesCount: increment(-1),
+        updatedAt: serverTimestamp() 
+      });
     } else {
       setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
-      updateDocumentNonBlocking(parentRef, { likesCount: increment(1) });
+      updateDocumentNonBlocking(parentRef, { 
+        likesCount: increment(1),
+        updatedAt: serverTimestamp()
+      });
     }
   };
 

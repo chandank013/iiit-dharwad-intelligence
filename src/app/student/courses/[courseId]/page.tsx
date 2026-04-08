@@ -418,7 +418,7 @@ export default function StudentCoursePage() {
                         <p className="text-muted-foreground text-sm leading-relaxed">{post.content}</p>
                         {post.attachmentUrl && (
                           <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">
-                            <LinkIcon className="h-3 w-3" /> View Resource
+                            <LinkIcon className="h-3 w-3" /> {post.attachmentUrl.startsWith('data:') ? 'View Attached File' : 'View Resource'}
                           </a>
                         )}
                         <div className="flex items-center justify-between pt-6 border-t border-border">
@@ -465,10 +465,16 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
     const parentRef = doc(firestore, 'courses', courseId, 'content', postId);
     if (isLiked) {
       deleteDocumentNonBlocking(likeRef);
-      updateDocumentNonBlocking(parentRef, { likesCount: increment(-1) });
+      updateDocumentNonBlocking(parentRef, { 
+        likesCount: increment(-1),
+        updatedAt: serverTimestamp()
+      });
     } else {
       setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
-      updateDocumentNonBlocking(parentRef, { likesCount: increment(1) });
+      updateDocumentNonBlocking(parentRef, { 
+        likesCount: increment(1),
+        updatedAt: serverTimestamp()
+      });
     }
   };
 

@@ -87,8 +87,8 @@ service cloud.firestore {
       match /content/{contentId} {
         allow get, list: if isSignedIn();
         allow create, delete: if isProfessor();
-        // Allow students to increment/decrement likesCount
-        allow update: if isProfessor() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'updatedAt']));
+        // Allow anyone signed in to update likesCount and updatedAt
+        allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'updatedAt']);
 
         match /comments/{commentId} {
           allow read: if isSignedIn();
