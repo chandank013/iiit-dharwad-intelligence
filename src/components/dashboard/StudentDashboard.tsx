@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -14,7 +14,8 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
-  Calendar
+  Calendar,
+  FileText
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -32,7 +33,8 @@ import {
   addDoc, 
   serverTimestamp,
   limit,
-  orderBy
+  orderBy,
+  collectionGroup
 } from 'firebase/firestore';
 import { 
   Dialog, 
@@ -78,6 +80,19 @@ export function StudentDashboard() {
   }, [firestore, user]);
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
+
+  // Fetch all submissions for the student
+  const submissionsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collectionGroup(firestore, "submissions"), where("submitterId", "==", user.uid));
+  }, [firestore, user]);
+
+  const { data: submissions, isLoading: isSubmissionsLoading } = useCollection(submissionsQuery);
+
+  const totalSubmissions = useMemo(() => {
+    if (!submissions || isChandan) return 0;
+    return submissions.length;
+  }, [submissions, isChandan]);
 
   // Manual fetch for assignments across enrolled courses
   useEffect(() => {
@@ -168,17 +183,6 @@ export function StudentDashboard() {
       };
 
       await addDoc(collection(firestore, 'course_enrollments'), enrollmentData);
-
-      // Audit Log for enrollment
-      addDoc(collection(firestore, 'audit_logs'), {
-        actorId: user.uid,
-        actionType: 'course_enrolled',
-        entityType: 'Course',
-        entityId: courseDoc.id,
-        timestamp: serverTimestamp(),
-        description: `Student enrolled in ${courseData.name}`,
-        createdAt: serverTimestamp()
-      });
 
       toast({
         title: "Successfully Enrolled!",
@@ -272,7 +276,7 @@ export function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl border-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 opacity-90">
@@ -294,6 +298,18 @@ export function StudentDashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{allAssignments.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Pending deadlines across courses</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-none bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-primary">
+              <FileText className="h-4 w-4" /> Total Submitted
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalSubmissions}</div>
+            <p className="text-xs text-muted-foreground mt-1">Assignments completed so far</p>
           </CardContent>
         </Card>
       </div>

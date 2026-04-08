@@ -8,14 +8,11 @@ import { PlusCircle, Users, FileText, CheckCircle, AlertTriangle, ArrowRight, Tr
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, collectionGroup } from "firebase/firestore";
 
 export function ProfessorDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-
-  // Check if user is Chandan to hide specific stats if necessary
-  const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   // 1. Fetch Professor's Courses
   const coursesQuery = useMemoFirebase(() => {
@@ -33,15 +30,37 @@ export function ProfessorDashboard() {
 
   const { data: enrollments, isLoading: isEnrollmentsLoading } = useCollection(enrollmentsQuery);
 
-  // Calculate unique students across all courses
+  // 3. Fetch all assignments across all courses for this professor
+  const assignmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collectionGroup(firestore, "assignments"), where("professorId", "==", user.uid));
+  }, [firestore, user]);
+
+  const { data: allAssignments, isLoading: isAssignmentsLoading } = useCollection(assignmentsQuery);
+
+  // 4. Fetch all submissions to count pending tasks
+  const submissionsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collectionGroup(firestore, "submissions"), where("professorId", "==", user.uid));
+  }, [firestore, user]);
+
+  const { data: allSubmissions, isLoading: isSubmissionsLoading } = useCollection(submissionsQuery);
+
+  // Calculate stats
   const uniqueStudentsCount = useMemo(() => {
     if (!enrollments) return 0;
     const studentIds = new Set(enrollments.map(e => e.studentId));
     return studentIds.size;
   }, [enrollments]);
 
+  const pendingTasksCount = useMemo(() => {
+    if (!allSubmissions) return 0;
+    // Count submissions that are NOT graded and belong to courses where the user is professor
+    return allSubmissions.filter(s => s.status === 'submitted').length;
+  }, [allSubmissions]);
+
   // Handle loading state
-  if (isUserLoading || isCoursesLoading || isEnrollmentsLoading) {
+  if (isUserLoading || isCoursesLoading || isEnrollmentsLoading || isAssignmentsLoading || isSubmissionsLoading) {
     return (
       <div className="h-96 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -71,29 +90,29 @@ export function ProfessorDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{uniqueStudentsCount}</div>
-            <p className="text-xs text-muted-foreground">Enrolled across all courses</p>
+            <p className="text-xs text-muted-foreground">Across all course portals</p>
           </CardContent>
         </Card>
         
         <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Active Courses</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Portals</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{courses?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Live portals for students</p>
+            <p className="text-xs text-muted-foreground">Live courses offered</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Global Rank</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Assignments</CardTitle>
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">N/A</div>
-            <p className="text-xs text-muted-foreground">Analytics initializing...</p>
+            <div className="text-2xl font-bold text-primary">{allAssignments?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Total tasks assigned</p>
           </CardContent>
         </Card>
 
@@ -103,8 +122,8 @@ export function ProfessorDashboard() {
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">0</div>
-            <p className="text-xs text-muted-foreground">Awaiting evaluation</p>
+            <div className="text-2xl font-bold text-orange-500">{pendingTasksCount}</div>
+            <p className="text-xs text-muted-foreground">Work awaiting evaluation</p>
           </CardContent>
         </Card>
       </div>
@@ -112,13 +131,14 @@ export function ProfessorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-headline font-semibold">Active Courses</h2>
+            <h2 className="text-xl font-headline font-semibold">Live Courses</h2>
             <Link href="/courses" className="text-sm text-primary hover:underline font-medium">View all</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {courses && courses.length > 0 ? (
               courses.map((course) => {
                 const courseStudents = enrollments?.filter(e => e.courseId === course.id).length || 0;
+                const courseAssignments = allAssignments?.filter(a => a.courseId === course.id).length || 0;
                 return (
                   <Card key={course.id} className="group hover:border-primary transition-colors cursor-pointer border-none shadow-sm">
                     <CardHeader>
@@ -131,7 +151,7 @@ export function ProfessorDashboard() {
                     <CardContent>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {courseStudents} Students</span>
-                        <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> 0 Assignments</span>
+                        <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> {courseAssignments} Tasks</span>
                       </div>
                       <Link href={`/courses/${course.id}`}>
                         <Button variant="ghost" className="w-full mt-4 justify-between group">
@@ -147,7 +167,7 @@ export function ProfessorDashboard() {
                 <div className="mb-4 flex justify-center">
                   <BookOpen className="h-10 w-10 opacity-20" />
                 </div>
-                <p className="font-medium">You haven't created any courses yet.</p>
+                <p className="font-medium">No courses launched yet.</p>
                 <Link href="/courses/create">
                   <Button variant="link" className="mt-2 text-primary font-bold">Launch your first course</Button>
                 </Link>
@@ -163,15 +183,15 @@ export function ProfessorDashboard() {
               <div className="flex gap-4 items-start p-3 rounded-lg bg-primary/5">
                 <div className="h-2 w-2 mt-1.5 rounded-full bg-primary shrink-0" />
                 <div className="flex flex-col gap-1">
-                  <p className="text-sm font-semibold">Real-time Enrollment Active</p>
+                  <p className="text-sm font-semibold">Real-time Data Active</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Student counts will update automatically when a join code is used.
+                    Student counts and task statuses update automatically across all portals.
                   </p>
-                  <span className="text-[10px] font-bold text-primary mt-1">SYSTEM MONITORING</span>
+                  <span className="text-[10px] font-bold text-primary mt-1 uppercase">Cloud Monitor Online</span>
                 </div>
               </div>
               <Button variant="outline" className="w-full text-xs gap-2" asChild>
-                <Link href="/audit"><Activity className="h-3 w-3" /> View Activity Logs</Link>
+                <Link href="/audit"><Activity className="h-3 w-3" /> View System Logs</Link>
               </Button>
             </CardContent>
           </Card>
@@ -179,25 +199,22 @@ export function ProfessorDashboard() {
           <Card className="bg-primary text-primary-foreground shadow-xl border-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChart3 className="h-5 w-5" /> AI Engine Status
+                <BarChart3 className="h-5 w-5" /> Analytics Engine
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-xs opacity-90 leading-relaxed">
-                Evaluation and plagiarism detection modules are online and monitoring course portals.
+                Evaluation modules are scanning submissions for plagiarism and rubric compliance in the background.
               </p>
               <div className="space-y-1.5">
                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                  <span>Data Sync</span>
-                  <span>100%</span>
+                  <span>Processing</span>
+                  <span>Active</span>
                 </div>
-                <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white w-full animate-pulse" />
+                <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white w-1/2 animate-[progress_2s_ease-in-out_infinite]" />
                 </div>
               </div>
-              <Button variant="secondary" className="w-full text-foreground text-xs font-bold" disabled>
-                Detailed Performance Reports
-              </Button>
             </CardContent>
           </Card>
         </div>
