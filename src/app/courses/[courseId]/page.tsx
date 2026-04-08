@@ -31,35 +31,13 @@ import {
   GraduationCap,
   Loader2,
   Trash2,
-  Users,
   Megaphone,
-  File as FileIcon,
-  Link as LinkIcon,
-  Download,
-  Heart,
-  MessageCircle,
-  Send,
-  Upload,
-  X,
-  Share2,
-  Settings,
-  Calendar,
-  Info,
-  ArrowRight
+  ArrowRight,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { 
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
 import {
   Table,
   TableBody,
@@ -68,46 +46,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -121,13 +69,8 @@ export default function CoursePortalPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState('');
-
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
   const [isPostingContent, setIsPostingContent] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [contentFormData, setContentFormData] = useState({
     title: '',
     type: 'announcement',
@@ -168,27 +111,19 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
-  // Real-time listener for student submissions across this course
   const submissionsQuery = useMemoFirebase(() => {
-    if (!firestore || !courseId || !user) return null;
-    // Security Rule Alignment: Requires filter on professorId for collectionGroup list
+    if (!firestore || !user) return null;
     return query(
       collectionGroup(firestore, 'submissions'),
       where('professorId', '==', user.uid)
     );
-  }, [firestore, courseId, user]);
+  }, [firestore, user]);
   const { data: rawSubmissions } = useCollection(submissionsQuery);
 
   const courseSubmissions = useMemo(() => {
     if (!rawSubmissions || !courseId) return [];
     return rawSubmissions.filter(s => s.courseId === courseId);
   }, [rawSubmissions, courseId]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
 
   const handlePostContent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,17 +161,6 @@ export default function CoursePortalPage() {
   const handleDeleteAssignment = (assignmentId: string) => {
     if (!firestore || !courseId) return;
     deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'assignments', assignmentId));
-  };
-
-  const handleAddComment = (contentId: string) => {
-    if (!firestore || !courseId || !user || !commentText.trim()) return;
-    addDocumentNonBlocking(collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments'), {
-      text: commentText,
-      authorId: user.uid,
-      authorName: user.displayName || 'Anonymous',
-      createdAt: serverTimestamp(),
-    });
-    setCommentText('');
   };
 
   if (isUserLoading || isCourseLoading || !user) {

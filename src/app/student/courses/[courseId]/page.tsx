@@ -26,7 +26,6 @@ import {
   Clock, 
   TrendingUp, 
   Loader2, 
-  Search, 
   AlertCircle, 
   FolderOpen,
   User,
@@ -54,7 +53,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Input } from '@/components/ui/input';
 import { 
   addDocumentNonBlocking, 
-  deleteDocumentNonBlocking
+  deleteDocumentNonBlocking,
+  setDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
@@ -91,10 +91,8 @@ export default function StudentCoursePage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
-  // Real-time listener for student's submissions across this course
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Security Rule Alignment: Requires filter on submitterId for collectionGroup list
     return query(
       collectionGroup(firestore, 'submissions'),
       where('submitterId', '==', user.uid)
@@ -102,7 +100,6 @@ export default function StudentCoursePage() {
   }, [firestore, user]);
   const { data: rawSubmissions } = useCollection(submissionsQuery);
 
-  // Filter submissions for this specific course in memory
   const mySubmissions = useMemo(() => {
     if (!rawSubmissions || !courseId) return [];
     return rawSubmissions.filter(s => s.courseId === courseId);
@@ -567,12 +564,11 @@ function LikeButton({ postId, courseId, currentUserId, initialLikes }: { postId:
 
   const handleToggleLike = () => {
     if (!firestore || !likeRef) return;
-    const postRef = doc(firestore, 'courses', courseId, 'content', postId);
     
     if (isLiked) {
       deleteDocumentNonBlocking(likeRef);
     } else {
-      addDocumentNonBlocking(collection(firestore, 'courses', courseId, 'content', postId, 'likes'), { uid: currentUserId, createdAt: serverTimestamp() });
+      setDocumentNonBlocking(likeRef, { uid: currentUserId, createdAt: serverTimestamp() }, { merge: true });
     }
   };
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
-import { GraduationCap, LayoutDashboard, ChevronDown, User as UserIcon, Mail, IdCard, LogOut } from 'lucide-react';
+import { GraduationCap, LayoutDashboard, ChevronDown, Mail, IdCard, LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -15,7 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
@@ -46,7 +45,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="bg-primary p-1.5 rounded-lg text-primary-foreground group-hover:scale-110 transition-transform">
-              <GraduationCap className="h-6 w-6" />
+              < GraduationCap className="h-6 w-6" />
             </div>
             <span className="font-headline text-xl font-bold tracking-tight text-primary">IIIT Dharwad</span>
           </Link>

@@ -32,14 +32,10 @@ service cloud.firestore {
       );
     }
 
-    // --- Collection Group Rules (Critical for Dashboards) ---
-    // These allow listing submissions across different assignment paths
+    // --- Collection Group Rules ---
+    // Critical for real-time dashboards filtering across different assignment paths
     match /{path=**}/submissions/{submissionId} {
-      allow list: if isSignedIn() && (
-        request.auth.uid == resource.data.submitterId || 
-        request.auth.uid == resource.data.professorId
-      );
-      allow get: if isSignedIn() && (
+      allow list, get: if isSignedIn() && (
         request.auth.uid == resource.data.submitterId || 
         request.auth.uid == resource.data.professorId
       );
@@ -57,6 +53,16 @@ service cloud.firestore {
       }
     }
 
+    match /professor_roles/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /student_roles/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     match /courses/{courseId} {
       allow get, list: if isSignedIn();
       allow create: if isProfessor() && request.resource.data.professorId == request.auth.uid;
@@ -70,7 +76,6 @@ service cloud.firestore {
         );
 
         match /submissions/{submissionId} {
-          // Note: collectionGroup rule above covers the 'list' operation across assignments
           allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
           allow update: if isSignedIn() && (request.auth.uid == resource.data.submitterId || request.auth.uid == resource.data.professorId);
         }
@@ -87,6 +92,11 @@ service cloud.firestore {
         match /comments/{commentId} {
           allow read, create: if isSignedIn();
           allow delete: if isProfessor() || (resource != null && resource.data.authorId == request.auth.uid);
+        }
+
+        match /likes/{userId} {
+          allow read: if isSignedIn();
+          allow write: if isOwner(userId);
         }
       }
     }
