@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -35,7 +34,8 @@ import {
   addDoc, 
   serverTimestamp,
   limit,
-  orderBy
+  orderBy,
+  collectionGroup
 } from 'firebase/firestore';
 import { 
   Dialog, 
@@ -97,36 +97,30 @@ export function StudentDashboard() {
         let totalS = 0;
         let totalQ = 0;
         
+        // Use collectionGroup for aggregate counts to avoid manual iteration and race conditions
+        if (!isChandan) {
+          const sq = query(collectionGroup(firestore, 'submissions'), where('submitterId', '==', user.uid));
+          const sSnap = await getDocs(sq);
+          totalS = sSnap.size;
+
+          const qsq = query(collectionGroup(firestore, 'quiz_submissions'), where('studentId', '==', user.uid));
+          const qsSnap = await getDocs(qsq);
+          totalQ = qsSnap.size;
+        }
+
         const dataPromises = enrollments.map(async (enrollment) => {
           const courseId = enrollment.courseId;
           const course = allCourses?.find(c => c.id === courseId);
 
-          // Fetch assignments for this course
           const aq = query(collection(firestore, 'courses', courseId, 'assignments'), limit(15));
           const aSnap = await getDocs(aq);
           
-          const courseAssignments = aSnap.docs.map(aDoc => ({ 
+          return aSnap.docs.map(aDoc => ({ 
             ...aDoc.data(), 
             id: aDoc.id, 
             courseName: course?.name || 'Unknown Course',
             courseCode: course?.code || ''
           }));
-
-          // Count submissions for THIS student strictly
-          const subPromises = aSnap.docs.map(async (aDoc) => {
-            const sq = query(collection(firestore, 'courses', courseId, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
-            const sSnap = await getDocs(sq);
-            return sSnap.size;
-          });
-          const subCounts = await Promise.all(subPromises);
-          if (!isChandan) totalS += subCounts.reduce((a, b) => a + b, 0);
-
-          // Count quizzes completed
-          const qsq = query(collection(firestore, 'courses', courseId, 'quiz_submissions'), where('studentId', '==', user.uid));
-          const qsSnap = await getDocs(qsq);
-          if (!isChandan) totalQ += qsSnap.size;
-
-          return courseAssignments;
         });
 
         const results = await Promise.all(dataPromises);
@@ -137,8 +131,8 @@ export function StudentDashboard() {
         });
 
         setAllAssignments(flattened);
-        setTotalSubmissionsCount(isChandan ? 0 : totalS);
-        setTotalQuizzesCount(isChandan ? 0 : totalQ);
+        setTotalSubmissionsCount(totalS);
+        setTotalQuizzesCount(totalQ);
       } catch (err) {
         console.error("Error fetching portal data:", err);
       } finally {
@@ -211,7 +205,7 @@ export function StudentDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Student Portal</h1>
-          <p className="text-muted-foreground font-medium mt-1">Track your academic progress and AI-driven assessments.</p>
+          <p className="text-muted-foreground font-medium mt-1">Track your progress, assignments, and AI quizzes.</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -253,7 +247,7 @@ export function StudentDashboard() {
         <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Assignments Pending
+              <Clock className="h-4 w-4" /> Tasks Pending
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -292,12 +286,12 @@ export function StudentDashboard() {
           </div>
           <CardHeader className="pb-2">
             <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 opacity-90">
-              <Target className="h-4 w-4" /> Standing
+              <Target className="h-4 w-4" /> Academic Standing
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{myCourses.length > 0 ? 'Active' : 'N/A'}</div>
-            <p className="text-xs opacity-75 mt-1">Academic status</p>
+            <p className="text-xs opacity-75 mt-1">Enrollment status</p>
           </CardContent>
         </Card>
       </div>
@@ -328,7 +322,7 @@ export function StudentDashboard() {
                   <CardContent>
                     <Link href={`/student/courses/${course.id}`}>
                       <Button variant="outline" className="w-full text-xs font-bold gap-2 h-10 rounded-xl">
-                        Portal Entry <ArrowRight className="h-3.5 w-3.5" />
+                        Enter Portal <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
                     </Link>
                   </CardContent>
@@ -340,7 +334,7 @@ export function StudentDashboard() {
               <Search className="h-10 w-10 text-primary/40 mx-auto mb-6" />
               <h3 className="text-lg font-bold">No active enrollments</h3>
               <p className="text-muted-foreground text-sm mb-8 max-w-xs mx-auto">Use a portal code from your professor to begin your coursework.</p>
-              <Button onClick={() => setIsDialogOpen(true)} className="font-bold px-8">Join Your First Course</Button>
+              <Button onClick={() => setIsDialogOpen(true)} className="font-bold px-8 rounded-xl h-11 shadow-lg shadow-primary/10">Join Your First Course</Button>
             </div>
           )}
         </div>
@@ -375,7 +369,7 @@ export function StudentDashboard() {
             ) : (
               <div className="p-10 text-center border-2 border-dashed rounded-2xl bg-card/30">
                 <AlertCircle className="h-6 w-6 text-primary/40 mx-auto mb-3" />
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No Pending Tasks</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">No Pending Tasks</p>
               </div>
             )}
           </div>

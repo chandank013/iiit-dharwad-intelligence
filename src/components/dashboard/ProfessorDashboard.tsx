@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -114,7 +113,7 @@ export function ProfessorDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Professor Hub</h1>
-          <p className="text-muted-foreground font-medium mt-1">Manage courses, assessments, and AI-driven insights.</p>
+          <p className="text-muted-foreground font-medium mt-1">Manage courses, assignments, and AI assessments.</p>
         </div>
         <div className="flex gap-3">
           <Link href="/audit">
@@ -155,18 +154,18 @@ export function ProfessorDashboard() {
 
         <Card className="border-none shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assignments</CardTitle>
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Course Assignments</CardTitle>
             <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{assignmentCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{pendingSubmissionsCount} pending evaluation</p>
+            <p className="text-xs text-muted-foreground mt-1">{pendingSubmissionsCount} pending eval</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Quizzes</CardTitle>
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Quiz Lab</CardTitle>
             <HelpCircle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
@@ -217,7 +216,7 @@ export function ProfessorDashboard() {
                 <h3 className="text-lg font-bold">No portals launched</h3>
                 <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6">Start by creating your first digital course environment.</p>
                 <Link href="/courses/create">
-                  <Button className="font-bold px-8">Create Portal</Button>
+                  <Button className="font-bold px-8">Create Portal Now</Button>
                 </Link>
               </div>
             )}
@@ -230,13 +229,13 @@ export function ProfessorDashboard() {
             <Card className="border-border bg-card/50">
               <CardContent className="pt-8 space-y-6">
                 <div className="flex gap-5 items-start">
-                  <div className="p-3 bg-primary/10 rounded-2xl text-primary">
+                  <div className="p-3 bg-primary/10 rounded-2xl text-primary border border-primary/20">
                     <Activity className="h-5 w-5" />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <p className="text-sm font-bold">Cloud Integrity Guard</p>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Real-time monitoring of student work and system interactions across all courses.
+                      Real-time monitoring of work and AI assessments across all courses.
                     </p>
                     <Badge variant="outline" className="text-[8px] font-bold uppercase tracking-widest border-primary/20 text-primary w-fit mt-2">Active Monitor</Badge>
                   </div>
@@ -250,16 +249,16 @@ export function ProfessorDashboard() {
               </div>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                  <TrendingUp className="h-5 w-5" /> Analytics Engine
+                  <TrendingUp className="h-5 w-5" /> Performance Analytics
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-xs font-medium opacity-90 leading-relaxed">
-                  Synthesizing student performance data to identify cognitive gaps and curriculum strengths.
+                  Synthesizing class performance to identify cognitive gaps and assessment accuracy.
                 </p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
-                    <span>Synthesizing</span>
+                    <span>Processing</span>
                     <span>94% Accurate</span>
                   </div>
                   <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">

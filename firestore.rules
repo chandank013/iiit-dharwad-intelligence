@@ -24,7 +24,7 @@ service cloud.firestore {
       );
     }
 
-    // Root-level rules for collection group queries and easy listing
+    // Root-level rules for collection group queries and aggregate listing
     match /{path=**}/submissions/{id} {
       allow read, list: if isSignedIn();
     }

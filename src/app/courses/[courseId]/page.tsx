@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -587,81 +586,130 @@ export default function CoursePortalPage() {
 
         {activeTab === 'submissions' && (
           <div className="p-10 space-y-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tighter">Submissions</h1>
-                <p className="text-muted-foreground">AI-assisted evaluation and plagiarism detection.</p>
+            <div className="space-y-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tighter">Course Submissions</h1>
+                  <p className="text-muted-foreground">AI-assisted evaluation and plagiarism detection for assignments.</p>
+                </div>
+                <Button variant="secondary" onClick={handleBulkEvaluate} disabled={isBulkEvaluating} className="font-bold shadow-lg">
+                  {isBulkEvaluating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary mr-2" />}
+                  Bulk AI Eval
+                </Button>
               </div>
-              <Button variant="secondary" onClick={handleBulkEvaluate} disabled={isBulkEvaluating} className="font-bold shadow-lg">
-                {isBulkEvaluating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary mr-2" />}
-                Bulk AI Eval
-              </Button>
-            </div>
-            <Card className="border-border overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {courseSubmissions.length > 0 ? (
-                    courseSubmissions.map((sub) => {
-                      const assignment = assignments?.find(a => a.id === sub.assignmentId);
-                      const deadlinePassed = assignment?.deadline ? new Date() > new Date(assignment.deadline) : true;
-                      return (
-                        <TableRow key={sub.id}>
-                          <TableCell className="font-bold text-xs">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px]">{getStudentName(sub.submitterId)[0]}</AvatarFallback></Avatar>
-                              {getStudentName(sub.submitterId)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-xs">{sub.assignmentTitle}</TableCell>
-                          <TableCell>
-                            {sub.evaluation?.totalScore !== undefined ? (
-                              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{sub.evaluation.totalScore}% AI Grade</Badge>
-                            ) : sub.status === 'returned' ? (
-                              <Badge variant="secondary" className="text-rose-500">Returned</Badge>
-                            ) : !deadlinePassed ? (
-                              <Badge variant="outline" className="text-amber-500 border-amber-500/20">Early</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-muted-foreground">Ready</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {!deadlinePassed && sub.status === 'submitted' && (
-                                <Button variant="ghost" size="sm" onClick={() => setItemToReturn(sub)} className="text-rose-500 hover:text-rose-600">
-                                  <RotateCcw className="h-3 w-3 mr-1" /> Return
-                                </Button>
-                              )}
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleAIEvaluate(sub)} 
-                                disabled={isEvaluating === sub.id || !deadlinePassed || sub.status === 'returned'} 
-                                className="text-primary hover:text-primary/80"
-                              >
-                                {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                                AI Eval
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
+              <Card className="border-border overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableCell colSpan={4} className="h-40 text-center text-muted-foreground italic">No submissions yet.</TableCell>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Task</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {courseSubmissions.length > 0 ? (
+                      courseSubmissions.map((sub) => {
+                        const assignment = assignments?.find(a => a.id === sub.assignmentId);
+                        const deadlinePassed = assignment?.deadline ? new Date() > new Date(assignment.deadline) : true;
+                        return (
+                          <TableRow key={sub.id}>
+                            <TableCell className="font-bold text-xs">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px]">{getStudentName(sub.submitterId)[0]}</AvatarFallback></Avatar>
+                                {getStudentName(sub.submitterId)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">{sub.assignmentTitle}</TableCell>
+                            <TableCell>
+                              {sub.evaluation?.totalScore !== undefined ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{sub.evaluation.totalScore}% AI Grade</Badge>
+                              ) : sub.status === 'returned' ? (
+                                <Badge variant="secondary" className="text-rose-500">Returned</Badge>
+                              ) : !deadlinePassed ? (
+                                <Badge variant="outline" className="text-amber-500 border-amber-500/20">Early</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-muted-foreground">Ready</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {!deadlinePassed && sub.status === 'submitted' && (
+                                  <Button variant="ghost" size="sm" onClick={() => setItemToReturn(sub)} className="text-rose-500 hover:text-rose-600">
+                                    <RotateCcw className="h-3 w-3 mr-1" /> Return
+                                  </Button>
+                                )}
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleAIEvaluate(sub)} 
+                                  disabled={isEvaluating === sub.id || !deadlinePassed || sub.status === 'returned'} 
+                                  className="text-primary hover:text-primary/80"
+                                >
+                                  {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                                  AI Eval
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-40 text-center text-muted-foreground italic">No assignment submissions yet.</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
+
+            <div className="space-y-10 pt-10 border-t border-border">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tighter">AI Quiz Attempts</h1>
+                <p className="text-muted-foreground">Automated grading results for published assessments.</p>
+              </div>
+              <Card className="border-border overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Quiz</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead className="text-right">Submitted At</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {quizSubmissions.length > 0 ? (
+                      quizSubmissions.map((sub) => {
+                        const quiz = quizzes?.find(q => q.id === sub.quizId);
+                        return (
+                          <TableRow key={sub.id}>
+                            <TableCell className="font-bold text-xs">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px]">{getStudentName(sub.studentId)[0]}</AvatarFallback></Avatar>
+                                {getStudentName(sub.studentId)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">{quiz?.title || 'Unknown Quiz'}</TableCell>
+                            <TableCell>
+                              <Badge className="bg-primary/10 text-primary border-primary/20">{sub.score}%</Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground uppercase tracking-widest">
+                              {sub.submittedAt ? new Date(sub.submittedAt.seconds * 1000).toLocaleString() : 'Just now'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-40 text-center text-muted-foreground italic">No quiz attempts yet.</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
           </div>
         )}
 
@@ -687,7 +735,7 @@ export default function CoursePortalPage() {
                           <div className="flex flex-col gap-1.5">
                             <Badge variant="secondary" className="w-fit">AI Generated</Badge>
                             {quiz.deadline && (
-                              <Badge variant={deadlinePassed ? "destructive" : "outline"} className="text-[10px] w-fit">
+                              <Badge variant={deadlinePassed ? "destructive" : "outline"} className="text-[10px] w-fit uppercase font-bold">
                                 {deadlinePassed ? "Expired" : `Due: ${new Date(quiz.deadline).toLocaleDateString()}`}
                               </Badge>
                             )}
@@ -704,10 +752,10 @@ export default function CoursePortalPage() {
                           </DropdownMenu>
                         </div>
                         <CardTitle className="text-xl font-bold leading-tight mt-4">{quiz.title}</CardTitle>
-                        <CardDescription>{quiz.questions.length} Questions • Instant Grading</CardDescription>
+                        <CardDescription>{quiz.questions.length} Questions • Instant AI Grading</CardDescription>
                       </CardHeader>
                       <CardContent className="mt-auto">
-                        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                           <Clock className="h-3 w-3" /> Created {new Date(quiz.createdAt?.seconds * 1000).toLocaleDateString()}
                         </div>
                       </CardContent>
@@ -842,7 +890,7 @@ export default function CoursePortalPage() {
                 <h1 className="text-3xl font-bold tracking-tighter">Resources & Feed</h1>
                 <p className="text-muted-foreground">Share announcements, files, and links with students.</p>
               </div>
-              <Button onClick={() => setIsContentDialogOpen(false)} size="icon" className="rounded-full h-12 w-12 shadow-xl" onClick={() => setIsContentDialogOpen(true)}>
+              <Button onClick={() => setIsContentDialogOpen(true)} size="icon" className="rounded-full h-12 w-12 shadow-xl shadow-primary/20 bg-primary">
                 <Plus className="h-6 w-6" />
               </Button>
             </div>
