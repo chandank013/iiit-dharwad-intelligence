@@ -38,12 +38,16 @@ import {
   Lock,
   Info,
   ChevronRight,
-  TextQuote
+  TextQuote,
+  Upload,
+  Link as LinkIcon,
+  FileArchive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/layout/Navbar';
@@ -62,7 +66,7 @@ export default function SubmitAssignmentPage() {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingQuality, setIsCheckingQuality] = useState(false);
-  const [qualityFeedback, setQualityQualityFeedback] = useState<StudentSubmissionQualityWarningOutput | null>(null);
+  const [qualityFeedback, setQualityFeedback] = useState<StudentSubmissionQualityWarningOutput | null>(null);
 
   const courseRef = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
@@ -88,9 +92,7 @@ export default function SubmitAssignmentPage() {
 
   useEffect(() => {
     if (!isUserLoading && !user) router.push('/login');
-    if (currentSubmission && !content && currentSubmission.status === 'returned') {
-      setContent(currentSubmission.content);
-    } else if (currentSubmission && !content) {
+    if (currentSubmission && !content) {
       setContent(currentSubmission.content);
     }
   }, [user, isUserLoading, router, currentSubmission]);
@@ -103,13 +105,19 @@ export default function SubmitAssignmentPage() {
         assignmentDescription: assignment.description,
         submissionContent: content,
       });
-      setQualityQualityFeedback(result);
+      setQualityFeedback(result);
       toast({ title: result.hasWarnings ? "Review AI Suggestions" : "Looking Good!" });
     } catch (error) {
       toast({ title: "Analysis Failed", variant: "destructive" });
     } finally {
       setIsCheckingQuality(false);
     }
+  };
+
+  const handleFileSelect = () => {
+    // Simulated file selection
+    toast({ title: "File Selected", description: "Your document is ready for submission." });
+    setContent("file_uploaded_simulated_path_123.zip");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -157,154 +165,162 @@ export default function SubmitAssignmentPage() {
   const deadlinePassed = assignment.deadline && new Date() > new Date(assignment.deadline);
   const isSubmitted = !!currentSubmission && currentSubmission.status !== 'returned';
   const isReturned = currentSubmission?.status === 'returned';
+  const submissionType = assignment.submissionType || 'text';
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-10">
       <Navbar />
-      <main className="container mx-auto px-6 py-10 max-w-7xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <main className="container mx-auto px-6 py-8 max-w-7xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <Link href={`/student/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group">
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
-              <Clock className="h-3 w-3" /> Due {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'No Deadline'}
-            </div>
-            {deadlinePassed && !isSubmitted && <Badge variant="destructive" className="font-bold">LATE</Badge>}
+          <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/50 px-3 py-1.5 rounded-lg border border-border">
+            <Clock className="h-3 w-3" /> Due {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'No Deadline'}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* Main Editor Area */}
-          <div className="lg:col-span-8 space-y-8">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tighter text-foreground">
-                {isSubmitted ? (isReturned ? 'Revise Work' : 'Work Submitted') : 'Submit Assignment'}
-              </h1>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <TextQuote className="h-4 w-4 opacity-50" />
-                <p className="font-medium text-lg">{assignment.title}</p>
-              </div>
+        {/* Global Alert for Returned Work */}
+        {isReturned && (
+          <Alert className="mb-6 border-rose-200 bg-rose-50 text-rose-700 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top-2">
+            <RotateCcw className="h-5 w-5 mt-0.5 text-rose-600" />
+            <div className="ml-3">
+              <AlertTitle className="font-bold text-base">Professor Requested Revision</AlertTitle>
+              <AlertDescription className="text-sm font-medium opacity-90">
+                Your submission has been sent back. Please improve your content based on feedback and re-submit.
+              </AlertDescription>
             </div>
+          </Alert>
+        )}
 
-            {isSubmitted && !isReturned && (
-              <Alert className="bg-primary/5 border-primary/20 text-primary rounded-[2rem] p-8 shadow-sm">
-                <Lock className="h-6 w-6 mt-1" />
-                <div className="ml-4">
-                  <AlertTitle className="font-bold text-lg mb-1">Already Submitted</AlertTitle>
-                  <AlertDescription className="text-sm font-medium opacity-80 leading-relaxed">
-                    You have already submitted this assignment. To make changes, please unsubmit it from your <Link href={`/student/courses/${courseId}`} className="underline font-bold hover:opacity-100">submission history</Link> first.
-                  </AlertDescription>
-                </div>
-              </Alert>
-            )}
-
-            {isReturned && (
-              <Card className="border-rose-200 bg-rose-50 text-rose-700 rounded-[2rem] p-8 flex items-start gap-5 shadow-sm border-2 animate-in slide-in-from-top-2">
-                <div className="p-3 bg-rose-500/10 rounded-2xl">
-                  <RotateCcw className="h-6 w-6" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-bold text-lg">Professor Requested Revision</h4>
-                  <p className="text-sm opacity-90 leading-relaxed font-medium">Your submission has been sent back for improvements. Your previous content is loaded below for editing. Please check the course feed or discussion for specific feedback.</p>
-                </div>
-              </Card>
-            )}
-
-            <Card className="border-border shadow-2xl rounded-[2.5rem] overflow-hidden bg-card/50 backdrop-blur-sm">
-              <CardHeader className="bg-muted/30 border-b border-border p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Main Column: Left (Workspace) */}
+          <div className="lg:col-span-8 flex flex-col">
+            <Card className="flex-1 border-border shadow-xl rounded-[2rem] overflow-hidden bg-card/50 flex flex-col h-[650px]">
+              <CardHeader className="bg-muted/20 border-b border-border p-6 shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-2xl text-primary border border-primary/20">
-                      {assignment.submissionType === 'github' ? <Github className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+                    <div className="p-2.5 bg-primary/10 rounded-xl text-primary border border-primary/20">
+                      {submissionType === 'github' ? <Github className="h-5 w-5" /> : 
+                       submissionType === 'drive' ? <LinkIcon className="h-5 w-5" /> :
+                       submissionType === 'zip' ? <FileArchive className="h-5 w-5" /> :
+                       <FileText className="h-5 w-5" />}
                     </div>
                     <div>
-                      <Badge variant="outline" className="font-bold uppercase tracking-widest text-[10px] border-primary/20 text-primary bg-primary/5 h-6 px-3">
-                        {assignment.submissionType} REQUIRED
+                      <Badge variant="outline" className="font-bold uppercase tracking-widest text-[9px] border-primary/20 text-primary bg-primary/5 h-5 px-2">
+                        {submissionType} REQUIRED
                       </Badge>
-                      <CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Workspace Editor</CardTitle>
+                      <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Workspace Editor</h2>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Status</div>
-                    <Badge variant={isSubmitted ? "default" : "secondary"} className="h-6 font-bold uppercase text-[9px]">
-                      {isSubmitted ? 'Locked' : 'Drafting'}
+                    <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Status</div>
+                    <Badge variant={isSubmitted ? "default" : "secondary"} className="h-5 font-bold uppercase text-[8px] px-2">
+                      {isSubmitted ? 'Locked' : isReturned ? 'Revising' : 'Drafting'}
                     </Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-10 space-y-8">
-                {isSubmitted && !isReturned ? (
-                  <div className="space-y-6">
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-2">Finalized Content</Label>
-                      <div className="min-h-[300px] rounded-[2rem] bg-accent/30 p-8 leading-relaxed text-muted-foreground whitespace-pre-wrap border border-border font-medium italic shadow-inner">
-                        {content}
-                      </div>
-                    </div>
-                    <div className="pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                      <p className="text-xs text-muted-foreground font-medium italic flex items-center gap-2">
-                        <Lock className="h-3.5 w-3.5" /> Editing is currently disabled for this task.
-                      </p>
-                      <Button variant="outline" onClick={() => router.push(`/student/courses/${courseId}`)} className="rounded-xl font-bold h-12 px-8">Return to Dashboard</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center px-2">
-                        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Enter Submission Content
-                        </Label>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase bg-muted px-2 py-1 rounded">
-                          {content.length} characters
-                        </span>
-                      </div>
-                      <Textarea 
-                        placeholder={assignment.submissionType === 'github' ? "Paste your repository URL here..." : "Type or paste your content here..."}
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        className="min-h-[400px] rounded-[2rem] bg-accent/30 border-none focus-visible:ring-primary/20 p-8 leading-relaxed text-lg resize-none shadow-inner"
-                        required
-                      />
-                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                      <Button 
-                        type="button"
-                        variant="secondary"
-                        className="h-16 rounded-[1.25rem] font-bold gap-3 shadow-sm hover:bg-secondary/80 transition-all border border-border"
-                        onClick={handleQualityCheck}
-                        disabled={isCheckingQuality || !content.trim()}
-                      >
-                        {isCheckingQuality ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5 text-primary" />}
-                        AI Quality Scan
-                      </Button>
-                      <Button 
-                        type="submit"
-                        className="h-16 rounded-[1.25rem] font-bold gap-3 shadow-2xl shadow-primary/30 hover:scale-[1.02] transition-transform"
-                        disabled={isSubmitting || !content.trim()}
-                      >
-                        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                        {currentSubmission ? 'Finalize Re-submission' : 'Submit Final Work'}
-                      </Button>
+              <CardContent className="p-8 flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 ml-1">
+                    Enter Submission Content
+                  </Label>
+
+                  {isSubmitted && !isReturned ? (
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex-1 rounded-2xl bg-accent/30 p-6 border border-border overflow-hidden flex flex-col">
+                        <ScrollArea className="flex-1">
+                          <p className="text-sm leading-relaxed text-muted-foreground font-medium whitespace-pre-wrap italic">
+                            {content}
+                          </p>
+                        </ScrollArea>
+                      </div>
+                      <div className="mt-6 flex items-center justify-center gap-2 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                        <Lock className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-bold text-primary uppercase tracking-tight">Work Submitted & Locked</span>
+                      </div>
                     </div>
-                  </form>
-                )}
+                  ) : (
+                    <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+                      <div className="flex-1 min-h-[300px] mb-6">
+                        {submissionType === 'github' || submissionType === 'drive' ? (
+                          <div className="space-y-4">
+                            <Input 
+                              placeholder={submissionType === 'github' ? "https://github.com/username/repo" : "https://drive.google.com/..."}
+                              value={content}
+                              onChange={(e) => setContent(e.target.value)}
+                              className="h-14 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20 p-4 font-mono text-sm shadow-inner"
+                              required
+                            />
+                            <p className="text-[10px] text-muted-foreground italic px-1">Ensure your link is public or shared with your professor.</p>
+                          </div>
+                        ) : submissionType === 'zip' || submissionType === 'file' ? (
+                          <div 
+                            className="h-full border-2 border-dashed border-border rounded-2xl bg-accent/10 flex flex-col items-center justify-center p-8 transition-colors hover:bg-accent/20 cursor-pointer"
+                            onClick={handleFileSelect}
+                          >
+                            <div className="p-4 bg-primary/10 rounded-full mb-4">
+                              <Upload className="h-8 w-8 text-primary" />
+                            </div>
+                            <h4 className="font-bold text-sm">Select files from device</h4>
+                            <p className="text-xs text-muted-foreground mt-1">Upload your {submissionType.toUpperCase()} archive here</p>
+                            {content && (
+                              <Badge className="mt-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold">
+                                ✓ {content}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <Textarea 
+                            placeholder="Type or paste your content here..."
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            className="h-full rounded-2xl bg-accent/30 border-none focus-visible:ring-primary/20 p-6 leading-relaxed text-sm resize-none shadow-inner"
+                            required
+                          />
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mt-auto">
+                        <Button 
+                          type="button"
+                          variant="secondary"
+                          className="h-14 rounded-xl font-bold gap-2 shadow-sm border border-border"
+                          onClick={handleQualityCheck}
+                          disabled={isCheckingQuality || !content.trim()}
+                        >
+                          {isCheckingQuality ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                          AI Quality Scan
+                        </Button>
+                        <Button 
+                          type="submit"
+                          className="h-14 rounded-xl font-bold gap-2 shadow-xl shadow-primary/20"
+                          disabled={isSubmitting || !content.trim() || deadlinePassed}
+                        >
+                          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          {currentSubmission ? 'Finalize Re-submission' : 'Submit Final Work'}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar Area: Instructions and AI Feedback */}
-          <div className="lg:col-span-4 space-y-8 sticky top-24">
-            <Card className="rounded-[2rem] border-border shadow-lg overflow-hidden bg-card/50">
-              <CardHeader className="bg-primary/5 border-b border-border p-6">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
+          {/* Right Column: Sidebar (Resources & Feedback) */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* Top Sidebar Card: Instructions */}
+            <Card className="flex-1 border-border shadow-lg rounded-[2rem] overflow-hidden bg-card/50 flex flex-col h-[313px]">
+              <CardHeader className="bg-primary/5 border-b border-border p-5 shrink-0">
+                <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-widest text-foreground/80">
                   <Info className="h-4 w-4 text-primary" /> Assignment Requirements
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[250px] p-6">
+              <CardContent className="p-0 flex-1">
+                <ScrollArea className="h-full p-6">
                   <p className="text-sm leading-relaxed text-muted-foreground font-medium whitespace-pre-wrap">
                     {assignment.description}
                   </p>
@@ -312,77 +328,81 @@ export default function SubmitAssignmentPage() {
               </CardContent>
             </Card>
 
-            {qualityFeedback ? (
-              <Card className={cn(
-                "rounded-[2rem] border-none shadow-2xl animate-in zoom-in-95 duration-300",
-                qualityFeedback.hasWarnings ? "bg-orange-500/10" : "bg-emerald-500/10"
+            {/* Bottom Sidebar Card: AI Feedback */}
+            <Card className={cn(
+              "flex-1 border-border shadow-lg rounded-[2rem] overflow-hidden flex flex-col h-[313px] transition-colors duration-500",
+              qualityFeedback 
+                ? (qualityFeedback.hasWarnings ? "bg-orange-500/5 border-orange-500/20" : "bg-emerald-500/5 border-emerald-500/20")
+                : "bg-card/50 border-dashed border-2"
+            )}>
+              <CardHeader className={cn(
+                "p-5 border-b shrink-0",
+                qualityFeedback ? "border-current/10" : "bg-muted/20 border-border"
               )}>
-                <CardHeader className="p-8 pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle className={cn(
-                      "text-sm font-bold flex items-center gap-2",
-                      qualityFeedback.hasWarnings ? "text-orange-600" : "text-emerald-600"
-                    )}>
-                      {qualityFeedback.hasWarnings ? <AlertCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-                      AI Assistant Scan
-                    </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className={cn(
+                    "text-xs font-bold flex items-center gap-2 uppercase tracking-widest",
+                    qualityFeedback ? (qualityFeedback.hasWarnings ? "text-orange-600" : "text-emerald-600") : "text-muted-foreground"
+                  )}>
+                    {qualityFeedback ? (qualityFeedback.hasWarnings ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />) : <Sparkles className="h-4 w-4" />}
+                    AI Quality Assistant
+                  </CardTitle>
+                  {qualityFeedback && (
                     <div className={cn(
-                      "h-2 w-2 rounded-full animate-ping",
+                      "h-2 w-2 rounded-full animate-pulse",
                       qualityFeedback.hasWarnings ? "bg-orange-500" : "bg-emerald-500"
                     )} />
-                  </div>
-                  <Badge variant="outline" className={cn(
-                    "font-bold uppercase text-[9px] border-current",
-                    qualityFeedback.hasWarnings ? "text-orange-600" : "text-emerald-600"
-                  )}>
-                    {qualityFeedback.hasWarnings ? 'Action Required' : 'Ready to Send'}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-6">
-                  <div className="space-y-4">
-                    <p className="text-sm font-bold leading-tight text-foreground/80">{qualityFeedback.summaryFeedback}</p>
-                    
-                    {qualityFeedback.potentialIssues && qualityFeedback.potentialIssues.length > 0 && (
-                      <div className="space-y-3">
-                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Spotted Weaknesses</h5>
-                        <div className="space-y-2">
-                          {qualityFeedback.potentialIssues.map((issue, i) => (
-                            <div key={i} className="flex gap-2 text-xs font-medium text-muted-foreground">
-                              <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-orange-500" />
-                              <span>{issue}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {qualityFeedback.detailedSuggestions && qualityFeedback.detailedSuggestions.length > 0 && (
-                      <div className="space-y-3 pt-2">
-                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">How to Improve</h5>
-                        <div className="space-y-2">
-                          {qualityFeedback.detailedSuggestions.map((suggestion, i) => (
-                            <div key={i} className="flex gap-2 text-xs font-medium text-muted-foreground">
-                              <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />
-                              <span>{suggestion}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="rounded-[2rem] border-dashed border-2 border-border bg-transparent p-8 text-center">
-                <div className="p-4 bg-muted/50 rounded-full w-fit mx-auto mb-4 border border-border">
-                  <Sparkles className="h-8 w-8 text-muted-foreground/40" />
+                  )}
                 </div>
-                <h4 className="font-bold text-sm text-muted-foreground">AI Quality Assistant</h4>
-                <p className="text-xs text-muted-foreground/60 mt-2 leading-relaxed">
-                  Click the <strong>AI Quality Scan</strong> button to get instant feedback on your draft before you finalize it.
-                </p>
-              </Card>
-            )}
+              </CardHeader>
+              <CardContent className="p-0 flex-1">
+                {qualityFeedback ? (
+                  <ScrollArea className="h-full p-6">
+                    <div className="space-y-5">
+                      <p className="text-xs font-bold leading-tight text-foreground/80">{qualityFeedback.summaryFeedback}</p>
+                      
+                      {qualityFeedback.potentialIssues && qualityFeedback.potentialIssues.length > 0 && (
+                        <div className="space-y-2">
+                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Spotted Weaknesses</h5>
+                          <div className="space-y-1.5">
+                            {qualityFeedback.potentialIssues.map((issue, i) => (
+                              <div key={i} className="flex gap-2 text-xs font-medium text-muted-foreground leading-snug">
+                                <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-orange-500" />
+                                <span>{issue}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {qualityFeedback.detailedSuggestions && qualityFeedback.detailedSuggestions.length > 0 && (
+                        <div className="space-y-2 pt-1">
+                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">How to Improve</h5>
+                          <div className="space-y-1.5">
+                            {qualityFeedback.detailedSuggestions.map((suggestion, i) => (
+                              <div key={i} className="flex gap-2 text-xs font-medium text-muted-foreground leading-snug">
+                                <Sparkles className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />
+                                <span>{suggestion}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                    <div className="p-3 bg-muted/50 rounded-full mb-3 border border-border">
+                      <Sparkles className="h-6 w-6 text-muted-foreground/40" />
+                    </div>
+                    <h4 className="font-bold text-xs text-muted-foreground">Ready to Scan</h4>
+                    <p className="text-[10px] text-muted-foreground/60 mt-2 leading-relaxed max-w-[180px]">
+                      Click the <strong>AI Quality Scan</strong> button to get instant feedback on your draft.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
