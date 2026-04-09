@@ -289,6 +289,30 @@ export default function CoursePortalPage() {
     }
   };
 
+  const handleViewContent = (url: string) => {
+    if (!url) return;
+    if (url.startsWith('data:')) {
+      try {
+        const parts = url.split(',');
+        const byteString = atob(parts[1]);
+        const mimeString = parts[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      } catch (err) {
+        toast({ title: "View Error", description: "Could not open document.", variant: "destructive" });
+      }
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+
   const handleAddComment = (contentId: string) => {
     if (!firestore || !courseId || !user || !commentText.trim()) return;
     const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
@@ -640,20 +664,26 @@ export default function CoursePortalPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">{post.body}</p>
+                      <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">{post.body || post.content}</p>
+                      
                       {post.attachmentUrl && (
-                        <div className="p-4 rounded-2xl bg-accent/30 border border-border flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <FileIcon className="h-5 w-5 text-muted-foreground" />
-                            <span className="text-sm font-semibold truncate max-w-[300px]">{post.attachmentUrl.split('/').pop()}</span>
-                          </div>
-                          <Button variant="outline" size="sm" className="font-bold rounded-xl" asChild>
-                            <a href={post.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                              View <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                            </a>
-                          </Button>
+                        <div className="flex items-center gap-4">
+                          <button 
+                            onClick={() => handleViewContent(post.attachmentUrl)} 
+                            className="flex items-center gap-2 text-xs font-bold text-primary hover:underline"
+                          >
+                            <LinkIcon className="h-3 w-3" /> View Content
+                          </button>
+                          <a 
+                            href={post.attachmentUrl} 
+                            download={post.title} 
+                            className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            <Download className="h-3 w-3" /> Download
+                          </a>
                         </div>
                       )}
+
                       <div className="flex items-center justify-between pt-6 border-t border-border">
                         <div className="flex items-center gap-2 text-rose-500 font-bold">
                            <Heart className="h-4 w-4 fill-rose-500" />
