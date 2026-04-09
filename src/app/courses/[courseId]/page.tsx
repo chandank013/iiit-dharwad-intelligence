@@ -20,7 +20,6 @@ import {
   updateDoc,
   serverTimestamp,
   getDocs,
-  increment
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -35,19 +34,15 @@ import {
   Loader2,
   Trash2,
   Megaphone,
-  ArrowRight,
   Sparkles,
   CheckCircle2,
   BarChart3,
   Link as LinkIcon,
-  FileArchive,
   File as FileIcon,
   MessageCircle,
   Heart,
   Send,
   Users,
-  User,
-  AlertCircle,
   Upload,
   Download,
   RotateCcw,
@@ -86,7 +81,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/AlertDialog";
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -103,7 +98,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -137,7 +132,6 @@ export default function CoursePortalPage() {
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' | 'assignment' } | null>(null);
   const [itemToReturn, setItemToReturn] = useState<any | null>(null);
   
-  // Dynamic state for submissions to avoid index issues with collectionGroup
   const [courseSubmissions, setCourseSubmissions] = useState<any[]>([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
 
@@ -177,7 +171,6 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
-  // Manually fetch submissions for this course to avoid collectionGroup index requirements
   useEffect(() => {
     async function fetchSubmissions() {
       if (!firestore || !assignments || assignments.length === 0) {
@@ -202,8 +195,8 @@ export default function CoursePortalPage() {
         const flattened = results.flat()
           .filter(s => {
             const student = allUsers?.find(u => u.id === s.submitterId);
-            const fullName = student ? `${student.firstName} ${student.lastName}` : "";
-            return !fullName.toLowerCase().includes("chandan kumar");
+            const fullName = (student?.firstName + " " + student?.lastName).toLowerCase();
+            return !fullName.includes("chandan kumar");
           });
         
         setCourseSubmissions(flattened);
@@ -240,6 +233,18 @@ export default function CoursePortalPage() {
     }).reverse();
     return { distribution: distribution.filter(d => d.value > 0), performance };
   }, [courseSubmissions, assignments]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setContentFormData(prev => ({ ...prev, attachmentUrl: reader.result as string }));
+      toast({ title: "File Attached", description: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAIEvaluate = async (submission: any) => {
     if (!firestore || !courseId) return;
@@ -650,8 +655,8 @@ export default function CoursePortalPage() {
                 <h1 className="text-3xl font-bold tracking-tighter">Resources & Feed</h1>
                 <p className="text-muted-foreground">Share announcements, files, and links with students.</p>
               </div>
-              <Button onClick={() => setIsContentDialogOpen(true)} className="gap-2 font-bold shadow-lg">
-                <Upload className="h-4 w-4" /> Post Update
+              <Button onClick={() => setIsContentDialogOpen(true)} size="icon" className="rounded-full h-12 w-12 shadow-xl">
+                <Plus className="h-6 w-6" />
               </Button>
             </div>
             <div className="space-y-6">
@@ -789,13 +794,27 @@ export default function CoursePortalPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Link / Attachment URL</Label>
-              <Input 
-                placeholder="https://..." 
-                value={contentFormData.attachmentUrl} 
-                onChange={(e) => setContentFormData({ ...contentFormData, attachmentUrl: e.target.value })}
-                className="rounded-xl h-12 bg-accent/30 border-none"
-              />
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attachment</Label>
+              <div className="flex gap-2">
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  id="content-file-upload" 
+                  onChange={handleFileChange}
+                />
+                <Button 
+                  variant="outline" 
+                  type="button"
+                  className="w-full h-12 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 rounded-xl font-bold"
+                  onClick={() => document.getElementById('content-file-upload')?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" /> 
+                  {contentFormData.attachmentUrl ? "Change Selected File" : "Select from Device"}
+                </Button>
+              </div>
+              {contentFormData.attachmentUrl && (
+                <p className="text-[10px] text-primary font-bold animate-pulse">✓ File successfully attached and ready to post.</p>
+              )}
             </div>
           </div>
           <DialogFooter>
