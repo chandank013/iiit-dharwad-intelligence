@@ -14,7 +14,8 @@ import {
   Calendar,
   FileText,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  CheckCircle2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -32,8 +33,7 @@ import {
   addDoc, 
   serverTimestamp,
   limit,
-  orderBy,
-  collectionGroup
+  orderBy
 } from 'firebase/firestore';
 import { 
   Dialog, 
@@ -94,36 +94,47 @@ export function StudentDashboard() {
       try {
         let totalS = 0;
         let totalQ = 0;
-        const assignmentsPromises = enrollments.map(async (enrollment) => {
-          // Fetch assignments
-          const aq = query(collection(firestore, 'courses', enrollment.courseId, 'assignments'), orderBy('createdAt', 'desc'), limit(5));
-          const aSnap = await getDocs(aq);
-          const course = allCourses?.find(c => c.id === enrollment.courseId);
-          
-          // Fetch submissions
-          const sq = query(collection(firestore, 'courses', enrollment.courseId, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
-          const sSnap = await getDocs(sq);
-          if (!isChandan) totalS += sSnap.size;
+        
+        const dataPromises = enrollments.map(async (enrollment) => {
+          const courseRef = enrollment.courseId;
+          const course = allCourses?.find(c => c.id === courseRef);
 
-          // Fetch quizzes done
-          const qsq = query(collection(firestore, 'courses', enrollment.courseId, 'quiz_submissions'), where('studentId', '==', user.uid));
-          const qsSnap = await getDocs(qsq);
-          if (!isChandan) totalQ += qsSnap.size;
+          // Fetch assignments for this course
+          const aq = query(collection(firestore, 'courses', courseRef, 'assignments'), orderBy('createdAt', 'desc'), limit(10));
+          const aSnap = await getDocs(aq);
           
-          return aSnap.docs.map(aDoc => ({ 
+          const courseAssignments = aSnap.docs.map(aDoc => ({ 
             ...aDoc.data(), 
             id: aDoc.id, 
             courseName: course?.name || 'Unknown Course',
             courseCode: course?.code || ''
           }));
+
+          // Count submissions for this student across these assignments
+          // (Fetching individually to avoid complex collectionGroup index requirements for now)
+          const subPromises = aSnap.docs.map(async (aDoc) => {
+            const sq = query(collection(firestore, 'courses', courseRef, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
+            const sSnap = await getDocs(sq);
+            return sSnap.size;
+          });
+          const subCounts = await Promise.all(subPromises);
+          if (!isChandan) totalS += subCounts.reduce((a, b) => a + b, 0);
+
+          // Count quizzes completed
+          const qsq = query(collection(firestore, 'courses', courseRef, 'quiz_submissions'), where('studentId', '==', user.uid));
+          const qsSnap = await getDocs(qsq);
+          if (!isChandan) totalQ += qsSnap.size;
+
+          return courseAssignments;
         });
 
-        const results = await Promise.all(assignmentsPromises);
+        const results = await Promise.all(dataPromises);
         const flattened = results.flat().sort((a, b) => {
           const dateA = a.deadline ? new Date(a.deadline).getTime() : 0;
           const dateB = b.deadline ? new Date(b.deadline).getTime() : 0;
           return dateA - dateB;
         });
+
         setAllAssignments(flattened);
         setTotalSubmissionsCount(isChandan ? 0 : totalS);
         setTotalQuizzesCount(isChandan ? 0 : totalQ);
@@ -245,31 +256,31 @@ export function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{allAssignments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pending tasks</p>
+            <p className="text-xs text-muted-foreground mt-1">Active tasks</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-none bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-primary">
-              <FileText className="h-4 w-4" /> Submissions
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-emerald-500">
+              <CheckCircle2 className="h-4 w-4" /> Total Submitted
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalSubmissionsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Assignments completed</p>
+            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : totalSubmissionsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Work completed</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-none bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-500">
-              <HelpCircle className="h-4 w-4" /> Quizzes
+              <HelpCircle className="h-4 w-4" /> AI Quizzes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalQuizzesCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">AI assessments done</p>
+            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : totalQuizzesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Assessments done</p>
           </CardContent>
         </Card>
 

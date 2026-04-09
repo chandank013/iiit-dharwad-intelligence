@@ -24,19 +24,18 @@ service cloud.firestore {
       );
     }
 
-    // Collection Group rules - needed at the root for queries across collections
-    match /{path=**}/submissions/{submissionId} {
+    // Root-level rules for collection group queries and general subcollection listing
+    match /{path=**}/submissions/{id} {
       allow read, list: if isSignedIn();
     }
-    
-    match /{path=**}/assignments/{assignmentId} {
+    match /{path=**}/assignments/{id} {
       allow read, list: if isSignedIn();
     }
-
-    // Audit Logs rules
-    match /audit_logs/{logId} {
-      allow read: if isProfessor();
-      allow create: if isSignedIn();
+    match /{path=**}/quizzes/{id} {
+      allow read, list: if isSignedIn();
+    }
+    match /{path=**}/quiz_submissions/{id} {
+      allow read, list: if isSignedIn();
     }
 
     match /users/{userId} {
@@ -70,16 +69,6 @@ service cloud.firestore {
             request.auth.uid == resource.data.professorId
           );
         }
-        
-        match /rubrics/{rubricId} {
-          allow read: if isSignedIn();
-          allow write: if isProfessor();
-          
-          match /criteria/{criterionId} {
-             allow read: if isSignedIn();
-             allow write: if isProfessor();
-          }
-        }
       }
 
       match /quizzes/{quizId} {
@@ -95,11 +84,11 @@ service cloud.firestore {
       match /content/{contentId} {
         allow get, list: if isSignedIn();
         allow create, delete: if isProfessor();
-        allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'updatedAt']);
+        allow update: if isSignedIn();
 
         match /comments/{commentId} {
           allow read: if isSignedIn();
-          allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+          allow create: if isSignedIn();
           allow delete: if isProfessor() || (resource != null && resource.data.authorId == request.auth.uid);
         }
 
@@ -112,7 +101,7 @@ service cloud.firestore {
 
     match /course_enrollments/{enrollmentId} {
       allow list: if isSignedIn();
-      allow get: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.professorId);
+      allow get: if isSignedIn();
       allow create: if isStudent() && request.resource.data.studentId == request.auth.uid;
       allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.studentId || request.auth.uid == resource.data.professorId);
     }
@@ -125,6 +114,11 @@ service cloud.firestore {
     match /learning_resources/{resourceId} {
       allow read: if isSignedIn();
       allow write: if isProfessor();
+    }
+    
+    match /audit_logs/{logId} {
+      allow read: if isProfessor();
+      allow create: if isSignedIn();
     }
   }
 }
