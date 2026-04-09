@@ -76,21 +76,26 @@ export function StudentDashboard() {
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
 
-  // Using a collectionGroup query with a filter requires a composite index. 
-  // To avoid index errors, we derive the count from the enrollments if Chandan Kumar rules are active.
+  // Fetch all submissions for current user across all courses. 
+  // We remove the 'where' if index is missing, or keep it if it works. 
+  // To avoid the 4 vs 0 issue, we filter strictly on the client side below.
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collectionGroup(firestore, "submissions"), where("submitterId", "==", user.uid));
+    // Note: If you encounter an index error here, remove the where and filter client-side.
+    return query(collectionGroup(firestore, "submissions"));
   }, [firestore, user]);
 
-  const { data: submissions, isLoading: isSubmissionsLoading } = useCollection(submissionsQuery);
+  const { data: rawSubmissions, isLoading: isSubmissionsLoading } = useCollection(submissionsQuery);
 
   const totalSubmissionsCount = useMemo(() => {
     // If the user is Chandan, we strictly return 0 to respect the privacy request
     if (isChandan) return 0;
-    if (!submissions) return 0;
-    return submissions.length;
-  }, [submissions, isChandan]);
+    if (!rawSubmissions || !user) return 0;
+    
+    // Filter strictly by the current user's UID to fix the "Rahul showing 4" bug
+    const userSubmissions = rawSubmissions.filter(s => s.submitterId === user.uid);
+    return userSubmissions.length;
+  }, [rawSubmissions, isChandan, user]);
 
   useEffect(() => {
     async function fetchAssignments() {

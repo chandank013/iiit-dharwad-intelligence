@@ -19,7 +19,6 @@ import {
   addDoc,
   updateDoc,
   serverTimestamp,
-  collectionGroup,
   getDocs,
   increment
 } from 'firebase/firestore';
@@ -87,7 +86,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/AlertDialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -131,13 +130,16 @@ export default function CoursePortalPage() {
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
   const [isPostingContent, setIsPostingContent] = useState(false);
   const [contentFormData, setContentFormData] = useState({ title: '', type: 'announcement', body: '', attachmentUrl: '' });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
   const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' | 'assignment' } | null>(null);
   const [itemToReturn, setItemToReturn] = useState<any | null>(null);
+  
+  // Dynamic state for submissions to avoid index issues with collectionGroup
+  const [courseSubmissions, setCourseSubmissions] = useState<any[]>([]);
+  const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -175,25 +177,45 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
-  const submissionsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collectionGroup(firestore, 'submissions'),
-      where('professorId', '==', user.uid)
-    );
-  }, [firestore, user]);
-  const { data: rawSubmissions } = useCollection(submissionsQuery);
+  // Manually fetch submissions for this course to avoid collectionGroup index requirements
+  useEffect(() => {
+    async function fetchSubmissions() {
+      if (!firestore || !assignments || assignments.length === 0) {
+        setCourseSubmissions([]);
+        return;
+      }
 
-  const courseSubmissions = useMemo(() => {
-    if (!rawSubmissions || !courseId || !allUsers) return [];
-    return rawSubmissions
-      .filter(s => s.courseId === courseId)
-      .filter(s => {
-        const student = allUsers.find(u => u.id === s.submitterId);
-        const fullName = student ? `${student.firstName} ${student.lastName}` : "";
-        return !fullName.toLowerCase().includes("chandan kumar");
-      });
-  }, [rawSubmissions, courseId, allUsers]);
+      setIsSubmissionsLoading(true);
+      try {
+        const submissionPromises = assignments.map(async (assignment) => {
+          const subsRef = collection(firestore, 'courses', courseId as string, 'assignments', assignment.id, 'submissions');
+          const subsSnap = await getDocs(subsRef);
+          return subsSnap.docs.map(d => ({
+            ...d.data(),
+            id: d.id,
+            assignmentId: assignment.id,
+            assignmentTitle: assignment.title
+          }));
+        });
+
+        const results = await Promise.all(submissionPromises);
+        const flattened = results.flat()
+          .filter(s => {
+            const student = allUsers?.find(u => u.id === s.submitterId);
+            const fullName = student ? `${student.firstName} ${student.lastName}` : "";
+            return !fullName.toLowerCase().includes("chandan kumar");
+          });
+        
+        setCourseSubmissions(flattened);
+      } catch (err) {
+        console.error("Error fetching course submissions:", err);
+      } finally {
+        setIsSubmissionsLoading(false);
+      }
+    }
+
+    fetchSubmissions();
+  }, [firestore, assignments, courseId, allUsers]);
 
   const analyticsData = useMemo(() => {
     if (!courseSubmissions || !assignments) return { distribution: [], performance: [] };
