@@ -411,23 +411,35 @@ export default function StudentCoursePage() {
                               </span>
                             </div>
                           </div>
-                          {!isSubmitted && !deadlinePassed && (
-                            <Link href={`/student/courses/${courseId}/submit/${assignment.id}`}>
-                              <Button className="rounded-xl font-bold gap-2 h-11 px-6 shadow-lg shadow-primary/20">
-                                Start Work <ArrowRight className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                          )}
-                          {deadlinePassed && !isSubmitted && (
-                            <Badge variant="secondary" className="bg-rose-50 text-rose-600 border-rose-100 font-bold px-4 py-2 uppercase text-[10px]">
-                              Closed
-                            </Badge>
-                          )}
-                          {isSubmitted && (
-                             <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-bold px-4 py-2 gap-2 uppercase text-[10px]">
-                               <CheckCircle2 className="h-4 w-4" /> Submitted
-                             </Badge>
-                          )}
+                          <div className="flex items-center gap-3">
+                            {isSubmitted && (
+                               <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-bold px-4 py-2 gap-2 uppercase text-[10px]">
+                                 <CheckCircle2 className="h-4 w-4" /> Submitted
+                               </Badge>
+                            )}
+                            
+                            {!isSubmitted && !deadlinePassed && (
+                              <Link href={`/student/courses/${courseId}/submit/${assignment.id}`}>
+                                <Button className="rounded-xl font-bold gap-2 h-11 px-6 shadow-lg shadow-primary/20">
+                                  Start Work <ArrowRight className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            )}
+
+                            {isSubmitted && !deadlinePassed && (
+                              <Link href={`/student/courses/${courseId}/submit/${assignment.id}`}>
+                                <Button variant="outline" className="rounded-xl font-bold gap-2 h-11 px-6">
+                                  Resubmit <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            )}
+
+                            {deadlinePassed && !isSubmitted && (
+                              <Badge variant="secondary" className="bg-rose-50 text-rose-600 border-rose-100 font-bold px-4 py-2 uppercase text-[10px]">
+                                Closed
+                              </Badge>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     );

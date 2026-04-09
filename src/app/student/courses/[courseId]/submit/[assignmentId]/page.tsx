@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -47,6 +46,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/layout/Navbar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function SubmitAssignmentPage() {
   const { courseId, assignmentId } = useParams();
@@ -126,7 +126,7 @@ export default function SubmitAssignmentPage() {
       createdAt: currentSubmission ? currentSubmission.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
       professorId: assignment.professorId,
-      status: 'submitted'
+      status: 'submitted' // Resubmitting resets the status so the teacher knows there is new work
     };
 
     if (currentSubmission) {
@@ -137,9 +137,10 @@ export default function SubmitAssignmentPage() {
       }).finally(() => setIsSubmitting(false));
     } else {
       const submissionsCol = collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions');
-      addDocumentNonBlocking(submissionsCol, submissionData);
-      toast({ title: "Submission Received" });
-      router.push(`/student/courses/${courseId}`);
+      addDocumentNonBlocking(submissionsCol, submissionData).then(() => {
+        toast({ title: "Submission Received" });
+        router.push(`/student/courses/${courseId}`);
+      }).finally(() => setIsSubmitting(false));
     }
   };
 
@@ -147,6 +148,7 @@ export default function SubmitAssignmentPage() {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
   }
 
+  const deadlinePassed = assignment.deadline && new Date() > new Date(assignment.deadline);
   const isGraded = currentSubmission?.status === 'graded';
   const isReturned = currentSubmission?.status === 'returned';
 
@@ -194,14 +196,24 @@ export default function SubmitAssignmentPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-8">
-                {isGraded ? (
+                {isGraded && deadlinePassed ? (
                   <div className="text-center py-12 space-y-4">
                     <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
                     <h3 className="text-xl font-bold">Work is Graded</h3>
-                    <p className="text-muted-foreground text-sm">This assignment has already been evaluated and cannot be resubmitted.</p>
+                    <p className="text-muted-foreground text-sm">This assignment has already been evaluated and the deadline has passed. It cannot be resubmitted.</p>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {isGraded && !deadlinePassed && (
+                      <Alert className="mb-6 bg-amber-50 border-amber-200 text-amber-800 rounded-2xl">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle className="font-bold">Heads Up!</AlertTitle>
+                        <AlertDescription className="text-xs">
+                          Your work has already been graded. Resubmitting will reset your status to 'Submitted' and your professor may need to re-evaluate it.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <div className="space-y-3">
                       <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                         Submission Content
