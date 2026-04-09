@@ -73,6 +73,7 @@ import {
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -295,8 +296,7 @@ export default function CoursePortalPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (Firestore limit is 1MB per document)
-    if (file.size > 700000) { // ~700KB limit to account for base64 overhead
+    if (file.size > 700000) {
       toast({ title: "File too large", description: "Please upload files smaller than 700KB.", variant: "destructive" });
       return;
     }
@@ -374,7 +374,6 @@ export default function CoursePortalPage() {
         isPinned: false
       });
 
-      // Notify all enrolled students
       const enrollmentSnap = await getDocs(query(collection(firestore, 'course_enrollments'), where('courseId', '==', courseId)));
       const notifyPromises = enrollmentSnap.docs.map(async (enrollmentDoc) => {
         const studentId = enrollmentDoc.data().studentId;
@@ -390,7 +389,6 @@ export default function CoursePortalPage() {
         });
       });
       
-      // We don't block the UI on notification success for every single student
       Promise.all(notifyPromises).catch(err => console.error("Notification dispatch failed", err));
 
       setIsContentDialogOpen(false);
@@ -502,7 +500,6 @@ export default function CoursePortalPage() {
       const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
       await updateDoc(submissionRef, { status: 'returned', updatedAt: serverTimestamp() });
       
-      // Notify student
       const notifRef = collection(firestore, 'users', submission.submitterId, 'notifications');
       await addDoc(notifRef, {
         userId: submission.submitterId,
@@ -585,7 +582,10 @@ export default function CoursePortalPage() {
               </>
             )}
           </div>
-          <div className="flex items-center gap-4"><ThemeToggle /></div>
+          <div className="flex items-center gap-4">
+            <NotificationBell />
+            <ThemeToggle />
+          </div>
         </header>
 
         {activeTab === 'dashboard' && (
@@ -1056,7 +1056,6 @@ export default function CoursePortalPage() {
                 </div>
 
                 <div className="space-y-12">
-                  {/* Aggregate Overview */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <Card className="p-8 space-y-6">
                       <CardHeader className="p-0">
@@ -1116,7 +1115,6 @@ export default function CoursePortalPage() {
                     </Card>
                   </div>
 
-                  {/* Drill-down Directory */}
                   <div className="space-y-8">
                     <div className="flex items-center gap-3 border-b border-border pb-4">
                       <BookOpen className="h-6 w-6 text-primary" />

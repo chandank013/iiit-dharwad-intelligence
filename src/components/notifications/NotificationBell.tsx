@@ -4,14 +4,11 @@
 import { useState, useMemo } from 'react';
 import { 
   Bell, 
-  Check, 
   Trash2, 
   Loader2, 
-  FileText, 
-  Megaphone, 
   Clock, 
   CheckCircle2,
-  AlertCircle
+  Megaphone
 } from 'lucide-react';
 import { 
   useUser, 
@@ -26,10 +23,7 @@ import {
   limit, 
   doc, 
   updateDoc, 
-  deleteDoc,
-  where,
-  getDocs,
-  collectionGroup
+  deleteDoc
 } from 'firebase/firestore';
 import {
   DropdownMenu,
@@ -52,13 +46,13 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
 
   const notificationsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(
       collection(firestore, 'users', user.uid, 'notifications'),
       orderBy('createdAt', 'desc'),
       limit(20)
     );
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
 
@@ -91,8 +85,8 @@ export function NotificationBell() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10 hover:bg-accent">
-          <Bell className="h-5 w-5 text-muted-foreground" />
+        <Button variant="ghost" size="icon" className="relative rounded-full h-10 w-10 hover:bg-accent group">
+          <Bell className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           {unreadCount > 0 && (
             <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-background">
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -124,7 +118,7 @@ export function NotificationBell() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-40 gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-primary/40" />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Synchronizing...</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Checking alerts...</span>
             </div>
           ) : notifications && notifications.length > 0 ? (
             <div className="divide-y divide-border">
@@ -162,7 +156,9 @@ export function NotificationBell() {
                       {notif.message}
                     </p>
                     <p className="text-[9px] font-bold text-muted-foreground/60 uppercase mt-2 tracking-tight">
-                      {notif.createdAt ? formatDistanceToNow(new Date(notif.createdAt.seconds * 1000), { addSuffix: true }) : 'Just now'}
+                      {notif.createdAt?.seconds 
+                        ? formatDistanceToNow(new Date(notif.createdAt.seconds * 1000), { addSuffix: true }) 
+                        : 'Just now'}
                     </p>
                   </div>
                   <button 
@@ -187,7 +183,7 @@ export function NotificationBell() {
         <DropdownMenuSeparator className="m-0" />
         <div className="p-3 bg-muted/10 text-center">
           <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary">
-            View All Activity
+            Activity Archive
           </Button>
         </div>
       </DropdownMenuContent>

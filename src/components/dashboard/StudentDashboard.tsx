@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,7 +13,6 @@ import {
   Loader2, 
   Search,
   Calendar,
-  FileText,
   AlertCircle,
   HelpCircle,
   CheckCircle2,
@@ -34,7 +34,6 @@ import {
   addDoc, 
   serverTimestamp,
   limit,
-  orderBy,
   collectionGroup
 } from 'firebase/firestore';
 import { 
@@ -68,9 +67,9 @@ export function StudentDashboard() {
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   const enrollmentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(collection(firestore, "course_enrollments"), where("studentId", "==", user.uid));
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: enrollments, isLoading: isEnrollmentsLoading } = useCollection(enrollmentsQuery);
 
@@ -80,6 +79,49 @@ export function StudentDashboard() {
   }, [firestore, user]);
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
+
+  // Logic to auto-generate 24-hour deadline notifications
+  useEffect(() => {
+    async function checkDeadlines() {
+      if (!firestore || !user?.uid || allAssignments.length === 0) return;
+
+      const now = new Date();
+      const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      for (const assignment of allAssignments) {
+        if (!assignment.deadline) continue;
+        const deadline = new Date(assignment.deadline);
+        
+        // If deadline is within 24 hours and in the future
+        if (deadline > now && deadline <= next24Hours) {
+          // Check if we already notified for this assignment
+          const notifKey = `deadline_notified_${assignment.id}_${user.uid}`;
+          const alreadyNotified = localStorage.getItem(notifKey);
+
+          if (!alreadyNotified) {
+            try {
+              await addDoc(collection(firestore, 'users', user.uid, 'notifications'), {
+                userId: user.uid,
+                title: "Upcoming Deadline",
+                message: `The assignment "${assignment.title}" is due within 24 hours!`,
+                type: 'deadline',
+                link: `/student/courses/${assignment.courseId}`,
+                read: false,
+                createdAt: serverTimestamp()
+              });
+              localStorage.setItem(notifKey, 'true');
+            } catch (err) {
+              console.error("Failed to create deadline notification", err);
+            }
+          }
+        }
+      }
+    }
+
+    if (!isAssignmentsLoading) {
+      checkDeadlines();
+    }
+  }, [firestore, user?.uid, allAssignments, isAssignmentsLoading]);
 
   useEffect(() => {
     async function fetchPortalData() {
@@ -100,7 +142,6 @@ export function StudentDashboard() {
         if (!isChandan) {
           const sq = query(collectionGroup(firestore, 'submissions'), where('submitterId', '==', user.uid));
           const sSnap = await getDocs(sq);
-          // Filter out returned submissions from the active "Done" count
           totalS = sSnap.docs.filter(d => d.data().status !== 'returned').length;
 
           const qsq = query(collectionGroup(firestore, 'quiz_submissions'), where('studentId', '==', user.uid));
@@ -118,6 +159,7 @@ export function StudentDashboard() {
           return aSnap.docs.map(aDoc => ({ 
             ...aDoc.data(), 
             id: aDoc.id, 
+            courseId: courseId,
             courseName: course?.name || 'Unknown Course',
             courseCode: course?.code || ''
           }));

@@ -29,7 +29,6 @@ import {
   TrendingUp, 
   Loader2, 
   FolderOpen,
-  ChevronRight,
   ArrowRight,
   Megaphone,
   File as FileIcon,
@@ -43,7 +42,6 @@ import {
   Download,
   FileText,
   CheckCircle2,
-  ExternalLink,
   HelpCircle,
   Play,
   RotateCcw,
@@ -57,6 +55,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Input } from '@/components/ui/input';
 import { 
   addDocumentNonBlocking, 
@@ -87,13 +86,11 @@ export default function StudentCoursePage() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
 
-  // Quiz State
   const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [quizResult, setQuizResult] = useState<any | null>(null);
 
-  // Resubmit Info State
   const [isUnsubmitReminderOpen, setIsUnsubmitReminderOpen] = useState(false);
 
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
@@ -310,6 +307,7 @@ export default function StudentCoursePage() {
         <header className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <h2 className="text-sm font-bold tracking-widest uppercase text-muted-foreground">{activeTab}</h2>
           <div className="flex items-center gap-4">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </header>
@@ -792,7 +790,6 @@ export default function StudentCoursePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Resubmit Info Dialog */}
       <Dialog open={isUnsubmitReminderOpen} onOpenChange={setIsUnsubmitReminderOpen}>
         <DialogContent className="rounded-[2rem] max-w-md">
           <DialogHeader>
