@@ -31,12 +31,9 @@ service cloud.firestore {
       allow create: if isSignedIn();
     }
 
-    // Collection Group rules for tracking submissions across all assignments
+    // Collection Group rules for tracking submissions and assignments across all courses
     match /{path=**}/submissions/{submissionId} {
-      allow list, get: if isSignedIn() && (
-        request.auth.uid == resource.data.submitterId || 
-        request.auth.uid == resource.data.professorId
-      );
+      allow list, get: if isSignedIn();
       allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.professorId || 
@@ -47,7 +44,6 @@ service cloud.firestore {
       );
     }
     
-    // Collection Group rules for assignments
     match /{path=**}/assignments/{assignmentId} {
       allow read, list: if isSignedIn();
     }
@@ -98,7 +94,6 @@ service cloud.firestore {
       match /content/{contentId} {
         allow get, list: if isSignedIn();
         allow create, delete: if isProfessor();
-        // Allow anyone signed in to update likesCount and updatedAt
         allow update: if isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'updatedAt']);
 
         match /comments/{commentId} {
