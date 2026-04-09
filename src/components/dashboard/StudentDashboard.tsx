@@ -97,11 +97,11 @@ export function StudentDashboard() {
         let totalS = 0;
         let totalQ = 0;
         
-        // Use collectionGroup for aggregate counts to avoid manual iteration and race conditions
         if (!isChandan) {
           const sq = query(collectionGroup(firestore, 'submissions'), where('submitterId', '==', user.uid));
           const sSnap = await getDocs(sq);
-          totalS = sSnap.size;
+          // Filter out returned submissions from the active "Done" count
+          totalS = sSnap.docs.filter(d => d.data().status !== 'returned').length;
 
           const qsq = query(collectionGroup(firestore, 'quiz_submissions'), where('studentId', '==', user.uid));
           const qsSnap = await getDocs(qsq);

@@ -150,7 +150,8 @@ export default function SubmitAssignmentPage() {
   }
 
   const deadlinePassed = assignment.deadline && new Date() > new Date(assignment.deadline);
-  const isSubmitted = !!currentSubmission;
+  // Status 'returned' counts as NOT submitted for locking the editor, enabling Start Work again
+  const isSubmitted = !!currentSubmission && currentSubmission.status !== 'returned';
   const isReturned = currentSubmission?.status === 'returned';
 
   return (

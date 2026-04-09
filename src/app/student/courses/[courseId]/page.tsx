@@ -139,10 +139,12 @@ export default function StudentCoursePage() {
   const mySubmissions = useMemo(() => {
     if (!rawSubmissions || !courseId) return [];
     if (isChandan) return [];
-    return rawSubmissions.filter(s => s.courseId === courseId);
+    // Hide returned submissions from history tab as they are effectively "unsubmitted" for the student's task queue
+    return rawSubmissions.filter(s => s.courseId === courseId && s.status !== 'returned');
   }, [rawSubmissions, courseId, isChandan]);
 
   const submittedAssignmentIds = useMemo(() => {
+    // Only count assignments as "submitted" if they haven't been returned for revision
     return new Set(mySubmissions.map(s => s.assignmentId));
   }, [mySubmissions]);
 
