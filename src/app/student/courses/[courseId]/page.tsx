@@ -139,12 +139,10 @@ export default function StudentCoursePage() {
   const mySubmissions = useMemo(() => {
     if (!rawSubmissions || !courseId) return [];
     if (isChandan) return [];
-    // Hide returned submissions from history tab as they are effectively "unsubmitted" for the student's task queue
     return rawSubmissions.filter(s => s.courseId === courseId && s.status !== 'returned');
   }, [rawSubmissions, courseId, isChandan]);
 
   const submittedAssignmentIds = useMemo(() => {
-    // Only count assignments as "submitted" if they haven't been returned for revision
     return new Set(mySubmissions.map(s => s.assignmentId));
   }, [mySubmissions]);
 
@@ -386,23 +384,18 @@ export default function StudentCoursePage() {
                               <div className="space-y-1">
                                 <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                                   {task.title}
-                                  {isSubmitted ? (
-                                    <Badge variant="outline" className="text-[8px] h-4 font-bold bg-emerald-50 text-emerald-600 border-emerald-100 uppercase">Done</Badge>
-                                  ) : deadlinePassed ? (
-                                    <Badge variant="destructive" className="text-[8px] h-4 font-bold uppercase">Missing</Badge>
-                                  ) : null}
                                 </div>
                                 <div className="text-[10px] text-muted-foreground font-medium">Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'}</div>
                               </div>
-                              {!isSubmitted && !deadlinePassed ? (
-                                <Button size="sm" variant="ghost" className="rounded-full h-8 w-8 p-0">
-                                   <ChevronRight className="h-4 w-4" />
-                                </Button>
-                              ) : isSubmitted ? (
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              ) : (
-                                <AlertTriangle className="h-4 w-4 text-rose-500" />
-                              )}
+                              <div className="flex items-center gap-2">
+                                {isSubmitted ? (
+                                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Done</span>
+                                ) : deadlinePassed ? (
+                                  <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Missing</span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Pending</span>
+                                )}
+                              </div>
                             </div>
                           );
                         })
@@ -435,25 +428,20 @@ export default function StudentCoursePage() {
                               <div className="space-y-1">
                                 <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                                   {quiz.title}
-                                  {isDone ? (
-                                    <Badge variant="outline" className="text-[8px] h-4 font-bold bg-emerald-50 text-emerald-600 border-emerald-100 uppercase">Done</Badge>
-                                  ) : isMissing ? (
-                                    <Badge variant="destructive" className="text-[8px] h-4 font-bold uppercase">Missing</Badge>
-                                  ) : (
-                                    <Badge variant="secondary" className="text-[8px] h-4 font-bold uppercase">Pending</Badge>
-                                  )}
                                 </div>
                                 <div className="text-[10px] text-muted-foreground font-medium">
                                   {quiz.deadline ? `Due: ${new Date(quiz.deadline).toLocaleDateString()}` : 'No Deadline'}
                                 </div>
                               </div>
-                              {isDone ? (
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              ) : isMissing ? (
-                                <AlertTriangle className="h-4 w-4 text-rose-500" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-orange-500" />
-                              )}
+                              <div className="flex items-center gap-2">
+                                {isDone ? (
+                                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Done</span>
+                                ) : isMissing ? (
+                                  <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Missing</span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Pending</span>
+                                )}
+                              </div>
                             </div>
                           );
                         })
