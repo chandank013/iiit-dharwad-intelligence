@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -135,6 +136,7 @@ export default function CoursePortalPage() {
   const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' | 'assignment' | 'quiz' } | null>(null);
   const [itemToReturn, setItemToReturn] = useState<any | null>(null);
+  const [lastEvaluatedAt, setLastEvaluatedAt] = useState<Date | null>(null);
   
   const [courseSubmissions, setCourseSubmissions] = useState<any[]>([]);
   const [quizSubmissions, setQuizSubmissions] = useState<any[]>([]);
@@ -241,7 +243,7 @@ export default function CoursePortalPage() {
     }
 
     fetchData();
-  }, [firestore, assignments, courseId, allUsers]);
+  }, [firestore, assignments, courseId, allUsers, lastEvaluatedAt]);
 
   const analyticsData = useMemo(() => {
     if (!courseSubmissions || !assignments || !quizSubmissions) return { distribution: [], performance: [], quizStats: [] };
@@ -307,6 +309,7 @@ export default function CoursePortalPage() {
         updatedAt: serverTimestamp()
       });
       toast({ title: "Evaluation Complete" });
+      setLastEvaluatedAt(new Date());
       return true;
     } catch (error) {
       toast({ title: "Evaluation Failed", variant: "destructive" });
@@ -332,6 +335,7 @@ export default function CoursePortalPage() {
     for (const sub of pending) { await handleAIEvaluate(sub); }
     setIsBulkEvaluating(false);
     toast({ title: "Bulk Evaluation Finished" });
+    setLastEvaluatedAt(new Date());
   };
 
   const handlePostContent = async () => {
@@ -457,6 +461,7 @@ export default function CoursePortalPage() {
       const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', itemToReturn.assignmentId, 'submissions', itemToReturn.id);
       await updateDoc(submissionRef, { status: 'returned', updatedAt: serverTimestamp() });
       toast({ title: "Submission Returned" });
+      setLastEvaluatedAt(new Date());
     } catch (error) { toast({ title: "Failed to Return", variant: "destructive" }); }
     finally { setItemToReturn(null); }
   };
@@ -617,6 +622,8 @@ export default function CoursePortalPage() {
                       courseSubmissions.map((sub) => {
                         const assignment = assignments?.find(a => a.id === sub.assignmentId);
                         const deadlinePassed = assignment?.deadline ? new Date() > new Date(assignment.deadline) : true;
+                        const isGraded = sub.status === 'graded';
+
                         return (
                           <TableRow key={sub.id}>
                             <TableCell className="font-bold text-xs">
@@ -627,7 +634,7 @@ export default function CoursePortalPage() {
                             </TableCell>
                             <TableCell className="text-xs">{sub.assignmentTitle}</TableCell>
                             <TableCell>
-                              {sub.evaluation?.totalScore !== undefined ? (
+                              {isGraded ? (
                                 <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">{sub.evaluation.totalScore}% AI Grade</Badge>
                               ) : sub.status === 'returned' ? (
                                 <Badge variant="secondary" className="text-rose-500">Returned</Badge>
@@ -639,21 +646,39 @@ export default function CoursePortalPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
-                                {!deadlinePassed && sub.status === 'submitted' && (
-                                  <Button variant="ghost" size="sm" onClick={() => setItemToReturn(sub)} className="text-rose-500 hover:text-rose-600">
-                                    <RotateCcw className="h-3 w-3 mr-1" /> Return
-                                  </Button>
+                                {isGraded ? (
+                                  <div className="flex items-center gap-3 bg-primary/5 px-3 py-1 rounded-lg border border-primary/10">
+                                    <span className="text-xs font-bold text-primary">{sub.evaluation?.totalScore}%</span>
+                                    <div className="w-px h-4 bg-primary/20" />
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleAIEvaluate(sub)} 
+                                      disabled={isEvaluating === sub.id} 
+                                      className="h-7 text-[10px] font-bold text-muted-foreground hover:text-primary p-0"
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-1" /> Re-Eval
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <>
+                                    {!deadlinePassed && sub.status === 'submitted' && (
+                                      <Button variant="ghost" size="sm" onClick={() => setItemToReturn(sub)} className="text-rose-500 hover:text-rose-600">
+                                        <RotateCcw className="h-3 w-3 mr-1" /> Return
+                                      </Button>
+                                    )}
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleAIEvaluate(sub)} 
+                                      disabled={isEvaluating === sub.id || sub.status === 'returned'} 
+                                      className="text-primary hover:text-primary/80"
+                                    >
+                                      {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                                      AI Eval
+                                    </Button>
+                                  </>
                                 )}
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleAIEvaluate(sub)} 
-                                  disabled={isEvaluating === sub.id || sub.status === 'returned'} 
-                                  className="text-primary hover:text-primary/80"
-                                >
-                                  {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                                  AI Eval
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
