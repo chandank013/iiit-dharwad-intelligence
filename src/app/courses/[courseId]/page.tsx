@@ -291,10 +291,7 @@ export default function CoursePortalPage() {
   const handleAIEvaluate = async (submission: any) => {
     if (!firestore || !courseId) return;
     const assignment = assignments?.find(a => a.id === submission.assignmentId);
-    if (assignment?.deadline && new Date() < new Date(assignment.deadline)) {
-      toast({ title: "Evaluation Locked", description: "You can only evaluate after the deadline.", variant: "destructive" });
-      return;
-    }
+    
     setIsEvaluating(submission.id);
     try {
       const evaluation = await aiSubmissionEvaluationAndPlagiarismDetection({
@@ -324,7 +321,11 @@ export default function CoursePortalPage() {
       return s.status !== 'graded' && deadlinePassed;
     });
     if (pending.length === 0) {
-      toast({ title: "No Eligible Submissions", variant: "destructive" });
+      toast({ 
+        title: "No Eligible Submissions", 
+        description: "Bulk evaluation is only available for assignments that have passed their deadline.",
+        variant: "destructive" 
+      });
       return;
     }
     setIsBulkEvaluating(true);
@@ -647,7 +648,7 @@ export default function CoursePortalPage() {
                                   variant="ghost" 
                                   size="sm" 
                                   onClick={() => handleAIEvaluate(sub)} 
-                                  disabled={isEvaluating === sub.id || !deadlinePassed || sub.status === 'returned'} 
+                                  disabled={isEvaluating === sub.id || sub.status === 'returned'} 
                                   className="text-primary hover:text-primary/80"
                                 >
                                   {isEvaluating === sub.id ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
