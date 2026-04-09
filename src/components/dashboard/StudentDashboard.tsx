@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -15,7 +16,8 @@ import {
   FileText,
   AlertCircle,
   HelpCircle,
-  CheckCircle2
+  CheckCircle2,
+  Trophy
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -205,39 +207,40 @@ export function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-8 py-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-10 py-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Student Portal</h1>
-          <p className="text-muted-foreground">Track your academic progress at IIIT Dharwad.</p>
+          <h1 className="text-4xl font-bold tracking-tight">Student Portal</h1>
+          <p className="text-muted-foreground font-medium mt-1">Track your academic progress and AI-driven assessments.</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="font-semibold gap-2 shadow-lg">
+              <Button className="font-bold gap-2 h-12 px-6 rounded-xl shadow-xl shadow-primary/20">
                 <Zap className="h-4 w-4 fill-current" /> Join Course
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] rounded-[2rem]">
               <DialogHeader>
-                <DialogTitle>Join a New Course</DialogTitle>
-                <DialogDescription>Enter the 6-character code to enroll.</DialogDescription>
+                <DialogTitle className="text-2xl font-bold">Enroll in Course</DialogTitle>
+                <DialogDescription className="font-medium">Enter the 6-character portal code provided by your professor.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleJoinCourse} className="space-y-4 py-4">
+              <form onSubmit={handleJoinCourse} className="space-y-6 py-6">
                 <div className="space-y-2">
-                  <Label htmlFor="joinCode">Course Join Code</Label>
+                  <Label htmlFor="joinCode" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Portal Join Code</Label>
                   <Input
                     id="joinCode"
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     maxLength={6}
-                    className="text-center text-2xl font-mono"
+                    placeholder="XYZ123"
+                    className="h-16 text-center text-3xl font-mono border-none bg-accent/30 rounded-2xl"
                     autoFocus
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full h-12" disabled={isJoining || joinCode.length < 4}>
-                    {isJoining ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enroll in Course'}
+                  <Button type="submit" className="w-full h-14 rounded-2xl font-bold text-lg" disabled={isJoining || joinCode.length < 4}>
+                    {isJoining ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Enroll Now'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -247,67 +250,71 @@ export function StudentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="shadow-sm border-none bg-white">
+        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Assignments
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" /> Assignments Pending
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{allAssignments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Active tasks</p>
+            <p className="text-xs text-muted-foreground mt-1">Current workload</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-none bg-white">
+        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-emerald-500">
-              <CheckCircle2 className="h-4 w-4" /> Total Submitted
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-emerald-500">
+              <CheckCircle2 className="h-4 w-4" /> Assignments Done
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : totalSubmissionsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Work completed</p>
+            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalSubmissionsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Work submitted</p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-none bg-white">
+        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-500">
-              <HelpCircle className="h-4 w-4" /> AI Quizzes
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-orange-500">
+              <HelpCircle className="h-4 w-4" /> AI Quizzes Done
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /> : totalQuizzesCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Assessments done</p>
+            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalQuizzesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Assessments completed</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl border-none">
+        <Card className="bg-primary text-primary-foreground shadow-2xl border-none overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Trophy className="h-16 w-16" />
+          </div>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 opacity-90">
-              <Target className="h-4 w-4" /> Status
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 opacity-90">
+              <Target className="h-4 w-4" /> Standing
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{myCourses.length > 0 ? 'Active' : 'N/A'}</div>
-            <p className="text-xs opacity-75 mt-1">Academic standing</p>
+            <div className="text-3xl font-bold">{myCourses.length > 0 ? 'Active' : 'N/A'}</div>
+            <p className="text-xs opacity-75 mt-1">Academic status</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-xl font-headline font-semibold flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" /> My Enrolled Courses
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-8">
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+            <BookOpen className="h-6 w-6 text-primary" /> My Enrolled Courses
           </h2>
           {myCourses.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {myCourses.map((course) => (
-                <Card key={course.id} className="h-full border-l-4 border-l-primary group">
+                <Card key={course.id} className="h-full border-border group hover:border-primary/20 transition-all bg-card/50 overflow-hidden">
+                  <div className="h-1.5 bg-primary/10 group-hover:bg-primary transition-colors" />
                   <CardHeader>
-                    <div className="flex justify-between items-start mb-1">
-                      <Badge variant="secondary">{course.code}</Badge>
+                    <div className="flex justify-between items-start mb-3">
+                      <Badge variant="secondary" className="font-bold">{course.code}</Badge>
                       <Link href={`/student/courses/${course.id}`}>
                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                            <ArrowRight className="h-4 w-4" />
@@ -315,13 +322,13 @@ export function StudentDashboard() {
                       </Link>
                     </div>
                     <Link href={`/student/courses/${course.id}`}>
-                      <CardTitle className="text-lg hover:text-primary transition-colors">{course.name}</CardTitle>
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors leading-tight">{course.name}</CardTitle>
                     </Link>
                   </CardHeader>
                   <CardContent>
                     <Link href={`/student/courses/${course.id}`}>
-                      <Button variant="outline" className="w-full text-xs font-bold gap-2">
-                        My Dashboard <ArrowRight className="h-3 w-3" />
+                      <Button variant="outline" className="w-full text-xs font-bold gap-2 h-10 rounded-xl">
+                        Portal Entry <ArrowRight className="h-3.5 w-3.5" />
                       </Button>
                     </Link>
                   </CardContent>
@@ -329,44 +336,46 @@ export function StudentDashboard() {
               ))}
             </div>
           ) : (
-            <div className="p-12 text-center border-2 border-dashed rounded-xl bg-white/50">
-              <Search className="h-8 w-8 text-primary/40 mx-auto mb-4" />
-              <h3 className="font-bold text-lg">Not enrolled in any courses</h3>
-              <p className="text-muted-foreground text-sm mb-6">Use a join code to get started.</p>
-              <Button variant="outline" onClick={() => setIsDialogOpen(true)}>Join Your First Course</Button>
+            <div className="p-20 text-center border-2 border-dashed rounded-[2rem] bg-card/30">
+              <Search className="h-10 w-10 text-primary/40 mx-auto mb-6" />
+              <h3 className="text-lg font-bold">No active enrollments</h3>
+              <p className="text-muted-foreground text-sm mb-8 max-w-xs mx-auto">Use a portal code from your professor to begin your coursework.</p>
+              <Button onClick={() => setIsDialogOpen(true)} className="font-bold px-8">Join Your First Course</Button>
             </div>
           )}
         </div>
 
-        <div className="space-y-6">
-          <h2 className="text-xl font-headline font-semibold flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" /> Upcoming Deadlines
+        <div className="space-y-8">
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+            <Calendar className="h-6 w-6 text-primary" /> Upcoming Deadlines
           </h2>
           <div className="space-y-4">
             {isAssignmentsLoading ? (
-              <Loader2 className="h-6 w-6 animate-spin text-primary/40 mx-auto" />
+              <div className="p-10 flex justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary/40" />
+              </div>
             ) : allAssignments.length > 0 ? (
               allAssignments.map((assignment) => (
-                <Card key={assignment.id} className="border-none shadow-sm bg-white">
-                  <CardContent className="p-4 space-y-3">
+                <Card key={assignment.id} className="border-border bg-card/50 hover:border-primary/20 transition-all">
+                  <CardContent className="p-5 space-y-4">
                     <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <Badge variant="outline" className="text-[10px] border-primary/20 text-primary uppercase font-bold">
+                      <div className="space-y-1.5">
+                        <Badge variant="outline" className="text-[9px] border-primary/20 text-primary uppercase font-bold tracking-widest">
                           {assignment.courseCode}
                         </Badge>
-                        <h4 className="text-sm font-bold leading-none">{assignment.title}</h4>
+                        <h4 className="text-sm font-bold leading-tight line-clamp-1">{assignment.title}</h4>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Clock className="h-3 w-3" /> {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'No Deadline'}
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      <Clock className="h-3.5 w-3.5" /> Due {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'N/A'}
                     </div>
                   </CardContent>
                 </Card>
               ))
             ) : (
-              <div className="p-6 text-center border rounded-lg bg-primary/5 border-dashed">
-                <AlertCircle className="h-5 w-5 text-primary mx-auto mb-2" />
-                <p className="text-sm font-semibold">No Active Assignments</p>
+              <div className="p-10 text-center border-2 border-dashed rounded-2xl bg-card/30">
+                <AlertCircle className="h-6 w-6 text-primary/40 mx-auto mb-3" />
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No Pending Tasks</p>
               </div>
             )}
           </div>

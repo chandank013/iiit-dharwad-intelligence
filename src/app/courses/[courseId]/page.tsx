@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -48,7 +49,9 @@ import {
   Settings2,
   MoreVertical,
   ExternalLink,
-  HelpCircle
+  HelpCircle,
+  Trophy,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -134,6 +137,7 @@ export default function CoursePortalPage() {
   const [itemToReturn, setItemToReturn] = useState<any | null>(null);
   
   const [courseSubmissions, setCourseSubmissions] = useState<any[]>([]);
+  const [quizSubmissions, setQuizSubmissions] = useState<any[]>([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
 
   // Quiz Generation State
@@ -186,7 +190,7 @@ export default function CoursePortalPage() {
   const { data: quizzes } = useCollection(quizzesQuery);
 
   useEffect(() => {
-    async function fetchSubmissions() {
+    async function fetchData() {
       if (!firestore || !assignments || assignments.length === 0) {
         setCourseSubmissions([]);
         return;
@@ -194,6 +198,7 @@ export default function CoursePortalPage() {
 
       setIsSubmissionsLoading(true);
       try {
+        // Fetch Assignment Submissions
         const submissionPromises = assignments.map(async (assignment) => {
           const subsRef = collection(firestore, 'courses', courseId as string, 'assignments', assignment.id, 'submissions');
           const subsSnap = await getDocs(subsRef);
@@ -215,18 +220,33 @@ export default function CoursePortalPage() {
           });
         
         setCourseSubmissions(flattened);
+
+        // Fetch Quiz Submissions
+        const qSubsRef = collection(firestore, 'courses', courseId as string, 'quiz_submissions');
+        const qSubsSnap = await getDocs(qSubsRef);
+        const qFlattened = qSubsSnap.docs.map(d => ({ ...d.data(), id: d.id }))
+          .filter(s => {
+            if (!allUsers) return true;
+            const student = allUsers.find(u => u.id === s.studentId);
+            const fullName = `${student?.firstName || ''} ${student?.lastName || ''}`.toLowerCase();
+            return !fullName.includes("chandan kumar");
+          });
+        setQuizSubmissions(qFlattened);
+
       } catch (err) {
-        console.error("Error fetching course submissions:", err);
+        console.error("Error fetching course data:", err);
       } finally {
         setIsSubmissionsLoading(false);
       }
     }
 
-    fetchSubmissions();
+    fetchData();
   }, [firestore, assignments, courseId, allUsers]);
 
   const analyticsData = useMemo(() => {
-    if (!courseSubmissions || !assignments) return { distribution: [], performance: [] };
+    if (!courseSubmissions || !assignments || !quizSubmissions) return { distribution: [], performance: [], quizStats: [] };
+    
+    // Assignment Analytics
     const graded = courseSubmissions.filter(s => s.status === 'graded');
     const distribution = [
       { name: '0-50', value: 0, color: '#ef4444' },
@@ -241,13 +261,22 @@ export default function CoursePortalPage() {
       else if (score < 90) distribution[2].value++;
       else distribution[3].value++;
     });
+    
     const performance = assignments.map(a => {
       const subs = graded.filter(s => s.assignmentId === a.id);
       const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / subs.length) : 0;
       return { name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title, average: avg };
     }).reverse();
-    return { distribution: distribution.filter(d => d.value > 0), performance };
-  }, [courseSubmissions, assignments]);
+
+    // Quiz Analytics
+    const quizStats = quizzes?.map(q => {
+      const subs = quizSubmissions.filter(s => s.quizId === q.id);
+      const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.score || 0), 0) / subs.length) : 0;
+      return { name: q.title.length > 15 ? q.title.substring(0, 15) + '...' : q.title, average: avg, attempts: subs.length };
+    }).reverse() || [];
+
+    return { distribution: distribution.filter(d => d.value > 0), performance, quizStats };
+  }, [courseSubmissions, assignments, quizSubmissions, quizzes]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -697,65 +726,111 @@ export default function CoursePortalPage() {
         )}
 
         {activeTab === 'analytics' && (
-          <div className="p-10 space-y-10">
-            <h1 className="text-3xl font-bold tracking-tighter">Performance Insights</h1>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="p-8 space-y-6">
-                <CardHeader className="p-0">
-                  <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" /> Grade Distribution
-                  </CardTitle>
-                  <CardDescription>Breakdown of AI-evaluated scores.</CardDescription>
-                </CardHeader>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={analyticsData.distribution}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {analyticsData.distribution.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-wrap justify-center gap-6">
-                  {analyticsData.distribution.map((d: any, i: number) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                      {d.name}: {d.value}
-                    </div>
-                  ))}
-                </div>
-              </Card>
+          <div className="p-10 space-y-12">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tighter">Performance Insights</h1>
+              <p className="text-muted-foreground">Comprehensive analysis of assignments and automated quizzes.</p>
+            </div>
 
-              <Card className="p-8 space-y-6">
-                <CardHeader className="p-0">
-                  <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" /> Assignment Averages
-                  </CardTitle>
-                  <CardDescription>Comparison across all tasks.</CardDescription>
-                </CardHeader>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analyticsData.performance}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
-                      <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
-                      <Tooltip />
-                      <Bar dataKey="average" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+            <div className="space-y-8">
+              <div className="flex items-center gap-3 border-b border-border pb-4">
+                <BookOpen className="h-6 w-6 text-primary" />
+                <h2 className="text-xl font-bold">Assignment Performance</h2>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card className="p-8 space-y-6">
+                  <CardHeader className="p-0">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" /> Grade Distribution
+                    </CardTitle>
+                    <CardDescription>Breakdown of AI-evaluated assignment scores.</CardDescription>
+                  </CardHeader>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={analyticsData.distribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {analyticsData.distribution.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-6">
+                    {analyticsData.distribution.map((d: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                        {d.name}: {d.value}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-8 space-y-6">
+                  <CardHeader className="p-0">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-primary" /> Average Assignment Scores
+                    </CardTitle>
+                    <CardDescription>Comparison across all historical tasks.</CardDescription>
+                  </CardHeader>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData.performance}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
+                        <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
+                        <Tooltip />
+                        <Bar dataKey="average" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="flex items-center gap-3 border-b border-border pb-4">
+                <HelpCircle className="h-6 w-6 text-orange-500" />
+                <h2 className="text-xl font-bold">AI Quiz Performance</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-8">
+                <Card className="p-8 space-y-6">
+                  <CardHeader className="p-0">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-orange-500" /> Quiz Averages & Engagement
+                    </CardTitle>
+                    <CardDescription>Success rates and participation levels for automated assessments.</CardDescription>
+                  </CardHeader>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={analyticsData.quizStats}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
+                        <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
+                        <Tooltip />
+                        <Bar dataKey="average" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-center gap-10">
+                    {analyticsData.quizStats.map((q: any, i: number) => (
+                      <div key={i} className="text-center space-y-1">
+                        <div className="text-xs font-bold">{q.attempts}</div>
+                        <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Attempts</div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
             </div>
           </div>
         )}
@@ -767,7 +842,7 @@ export default function CoursePortalPage() {
                 <h1 className="text-3xl font-bold tracking-tighter">Resources & Feed</h1>
                 <p className="text-muted-foreground">Share announcements, files, and links with students.</p>
               </div>
-              <Button onClick={() => setIsContentDialogOpen(true)} size="icon" className="rounded-full h-12 w-12 shadow-xl">
+              <Button onClick={() => setIsContentDialogOpen(false)} size="icon" className="rounded-full h-12 w-12 shadow-xl" onClick={() => setIsContentDialogOpen(true)}>
                 <Plus className="h-6 w-6" />
               </Button>
             </div>

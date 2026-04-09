@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, FileText, CheckCircle, AlertTriangle, ArrowRight, TrendingUp, BarChart3, Loader2, BookOpen, Activity } from "lucide-react";
+import { PlusCircle, Users, FileText, CheckCircle, AlertTriangle, ArrowRight, TrendingUp, BarChart3, Loader2, BookOpen, Activity, HelpCircle, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
@@ -30,17 +30,20 @@ export function ProfessorDashboard() {
 
   const { data: enrollments, isLoading: isEnrollmentsLoading } = useCollection(enrollmentsQuery);
 
-  // State to hold derived counts to avoid collectionGroup index errors
+  // State to hold derived counts
   const [assignmentCount, setAssignmentCount] = useState(0);
   const [pendingSubmissionsCount, setPendingSubmissionsCount] = useState(0);
+  const [quizCount, setQuizCount] = useState(0);
+  const [quizAttemptsCount, setQuizAttemptsCount] = useState(0);
   const [isLoadingCounts, setIsLoadingCounts] = useState(false);
 
-  // Derive counts by iterating through courses manually to bypass index requirement for collectionGroup
   useEffect(() => {
     async function fetchCounts() {
       if (!firestore || !courses || courses.length === 0) {
         setAssignmentCount(0);
         setPendingSubmissionsCount(0);
+        setQuizCount(0);
+        setQuizAttemptsCount(0);
         return;
       }
 
@@ -48,13 +51,15 @@ export function ProfessorDashboard() {
       try {
         let totalA = 0;
         let totalP = 0;
+        let totalQ = 0;
+        let totalQA = 0;
 
         const promises = courses.map(async (course) => {
+          // Fetch Assignments & Pending
           const assignmentsRef = collection(firestore, 'courses', course.id, 'assignments');
           const assignmentsSnap = await getDocs(assignmentsRef);
           totalA += assignmentsSnap.size;
 
-          // For each assignment, check for submissions that are 'submitted'
           const submissionsPromises = assignmentsSnap.docs.map(async (aDoc) => {
             const subsRef = collection(firestore, 'courses', course.id, 'assignments', aDoc.id, 'submissions');
             const pQuery = query(subsRef, where('status', '==', 'submitted'));
@@ -64,11 +69,22 @@ export function ProfessorDashboard() {
 
           const pResults = await Promise.all(submissionsPromises);
           totalP += pResults.reduce((acc, curr) => acc + curr, 0);
+
+          // Fetch Quizzes & Attempts
+          const quizzesRef = collection(firestore, 'courses', course.id, 'quizzes');
+          const quizzesSnap = await getDocs(quizzesRef);
+          totalQ += quizzesSnap.size;
+
+          const quizAttemptsRef = collection(firestore, 'courses', course.id, 'quiz_submissions');
+          const quizAttemptsSnap = await getDocs(quizAttemptsRef);
+          totalQA += quizAttemptsSnap.size;
         });
 
         await Promise.all(promises);
         setAssignmentCount(totalA);
         setPendingSubmissionsCount(totalP);
+        setQuizCount(totalQ);
+        setQuizAttemptsCount(totalQA);
       } catch (err) {
         console.error("Error calculating dashboard counts:", err);
       } finally {
@@ -94,98 +110,99 @@ export function ProfessorDashboard() {
   }
 
   return (
-    <div className="space-y-8 py-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-10 py-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-headline font-bold">Professor Hub</h1>
-          <p className="text-muted-foreground">Manage your courses, assignments, and evaluate student progress.</p>
+          <h1 className="text-4xl font-bold tracking-tight">Professor Hub</h1>
+          <p className="text-muted-foreground font-medium mt-1">Manage courses, assessments, and AI-driven insights.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Link href="/audit">
-            <Button variant="outline" className="font-semibold gap-2 border-primary/20 hover:bg-primary/5">
-              <Activity className="h-4 w-4" /> Activity Logs
+            <Button variant="outline" className="font-bold gap-2 h-12 px-6 rounded-xl border-primary/20 hover:bg-primary/5">
+              <Activity className="h-4 w-4" /> Activity
             </Button>
           </Link>
           <Link href="/courses/create">
-            <Button className="font-semibold gap-2 shadow-lg">
+            <Button className="font-bold gap-2 h-12 px-6 rounded-xl shadow-xl shadow-primary/20">
               <PlusCircle className="h-4 w-4" /> Create Course
             </Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-none shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Students</CardTitle>
+            <GraduationCap className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{uniqueStudentsCount}</div>
-            <p className="text-xs text-muted-foreground">Across all course portals</p>
+            <div className="text-3xl font-bold">{uniqueStudentsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all portals</p>
           </CardContent>
         </Card>
         
-        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border-none shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Active Portals</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Portals</CardTitle>
+            <BookOpen className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{courses?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Live courses offered</p>
+            <div className="text-3xl font-bold">{courses?.length || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Live environments</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border-none shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Assignments</CardTitle>
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assignments</CardTitle>
             <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{assignmentCount}</div>
-            <p className="text-xs text-muted-foreground">Total tasks assigned</p>
+            <div className="text-3xl font-bold">{assignmentCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{pendingSubmissionsCount} pending evaluation</p>
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+        <Card className="border-none shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Quizzes</CardTitle>
+            <HelpCircle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{pendingSubmissionsCount}</div>
-            <p className="text-xs text-muted-foreground">Work awaiting evaluation</p>
+            <div className="text-3xl font-bold">{quizCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{quizAttemptsCount} attempts recorded</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-8">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-headline font-semibold">Live Courses</h2>
-            <Link href="/courses" className="text-sm text-primary hover:underline font-medium">View all</Link>
+            <h2 className="text-2xl font-bold tracking-tight">Active Course Portals</h2>
+            <Link href="/courses" className="text-xs font-bold text-primary hover:underline uppercase tracking-widest">View Catalog</Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {courses && courses.length > 0 ? (
               courses.map((course) => {
                 const courseStudents = enrollments?.filter(e => e.courseId === course.id).length || 0;
                 return (
-                  <Card key={course.id} className="group hover:border-primary transition-colors cursor-pointer border-none shadow-sm">
+                  <Card key={course.id} className="group hover:border-primary/20 transition-all border-border bg-card/50 overflow-hidden">
+                    <div className="h-1.5 bg-primary/10 group-hover:bg-primary transition-colors" />
                     <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <Badge variant="secondary" className="mb-2">{course.code}</Badge>
-                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded tracking-widest">{course.joinCode}</span>
+                      <div className="flex justify-between items-start mb-3">
+                        <Badge variant="secondary" className="font-bold">{course.code}</Badge>
+                        <span className="text-[10px] font-mono bg-muted px-2 py-0.5 rounded tracking-widest font-bold">ID: {course.joinCode}</span>
                       </div>
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors">{course.name}</CardTitle>
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors leading-tight">{course.name}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {courseStudents} Students</span>
+                    <CardContent className="space-y-6">
+                      <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> {courseStudents} Students</span>
                       </div>
                       <Link href={`/courses/${course.id}`}>
-                        <Button variant="ghost" className="w-full mt-4 justify-between group">
-                          Enter Course Portal <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        <Button variant="secondary" className="w-full justify-between font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                          Enter Portal <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                         </Button>
                       </Link>
                     </CardContent>
@@ -193,57 +210,65 @@ export function ProfessorDashboard() {
                 );
               })
             ) : (
-              <div className="col-span-2 p-12 text-center border-2 border-dashed rounded-xl bg-white/50 text-muted-foreground">
-                <div className="mb-4 flex justify-center">
-                  <BookOpen className="h-10 w-10 opacity-20" />
+              <div className="col-span-2 p-20 text-center border-2 border-dashed rounded-[2rem] bg-card/30">
+                <div className="mb-6 p-4 bg-primary/5 rounded-full w-fit mx-auto">
+                  <BookOpen className="h-10 w-10 text-primary/40" />
                 </div>
-                <p className="font-medium">No courses launched yet.</p>
+                <h3 className="text-lg font-bold">No portals launched</h3>
+                <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6">Start by creating your first digital course environment.</p>
                 <Link href="/courses/create">
-                  <Button variant="link" className="mt-2 text-primary font-bold">Launch your first course</Button>
+                  <Button className="font-bold px-8">Create Portal</Button>
                 </Link>
               </div>
             )}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <h2 className="text-xl font-headline font-semibold">System Insights</h2>
-          <Card className="border-none shadow-sm">
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex gap-4 items-start p-3 rounded-lg bg-primary/5">
-                <div className="h-2 w-2 mt-1.5 rounded-full bg-primary shrink-0" />
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-semibold">Real-time Monitoring</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Course portals and student work are audited automatically for integrity.
-                  </p>
-                  <span className="text-[10px] font-bold text-primary mt-1 uppercase">Cloud Guard Online</span>
+        <div className="space-y-8">
+          <h2 className="text-2xl font-bold tracking-tight">Intelligence</h2>
+          <div className="space-y-6">
+            <Card className="border-border bg-card/50">
+              <CardContent className="pt-8 space-y-6">
+                <div className="flex gap-5 items-start">
+                  <div className="p-3 bg-primary/10 rounded-2xl text-primary">
+                    <Activity className="h-5 w-5" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-sm font-bold">Cloud Integrity Guard</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Real-time monitoring of student work and system interactions across all courses.
+                    </p>
+                    <Badge variant="outline" className="text-[8px] font-bold uppercase tracking-widest border-primary/20 text-primary w-fit mt-2">Active Monitor</Badge>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-primary text-primary-foreground shadow-xl border-none">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <BarChart3 className="h-5 w-5" /> Analytics Engine
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-xs opacity-90 leading-relaxed">
-                Evaluating student performance and identifying weak areas across all your active courses.
-              </p>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
-                  <span>Processing</span>
-                  <span>Active</span>
-                </div>
-                <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white w-1/3 animate-[progress_2s_ease-in-out_infinite]" />
-                </div>
+            <Card className="bg-primary text-primary-foreground shadow-2xl border-none overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <BarChart3 className="h-20 w-20" />
               </div>
-            </CardContent>
-          </Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                  <TrendingUp className="h-5 w-5" /> Analytics Engine
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-xs font-medium opacity-90 leading-relaxed">
+                  Synthesizing student performance data to identify cognitive gaps and curriculum strengths.
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
+                    <span>Synthesizing</span>
+                    <span>94% Accurate</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-white w-2/3 animate-[progress_3s_ease-in-out_infinite]" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
