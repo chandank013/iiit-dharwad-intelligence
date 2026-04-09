@@ -378,7 +378,7 @@ export default function StudentCoursePage() {
                   <CardContent className="p-0">
                     <div className="divide-y divide-border">
                       {assignments && assignments.length > 0 ? (
-                        assignments.slice(0, 3).map((task, i) => {
+                        assignments.slice(0, 5).map((task, i) => {
                           const isSubmitted = submittedAssignmentIds.has(task.id);
                           const deadlinePassed = task.deadline && new Date() > new Date(task.deadline);
                           return (
@@ -408,6 +408,57 @@ export default function StudentCoursePage() {
                         })
                       ) : (
                         <div className="p-10 text-center text-xs text-muted-foreground italic">No upcoming tasks.</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border overflow-hidden rounded-2xl shadow-sm">
+                  <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <HelpCircle className="h-4 w-4 text-orange-500" /> Quiz Queue
+                    </CardTitle>
+                    <button onClick={() => setActiveTab('quizzes')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase hover:underline">
+                      View all <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-border">
+                      {quizzes && quizzes.length > 0 ? (
+                        quizzes.slice(0, 5).map((quiz, i) => {
+                          const isDone = completedQuizIds.has(quiz.id);
+                          const deadlinePassed = quiz.deadline && new Date() > new Date(quiz.deadline);
+                          const isMissing = !isDone && deadlinePassed;
+                          
+                          return (
+                            <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => handleStartQuiz(quiz)}>
+                              <div className="space-y-1">
+                                <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                                  {quiz.title}
+                                  {isDone ? (
+                                    <Badge variant="outline" className="text-[8px] h-4 font-bold bg-emerald-50 text-emerald-600 border-emerald-100 uppercase">Done</Badge>
+                                  ) : isMissing ? (
+                                    <Badge variant="destructive" className="text-[8px] h-4 font-bold uppercase">Missing</Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="text-[8px] h-4 font-bold uppercase">Pending</Badge>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-medium">
+                                  {quiz.deadline ? `Due: ${new Date(quiz.deadline).toLocaleDateString()}` : 'No Deadline'}
+                                </div>
+                              </div>
+                              {isDone ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              ) : isMissing ? (
+                                <AlertTriangle className="h-4 w-4 text-rose-500" />
+                              ) : (
+                                <Clock className="h-4 w-4 text-orange-500" />
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="p-10 text-center text-xs text-muted-foreground italic">No assessments available.</div>
                       )}
                     </div>
                   </CardContent>
