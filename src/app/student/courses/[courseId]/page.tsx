@@ -46,7 +46,8 @@ import {
   HelpCircle,
   Play,
   RotateCcw,
-  XCircle
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +68,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter
+  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { aiQuizEvaluator } from '@/ai/flows/ai-quiz-evaluator';
@@ -89,6 +91,9 @@ export default function StudentCoursePage() {
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [quizResult, setQuizResult] = useState<any | null>(null);
+
+  // Resubmit Info State
+  const [isUnsubmitReminderOpen, setIsUnsubmitReminderOpen] = useState(false);
 
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
@@ -438,11 +443,13 @@ export default function StudentCoursePage() {
                             )}
 
                             {isSubmitted && !deadlinePassed && (
-                              <Link href={`/student/courses/${courseId}/submit/${assignment.id}`}>
-                                <Button variant="outline" className="rounded-xl font-bold gap-2 h-11 px-6">
-                                  View Submission <ExternalLink className="h-4 w-4" />
-                                </Button>
-                              </Link>
+                              <Button 
+                                variant="outline" 
+                                className="rounded-xl font-bold gap-2 h-11 px-6"
+                                onClick={() => setIsUnsubmitReminderOpen(true)}
+                              >
+                                Resubmit <RotateCcw className="h-4 w-4" />
+                              </Button>
                             )}
 
                             {deadlinePassed && !isSubmitted && (
@@ -733,6 +740,41 @@ export default function StudentCoursePage() {
             ) : (
               <Button onClick={() => setActiveQuiz(null)} className="w-full h-16 rounded-2xl font-bold text-lg shadow-lg">Return to Course Feed</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resubmit Info Dialog */}
+      <Dialog open={isUnsubmitReminderOpen} onOpenChange={setIsUnsubmitReminderOpen}>
+        <DialogContent className="rounded-[2rem] max-w-md">
+          <DialogHeader>
+            <div className="mx-auto p-3 bg-primary/10 rounded-2xl text-primary w-fit mb-4">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <DialogTitle className="text-center text-2xl font-bold">Unsubmit Required</DialogTitle>
+            <DialogDescription className="text-center font-medium py-4">
+              To resubmit this assignment, you must first <span className="font-bold text-foreground">unsubmit</span> your current work from the <span className="font-bold text-primary italic">My Submission History</span> tab.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-muted/30 p-6 rounded-2xl border border-border space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Steps to resubmit:</p>
+            <ol className="text-xs space-y-2 font-medium">
+              <li className="flex items-center gap-2">
+                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">1</span>
+                Go to <span className="font-bold">My Submission History</span> tab.
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">2</span>
+                Click <span className="font-bold text-rose-500">Unsubmit</span> next to the task.
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">3</span>
+                Return here to <span className="font-bold text-primary">Start Work</span> again.
+              </li>
+            </ol>
+          </div>
+          <DialogFooter className="pt-6">
+            <Button onClick={() => setIsUnsubmitReminderOpen(false)} className="w-full rounded-xl font-bold h-12">Understood</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
