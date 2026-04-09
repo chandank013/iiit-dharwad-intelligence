@@ -44,7 +44,8 @@ import {
   CheckCircle2,
   ExternalLink,
   HelpCircle,
-  Play
+  Play,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -150,6 +151,11 @@ export default function StudentCoursePage() {
   }, [quizSubmissions]);
 
   const handleStartQuiz = (quiz: any) => {
+    const isLocked = quiz.deadline && new Date() > new Date(quiz.deadline);
+    if (isLocked && !completedQuizIds.has(quiz.id)) {
+      toast({ title: "Quiz Expired", description: "The deadline for this assessment has passed.", variant: "destructive" });
+      return;
+    }
     setActiveQuiz(quiz);
     setQuizAnswers(new Array(quiz.questions.length).fill(-1));
     setQuizResult(null);
@@ -428,26 +434,37 @@ export default function StudentCoursePage() {
                   quizzes.map((quiz) => {
                     const isCompleted = completedQuizIds.has(quiz.id);
                     const sub = quizSubmissions?.find(s => s.quizId === quiz.id);
+                    const deadlinePassed = quiz.deadline && new Date() > new Date(quiz.deadline);
+                    const isLocked = deadlinePassed && !isCompleted;
+
                     return (
-                      <Card key={quiz.id} className="border-border hover:border-primary/20 transition-all flex flex-col">
+                      <Card key={quiz.id} className={cn("border-border hover:border-primary/20 transition-all flex flex-col", isLocked && "opacity-60")}>
                         <CardHeader>
                           <div className="flex justify-between items-start mb-2">
-                            <Badge variant={isCompleted ? "outline" : "secondary"}>
-                              {isCompleted ? "Completed" : "Available"}
-                            </Badge>
+                            <div className="flex flex-col gap-1.5">
+                              <Badge variant={isCompleted ? "outline" : "secondary"}>
+                                {isCompleted ? "Completed" : deadlinePassed ? "Expired" : "Available"}
+                              </Badge>
+                              {quiz.deadline && (
+                                <span className={cn("text-[10px] font-bold uppercase", deadlinePassed ? "text-rose-500" : "text-muted-foreground")}>
+                                  Due: {new Date(quiz.deadline).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
                             {isCompleted && <div className="text-lg font-bold text-primary">{sub?.score}%</div>}
                           </div>
                           <CardTitle className="text-lg font-bold leading-tight line-clamp-2">{quiz.title}</CardTitle>
                         </CardHeader>
-                        <CardContent className="flex-1">
+                        <CardContent className="flex-1 mt-auto">
                           <p className="text-xs text-muted-foreground mb-4">{quiz.questions.length} AI-generated questions</p>
                           <Button 
                             className="w-full rounded-xl font-bold gap-2" 
-                            variant={isCompleted ? "secondary" : "default"}
+                            variant={isCompleted ? "secondary" : isLocked ? "outline" : "default"}
                             onClick={() => handleStartQuiz(quiz)}
+                            disabled={isLocked}
                           >
                             {isCompleted ? <RotateCcw className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                            {isCompleted ? "Review Results" : "Attempt Quiz"}
+                            {isCompleted ? "Review Results" : isLocked ? "Locked" : "Attempt Quiz"}
                           </Button>
                         </CardContent>
                       </Card>

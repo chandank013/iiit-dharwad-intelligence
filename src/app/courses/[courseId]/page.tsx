@@ -140,6 +140,7 @@ export default function CoursePortalPage() {
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [quizTopic, setQuizTopic] = useState('');
+  const [quizDeadline, setQuizDeadline] = useState('');
   const [generatedQuiz, setQuizPreview] = useState<any>(null);
 
   useEffect(() => {
@@ -180,7 +181,7 @@ export default function CoursePortalPage() {
 
   const quizzesQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
-    return query(collection(firestore, 'courses', courseId as string, 'quizzes'));
+    return query(collection(firestore, 'courses', courseId as string, 'quizzes'), orderBy('createdAt', 'desc'));
   }, [firestore, courseId]);
   const { data: quizzes } = useCollection(quizzesQuery);
 
@@ -350,12 +351,14 @@ export default function CoursePortalPage() {
       const quizRef = collection(firestore, 'courses', courseId as string, 'quizzes');
       await addDoc(quizRef, {
         ...generatedQuiz,
+        deadline: quizDeadline || null,
         createdAt: serverTimestamp(),
         isActive: true
       });
       setIsQuizDialogOpen(false);
       setQuizPreview(null);
       setQuizTopic('');
+      setQuizDeadline('');
       toast({ title: "Quiz Published to Students" });
     } catch (e) {
       toast({ title: "Failed to Publish", variant: "destructive" });
@@ -646,32 +649,42 @@ export default function CoursePortalPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {quizzes && quizzes.length > 0 ? (
-                quizzes.map((quiz) => (
-                  <Card key={quiz.id} className="border-border hover:border-primary/20 transition-all">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <Badge variant="secondary" className="mb-2">AI Generated</Badge>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="text-rose-500 font-bold" onClick={() => setItemToDelete({ id: quiz.id, type: 'quiz' })}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete Quiz
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <CardTitle className="text-xl font-bold leading-tight">{quiz.title}</CardTitle>
-                      <CardDescription>{quiz.questions.length} Questions • Instant Grading</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                        <Clock className="h-3 w-3" /> Created {new Date(quiz.createdAt?.seconds * 1000).toLocaleDateString()}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                quizzes.map((quiz) => {
+                  const deadlinePassed = quiz.deadline && new Date() > new Date(quiz.deadline);
+                  return (
+                    <Card key={quiz.id} className="border-border hover:border-primary/20 transition-all flex flex-col">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col gap-1.5">
+                            <Badge variant="secondary" className="w-fit">AI Generated</Badge>
+                            {quiz.deadline && (
+                              <Badge variant={deadlinePassed ? "destructive" : "outline"} className="text-[10px] w-fit">
+                                {deadlinePassed ? "Expired" : `Due: ${new Date(quiz.deadline).toLocaleDateString()}`}
+                              </Badge>
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem className="text-rose-500 font-bold" onClick={() => setItemToDelete({ id: quiz.id, type: 'quiz' })}>
+                                <Trash2 className="h-4 w-4 mr-2" /> Delete Quiz
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <CardTitle className="text-xl font-bold leading-tight mt-4">{quiz.title}</CardTitle>
+                        <CardDescription>{quiz.questions.length} Questions • Instant Grading</CardDescription>
+                      </CardHeader>
+                      <CardContent className="mt-auto">
+                        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                          <Clock className="h-3 w-3" /> Created {new Date(quiz.createdAt?.seconds * 1000).toLocaleDateString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
               ) : (
                 <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl bg-card">
                   <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
@@ -945,7 +958,16 @@ export default function CoursePortalPage() {
                     className="min-h-[200px] rounded-2xl bg-accent/30 border-none p-6 leading-relaxed"
                   />
                 </div>
-                <div className="flex gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deadline (Optional)</Label>
+                  <Input 
+                    type="datetime-local" 
+                    value={quizDeadline} 
+                    onChange={(e) => setQuizDeadline(e.target.value)}
+                    className="rounded-xl bg-accent/30 border-none"
+                  />
+                </div>
+                <div className="flex gap-4 pt-4">
                   <Button 
                     variant="outline" 
                     className="flex-1 rounded-xl h-12 font-bold gap-2"

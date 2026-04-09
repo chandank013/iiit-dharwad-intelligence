@@ -96,11 +96,11 @@ export function StudentDashboard() {
         let totalQ = 0;
         
         const dataPromises = enrollments.map(async (enrollment) => {
-          const courseRef = enrollment.courseId;
-          const course = allCourses?.find(c => c.id === courseRef);
+          const courseId = enrollment.courseId;
+          const course = allCourses?.find(c => c.id === courseId);
 
           // Fetch assignments for this course
-          const aq = query(collection(firestore, 'courses', courseRef, 'assignments'), limit(15));
+          const aq = query(collection(firestore, 'courses', courseId, 'assignments'), limit(15));
           const aSnap = await getDocs(aq);
           
           const courseAssignments = aSnap.docs.map(aDoc => ({ 
@@ -110,9 +110,9 @@ export function StudentDashboard() {
             courseCode: course?.code || ''
           }));
 
-          // Count submissions for this student across these assignments
+          // Count submissions for THIS student strictly
           const subPromises = aSnap.docs.map(async (aDoc) => {
-            const sq = query(collection(firestore, 'courses', courseRef, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
+            const sq = query(collection(firestore, 'courses', courseId, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
             const sSnap = await getDocs(sq);
             return sSnap.size;
           });
@@ -120,7 +120,7 @@ export function StudentDashboard() {
           if (!isChandan) totalS += subCounts.reduce((a, b) => a + b, 0);
 
           // Count quizzes completed
-          const qsq = query(collection(firestore, 'courses', courseRef, 'quiz_submissions'), where('studentId', '==', user.uid));
+          const qsq = query(collection(firestore, 'courses', courseId, 'quiz_submissions'), where('studentId', '==', user.uid));
           const qsSnap = await getDocs(qsq);
           if (!isChandan) totalQ += qsSnap.size;
 
