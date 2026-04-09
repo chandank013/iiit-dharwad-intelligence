@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -6,6 +7,7 @@ import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { GraduationCap, LayoutDashboard, ChevronDown, Mail, IdCard, LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -58,6 +60,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          <NotificationBell />
           <ThemeToggle />
           
           <DropdownMenu>

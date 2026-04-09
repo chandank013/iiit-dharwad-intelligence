@@ -357,7 +357,7 @@ export default function CoursePortalPage() {
     setIsPostingContent(true);
     try {
       const contentRef = collection(firestore, 'courses', courseId as string, 'content');
-      await addDoc(contentRef, {
+      const docRef = await addDoc(contentRef, {
         ...contentFormData,
         courseId,
         professorId: user.uid,
@@ -367,9 +367,27 @@ export default function CoursePortalPage() {
         likesCount: 0,
         isPinned: false
       });
+
+      // Notify all enrolled students
+      const enrollmentSnap = await getDocs(query(collection(firestore, 'course_enrollments'), where('courseId', '==', courseId)));
+      const notifyPromises = enrollmentSnap.docs.map(async (enrollmentDoc) => {
+        const studentId = enrollmentDoc.data().studentId;
+        const notifRef = collection(firestore, 'users', studentId, 'notifications');
+        return addDoc(notifRef, {
+          userId: studentId,
+          title: `New Content in ${course?.name}`,
+          message: `${user.displayName} posted: ${contentFormData.title}`,
+          type: 'content',
+          link: `/student/courses/${courseId}`,
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      });
+      await Promise.all(notifyPromises);
+
       setIsContentDialogOpen(false);
       setContentFormData({ title: '', type: 'announcement', body: '', attachmentUrl: '' });
-      toast({ title: "Content Published" });
+      toast({ title: "Content Published & Students Notified" });
     } catch (e) {
       toast({ title: "Failed to Post", variant: "destructive" });
     } finally {
@@ -474,7 +492,20 @@ export default function CoursePortalPage() {
     try {
       const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', itemToReturn.assignmentId, 'submissions', itemToReturn.id);
       await updateDoc(submissionRef, { status: 'returned', updatedAt: serverTimestamp() });
-      toast({ title: "Submission Returned" });
+      
+      // Notify student
+      const notifRef = collection(firestore, 'users', itemToReturn.submitterId, 'notifications');
+      await addDoc(notifRef, {
+        userId: itemToReturn.submitterId,
+        title: "Work Returned",
+        message: `Professor requested revision for: ${itemToReturn.assignmentTitle}`,
+        type: 'deadline',
+        link: `/student/courses/${courseId}/submit/${itemToReturn.assignmentId}`,
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
+      toast({ title: "Submission Returned & Student Notified" });
       setLastEvaluatedAt(new Date());
     } catch (error) { toast({ title: "Failed to Return", variant: "destructive" }); }
     finally { setItemToReturn(null); }

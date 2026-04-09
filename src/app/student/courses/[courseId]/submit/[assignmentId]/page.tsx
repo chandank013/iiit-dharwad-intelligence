@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -15,7 +16,8 @@ import {
   serverTimestamp,
   query,
   where,
-  updateDoc
+  updateDoc,
+  addDoc
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking 
@@ -120,6 +122,20 @@ export default function SubmitAssignmentPage() {
     setContent("file_uploaded_simulated_path_123.zip");
   };
 
+  const notifyProfessor = async () => {
+    if (!firestore || !assignment || !user) return;
+    const notifRef = collection(firestore, 'users', assignment.professorId, 'notifications');
+    await addDoc(notifRef, {
+      userId: assignment.professorId,
+      title: "New Submission",
+      message: `${user.displayName || 'A student'} submitted: ${assignment.title}`,
+      type: 'submission',
+      link: `/courses/${courseId}`,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!firestore || !user || !assignmentId || !content.trim() || !assignment) return;
@@ -143,19 +159,15 @@ export default function SubmitAssignmentPage() {
       status: 'submitted' 
     };
 
-    if (currentSubmission) {
-      const subRef = doc(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions', currentSubmission.id);
-      updateDoc(subRef, submissionData).then(() => {
-        toast({ title: "Resubmission Received" });
-        router.push(`/student/courses/${courseId}`);
-      }).finally(() => setIsSubmitting(false));
-    } else {
-      const submissionsCol = collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions');
-      addDocumentNonBlocking(submissionsCol, submissionData).then(() => {
-        toast({ title: "Submission Received" });
-        router.push(`/student/courses/${courseId}`);
-      }).finally(() => setIsSubmitting(false));
-    }
+    const action = currentSubmission 
+      ? updateDoc(doc(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions', currentSubmission.id), submissionData)
+      : addDoc(collection(firestore, 'courses', courseId as string, 'assignments', assignmentId as string, 'submissions'), submissionData);
+
+    action.then(async () => {
+      await notifyProfessor();
+      toast({ title: currentSubmission ? "Resubmission Received" : "Submission Received" });
+      router.push(`/student/courses/${courseId}`);
+    }).finally(() => setIsSubmitting(false));
   };
 
   if (isUserLoading || isAssignmentLoading || !user || !assignment) {
