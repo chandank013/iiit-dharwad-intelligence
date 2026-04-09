@@ -54,6 +54,7 @@ import {
   Activity,
   Layers,
   ChevronRight,
+  ArrowRight,
   Search,
   Target,
   AlertTriangle
