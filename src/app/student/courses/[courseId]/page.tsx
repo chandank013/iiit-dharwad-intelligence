@@ -45,7 +45,8 @@ import {
   ExternalLink,
   HelpCircle,
   Play,
-  RotateCcw
+  RotateCcw,
+  XCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -155,7 +156,6 @@ export default function StudentCoursePage() {
     const deadlinePassed = quiz.deadline && new Date() > new Date(quiz.deadline);
     
     if (isCompleted) {
-      // Allow viewing results
       const sub = quizSubmissions?.find(s => s.quizId === quiz.id);
       setActiveQuiz(quiz);
       setQuizResult(sub?.evaluation || { score: sub?.score, feedback: "Attempt previously submitted." });
@@ -203,6 +203,17 @@ export default function StudentCoursePage() {
       toast({ title: "Evaluation Failed", variant: "destructive" });
     } finally {
       setIsSubmittingQuiz(false);
+    }
+  };
+
+  const handleUnsubmit = async (sub: any) => {
+    if (!firestore || !courseId) return;
+    try {
+      const subRef = doc(firestore, 'courses', courseId as string, 'assignments', sub.assignmentId, 'submissions', sub.id);
+      await deleteDocumentNonBlocking(subRef);
+      toast({ title: "Work Unsubmitted", description: "You can now make changes and submit again." });
+    } catch (error) {
+      toast({ title: "Action Failed", variant: "destructive" });
     }
   };
 
@@ -429,7 +440,7 @@ export default function StudentCoursePage() {
                             {isSubmitted && !deadlinePassed && (
                               <Link href={`/student/courses/${courseId}/submit/${assignment.id}`}>
                                 <Button variant="outline" className="rounded-xl font-bold gap-2 h-11 px-6">
-                                  Resubmit <RotateCcw className="h-4 w-4" />
+                                  View Submission <ExternalLink className="h-4 w-4" />
                                 </Button>
                               </Link>
                             )}
@@ -507,43 +518,54 @@ export default function StudentCoursePage() {
               <h1 className="text-3xl font-bold tracking-tight">My Submission History</h1>
               <div className="grid gap-6">
                 {mySubmissions.length > 0 ? (
-                  mySubmissions.map((sub) => (
-                    <Card key={sub.id} className="border-border overflow-hidden group hover:border-primary/20 transition-all shadow-sm">
-                      <CardContent className="p-8 space-y-6">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-1">
-                            <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{sub.assignmentTitle}</h3>
-                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                              <Clock className="h-3.5 w-3.5" /> Submitted: {sub.submittedAt ? new Date(sub.submittedAt.seconds * 1000).toLocaleString() : 'Processing'}
+                  mySubmissions.map((sub) => {
+                    const assignment = assignments?.find(a => a.id === sub.assignmentId);
+                    const deadlinePassed = assignment?.deadline && new Date() > new Date(assignment.deadline);
+                    return (
+                      <Card key={sub.id} className="border-border overflow-hidden group hover:border-primary/20 transition-all shadow-sm">
+                        <CardContent className="p-8 space-y-6">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <h3 className="text-xl font-bold group-hover:text-primary transition-colors">{sub.assignmentTitle}</h3>
+                              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                <Clock className="h-3.5 w-3.5" /> Submitted: {sub.submittedAt ? new Date(sub.submittedAt.seconds * 1000).toLocaleString() : 'Processing'}
+                              </div>
                             </div>
+                            {sub.status === 'graded' ? (
+                              <div className="text-right">
+                                <div className="text-3xl font-bold text-primary">{sub.evaluation?.totalScore}%</div>
+                                <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">AI Evaluated</div>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-amber-500 border-amber-500/20 font-bold uppercase text-[9px]">Evaluation Pending</Badge>
+                            )}
                           </div>
-                          {sub.status === 'graded' ? (
-                            <div className="text-right">
-                              <div className="text-3xl font-bold text-primary">{sub.evaluation?.totalScore}%</div>
-                              <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">AI Evaluated</div>
+
+                          {sub.status === 'graded' && sub.evaluation?.writtenFeedback && (
+                            <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                              <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <TrendingUp className="h-3.5 w-3.5" /> Feedback from AI
+                              </h4>
+                              <p className="text-sm leading-relaxed text-muted-foreground">{sub.evaluation.writtenFeedback}</p>
                             </div>
-                          ) : (
-                            <Badge variant="outline" className="text-amber-500 border-amber-500/20 font-bold uppercase text-[9px]">Evaluation Pending</Badge>
                           )}
-                        </div>
 
-                        {sub.status === 'graded' && sub.evaluation?.writtenFeedback && (
-                          <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
-                            <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
-                              <TrendingUp className="h-3.5 w-3.5" /> Feedback from AI
-                            </h4>
-                            <p className="text-sm leading-relaxed text-muted-foreground">{sub.evaluation.writtenFeedback}</p>
+                          <div className="pt-4 border-t border-border flex justify-between items-center">
+                             <div className="flex items-center gap-4">
+                               <button className="text-xs font-bold text-primary flex items-center gap-2 hover:underline" onClick={() => router.push(`/student/courses/${courseId}/submit/${sub.assignmentId}`)}>
+                                 <ExternalLink className="h-3.5 w-3.5" /> View Submitted Content
+                               </button>
+                             </div>
+                             {!deadlinePassed && (
+                               <Button variant="ghost" size="sm" className="text-rose-500 hover:text-rose-600 font-bold gap-2" onClick={() => handleUnsubmit(sub)}>
+                                 <XCircle className="h-4 w-4" /> Unsubmit Work
+                               </Button>
+                             )}
                           </div>
-                        )}
-
-                        <div className="pt-4 border-t border-border flex justify-between items-center">
-                           <button className="text-xs font-bold text-primary flex items-center gap-2 hover:underline">
-                             <ExternalLink className="h-3.5 w-3.5" /> View Submitted Content
-                           </button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 ) : (
                   <div className="p-20 text-center border-2 border-dashed rounded-[2rem] bg-card/30">
                     <div className="p-4 bg-primary/5 rounded-full w-fit mx-auto mb-4">
@@ -560,7 +582,7 @@ export default function StudentCoursePage() {
             </div>
           )}
 
-          {activeTab === 'content' && (
+          {activeTab === 'content' && ( activeTab === 'content' && (
             <div className="p-10 space-y-10 animate-in fade-in duration-500">
               <h1 className="text-3xl font-bold tracking-tighter">Course Feed</h1>
               <div className="max-w-4xl space-y-8">
@@ -618,7 +640,7 @@ export default function StudentCoursePage() {
                 )}
               </div>
             </div>
-          )}
+          ))}
         </div>
       </main>
 

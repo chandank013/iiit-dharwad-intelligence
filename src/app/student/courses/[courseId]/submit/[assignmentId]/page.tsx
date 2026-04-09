@@ -34,7 +34,8 @@ import {
   Github, 
   FileText, 
   Clock,
-  RotateCcw
+  RotateCcw,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,7 +127,7 @@ export default function SubmitAssignmentPage() {
       createdAt: currentSubmission ? currentSubmission.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
       professorId: assignment.professorId,
-      status: 'submitted' // Resubmitting resets the status so the teacher knows there is new work
+      status: 'submitted' 
     };
 
     if (currentSubmission) {
@@ -145,11 +146,11 @@ export default function SubmitAssignmentPage() {
   };
 
   if (isUserLoading || isAssignmentLoading || !user || !assignment) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
   const deadlinePassed = assignment.deadline && new Date() > new Date(assignment.deadline);
-  const isGraded = currentSubmission?.status === 'graded';
+  const isSubmitted = !!currentSubmission;
   const isReturned = currentSubmission?.status === 'returned';
 
   return (
@@ -164,10 +165,20 @@ export default function SubmitAssignmentPage() {
           <div className="lg:col-span-8 space-y-8">
             <div className="space-y-2">
               <h1 className="text-4xl font-bold tracking-tighter">
-                {currentSubmission ? (isReturned ? 'Revise Work' : 'Resubmit Work') : 'Submit Assignment'}
+                {isSubmitted ? (isReturned ? 'Revise Work' : 'Work Submitted') : 'Submit Assignment'}
               </h1>
               <p className="text-muted-foreground font-medium">{assignment.title}</p>
             </div>
+
+            {isSubmitted && !isReturned && (
+              <Alert className="bg-primary/5 border-primary/20 text-primary rounded-[2rem] p-6 shadow-sm">
+                <Lock className="h-5 w-5" />
+                <AlertTitle className="font-bold mb-1">Already Submitted</AlertTitle>
+                <AlertDescription className="text-xs font-medium opacity-80">
+                  You have already submitted this assignment. To make changes, please unsubmit it from your submission history first.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {isReturned && (
               <Card className="border-rose-200 bg-rose-50 text-rose-700 rounded-3xl p-6 flex items-start gap-4 shadow-sm">
@@ -196,24 +207,21 @@ export default function SubmitAssignmentPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-8">
-                {isGraded && deadlinePassed ? (
-                  <div className="text-center py-12 space-y-4">
-                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
-                    <h3 className="text-xl font-bold">Work is Graded</h3>
-                    <p className="text-muted-foreground text-sm">This assignment has already been evaluated and the deadline has passed. It cannot be resubmitted.</p>
+                {isSubmitted && !isReturned ? (
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your Work</Label>
+                      <div className="min-h-[200px] rounded-2xl bg-accent/30 p-6 leading-relaxed text-muted-foreground whitespace-pre-wrap border border-border/50 font-medium italic">
+                        {content}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-border flex justify-between items-center">
+                      <p className="text-xs text-muted-foreground font-medium italic">Changes are locked until work is unsubmitted.</p>
+                      <Button variant="outline" onClick={() => router.push(`/student/courses/${courseId}`)} className="rounded-xl font-bold">Return to Course</Button>
+                    </div>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    {isGraded && !deadlinePassed && (
-                      <Alert className="mb-6 bg-amber-50 border-amber-200 text-amber-800 rounded-2xl">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle className="font-bold">Heads Up!</AlertTitle>
-                        <AlertDescription className="text-xs">
-                          Your work has already been graded. Resubmitting will reset your status to 'Submitted' and your professor may need to re-evaluate it.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
                     <div className="space-y-3">
                       <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                         Submission Content
