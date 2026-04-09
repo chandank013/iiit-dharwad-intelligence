@@ -180,7 +180,7 @@ export default function CoursePortalPage() {
 
   const quizzesQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
-    return query(collection(firestore, 'courses', courseId as string, 'quizzes'), orderBy('createdAt', 'desc'));
+    return query(collection(firestore, 'courses', courseId as string, 'quizzes'));
   }, [firestore, courseId]);
   const { data: quizzes } = useCollection(quizzesQuery);
 

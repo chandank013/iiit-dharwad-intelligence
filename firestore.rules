@@ -24,7 +24,7 @@ service cloud.firestore {
       );
     }
 
-    // Root-level rules for collection group queries and general subcollection listing
+    // Root-level rules for collection group queries
     match /{path=**}/submissions/{id} {
       allow read, list: if isSignedIn();
     }
@@ -64,10 +64,7 @@ service cloud.firestore {
 
         match /submissions/{submissionId} {
           allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
-          allow read, update, delete: if isSignedIn() && (
-            request.auth.uid == resource.data.submitterId || 
-            request.auth.uid == resource.data.professorId
-          );
+          allow read, update, delete: if isSignedIn();
         }
       }
 

@@ -100,7 +100,7 @@ export function StudentDashboard() {
           const course = allCourses?.find(c => c.id === courseRef);
 
           // Fetch assignments for this course
-          const aq = query(collection(firestore, 'courses', courseRef, 'assignments'), orderBy('createdAt', 'desc'), limit(10));
+          const aq = query(collection(firestore, 'courses', courseRef, 'assignments'), limit(15));
           const aSnap = await getDocs(aq);
           
           const courseAssignments = aSnap.docs.map(aDoc => ({ 
@@ -111,7 +111,6 @@ export function StudentDashboard() {
           }));
 
           // Count submissions for this student across these assignments
-          // (Fetching individually to avoid complex collectionGroup index requirements for now)
           const subPromises = aSnap.docs.map(async (aDoc) => {
             const sq = query(collection(firestore, 'courses', courseRef, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
             const sSnap = await getDocs(sq);
