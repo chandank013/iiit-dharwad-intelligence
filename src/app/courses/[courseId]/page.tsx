@@ -54,7 +54,9 @@ import {
   Activity,
   Layers,
   ChevronRight,
-  Search
+  Search,
+  Target,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -132,6 +134,10 @@ export default function CoursePortalPage() {
   // Drill-down states for Submissions
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+
+  // Drill-down states for Analytics
+  const [selectedAnalyticsAssignmentId, setSelectedAnalyticsAssignmentId] = useState<string | null>(null);
+  const [selectedAnalyticsQuizId, setSelectedAnalyticsQuizId] = useState<string | null>(null);
 
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
   const [isPostingContent, setIsPostingContent] = useState(false);
@@ -507,6 +513,8 @@ export default function CoursePortalPage() {
                   setActiveTab(tab.id);
                   setSelectedAssignmentId(null);
                   setSelectedQuizId(null);
+                  setSelectedAnalyticsAssignmentId(null);
+                  setSelectedAnalyticsQuizId(null);
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all font-semibold capitalize",
@@ -525,11 +533,14 @@ export default function CoursePortalPage() {
         <header className="h-20 border-b border-border flex items-center justify-between px-10 sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold tracking-tight capitalize">{activeTab}</h2>
-            {(selectedAssignmentId || selectedQuizId) && (
+            {(selectedAssignmentId || selectedQuizId || selectedAnalyticsAssignmentId || selectedAnalyticsQuizId) && (
               <>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {selectedAssignmentId ? assignments?.find(a => a.id === selectedAssignmentId)?.title : quizzes?.find(q => q.id === selectedQuizId)?.title}
+                <span className="text-sm font-medium text-muted-foreground truncate max-w-[200px]">
+                  {selectedAssignmentId ? assignments?.find(a => a.id === selectedAssignmentId)?.title : 
+                   selectedQuizId ? quizzes?.find(q => q.id === selectedQuizId)?.title :
+                   selectedAnalyticsAssignmentId ? assignments?.find(a => a.id === selectedAnalyticsAssignmentId)?.title :
+                   quizzes?.find(q => q.id === selectedAnalyticsQuizId)?.title}
                 </span>
               </>
             )}
@@ -921,111 +932,329 @@ export default function CoursePortalPage() {
 
         {activeTab === 'analytics' && (
           <div className="p-10 space-y-12">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tighter">Performance Insights</h1>
-              <p className="text-muted-foreground">Comprehensive analysis of assignments and automated quizzes.</p>
-            </div>
+            {!selectedAnalyticsAssignmentId && !selectedAnalyticsQuizId ? (
+              <>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tighter">Performance Insights</h1>
+                  <p className="text-muted-foreground">Comprehensive analysis of assignments and automated quizzes.</p>
+                </div>
 
-            <div className="space-y-8">
-              <div className="flex items-center gap-3 border-b border-border pb-4">
-                <BookOpen className="h-6 w-6 text-primary" />
-                <h2 className="text-xl font-bold">Assignment Performance</h2>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="p-8 space-y-6">
-                  <CardHeader className="p-0">
-                    <CardTitle className="text-lg font-bold flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-primary" /> Grade Distribution
-                    </CardTitle>
-                    <CardDescription>Breakdown of AI-evaluated assignment scores.</CardDescription>
-                  </CardHeader>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={analyticsData.distribution}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {analyticsData.distribution.map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-6">
-                    {analyticsData.distribution.map((d: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                        {d.name}: {d.value}
+                <div className="space-y-12">
+                  {/* Aggregate Overview */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <Card className="p-8 space-y-6">
+                      <CardHeader className="p-0">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                          <TrendingUp className="h-5 w-5 text-primary" /> Global Grade Distribution
+                        </CardTitle>
+                        <CardDescription>Aggregate performance across all graded work.</CardDescription>
+                      </CardHeader>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={analyticsData.distribution}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {analyticsData.distribution.map((entry: any, index: number) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
-                    ))}
-                  </div>
-                </Card>
+                      <div className="flex flex-wrap justify-center gap-6">
+                        {analyticsData.distribution.map((d: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
+                            {d.name}: {d.value}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
 
-                <Card className="p-8 space-y-6">
-                  <CardHeader className="p-0">
-                    <CardTitle className="text-lg font-bold flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-primary" /> Average Assignment Scores
+                    <Card className="p-8 space-y-6">
+                      <CardHeader className="p-0">
+                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                          <BarChart3 className="h-5 w-5 text-primary" /> Task Performance Timeline
+                        </CardTitle>
+                        <CardDescription>Average scores per assignment.</CardDescription>
+                      </CardHeader>
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={analyticsData.performance}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                            <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
+                            <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
+                            <Tooltip />
+                            <Bar dataKey="average" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Drill-down Directory */}
+                  <div className="space-y-8">
+                    <div className="flex items-center gap-3 border-b border-border pb-4">
+                      <BookOpen className="h-6 w-6 text-primary" />
+                      <h2 className="text-xl font-bold">Assignment Performance Reports</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {assignments?.map((a) => {
+                        const subs = courseSubmissions.filter(s => s.assignmentId === a.id && s.status === 'graded');
+                        const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / subs.length) : 0;
+                        return (
+                          <Card key={a.id} className="border-border hover:border-primary/40 transition-all cursor-pointer group" onClick={() => setSelectedAnalyticsAssignmentId(a.id)}>
+                            <CardContent className="p-6 space-y-4">
+                              <div className="flex justify-between items-start">
+                                <Badge variant="outline" className="text-[10px] font-bold uppercase">{subs.length} Graded</Badge>
+                                <div className="text-xl font-bold text-primary">{avg}% Avg</div>
+                              </div>
+                              <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{a.title}</h3>
+                              <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest gap-2">
+                                View Detailed Report <ArrowRight className="h-3 w-3" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="flex items-center gap-3 border-b border-border pb-4">
+                      <HelpCircle className="h-6 w-6 text-orange-500" />
+                      <h2 className="text-xl font-bold">Quiz Performance Reports</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {quizzes?.map((q) => {
+                        const subs = quizSubmissions.filter(s => s.quizId === q.id);
+                        const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.score || 0), 0) / subs.length) : 0;
+                        return (
+                          <Card key={q.id} className="border-border hover:border-orange-500/40 transition-all cursor-pointer group" onClick={() => setSelectedAnalyticsQuizId(q.id)}>
+                            <CardContent className="p-6 space-y-4">
+                              <div className="flex justify-between items-start">
+                                <Badge variant="outline" className="text-[10px] font-bold uppercase border-orange-500/20 text-orange-500">{subs.length} Attempts</Badge>
+                                <div className="text-xl font-bold text-orange-500">{avg}% Avg</div>
+                              </div>
+                              <h3 className="font-bold text-lg leading-tight group-hover:text-orange-500 transition-colors">{q.title}</h3>
+                              <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest gap-2">
+                                View Detailed Report <ArrowRight className="h-3 w-3" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : selectedAnalyticsAssignmentId ? (
+              <div className="space-y-10 animate-in fade-in slide-in-from-left-4">
+                <Button variant="ghost" onClick={() => setSelectedAnalyticsAssignmentId(null)} className="p-0 text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-widest gap-2">
+                  <ChevronLeft className="h-4 w-4" /> Back to Analytics Overview
+                </Button>
+                
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      {assignments?.find(a => a.id === selectedAnalyticsAssignmentId)?.title}
+                    </h1>
+                    <p className="text-muted-foreground">In-depth performance analysis and AI-detected learning gaps.</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <Card className="bg-primary/5 border-primary/10 px-6 py-3">
+                      <div className="text-[10px] font-bold text-primary uppercase tracking-widest">Class Average</div>
+                      <div className="text-2xl font-bold">
+                        {Math.round(courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.status === 'graded').reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / (courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.status === 'graded').length || 1))}%
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <Card className="lg:col-span-2 p-8">
+                    <CardHeader className="p-0 mb-6">
+                      <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <Target className="h-5 w-5 text-primary" /> Grade Breakdown
+                      </CardTitle>
+                    </CardHeader>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { range: '0-50', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore < 50).length, fill: '#ef4444' },
+                          { range: '50-75', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore >= 50 && s.evaluation?.totalScore < 75).length, fill: '#f59e0b' },
+                          { range: '75-90', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore >= 75 && s.evaluation?.totalScore < 90).length, fill: '#10b981' },
+                          { range: '90-100', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore >= 90).length, fill: '#3b82f6' },
+                        ]}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="range" fontSize={10} fontWeight="bold" />
+                          <YAxis fontSize={10} fontWeight="bold" />
+                          <Tooltip />
+                          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                            { [0,1,2,3].map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={['#ef4444', '#f59e0b', '#10b981', '#3b82f6'][index]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+
+                  <div className="space-y-6">
+                    <Card className="p-6 bg-orange-500/5 border-orange-500/10">
+                      <CardHeader className="p-0 mb-4">
+                        <CardTitle className="text-sm font-bold flex items-center gap-2 text-orange-600">
+                          <AlertTriangle className="h-4 w-4" /> Cognitive Gaps
+                        </CardTitle>
+                        <CardDescription className="text-xs">Common weak areas identified by AI.</CardDescription>
+                      </CardHeader>
+                      <div className="space-y-2">
+                        {Array.from(new Set(courseSubmissions
+                          .filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.weakAreas)
+                          .flatMap(s => s.evaluation.weakAreas)
+                        )).slice(0, 5).map((area, i) => (
+                          <div key={i} className="px-3 py-2 rounded-lg bg-orange-500/10 text-orange-700 text-xs font-bold border border-orange-500/20">
+                            {area}
+                          </div>
+                        ))}
+                        {courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.weakAreas).length === 0 && (
+                          <p className="text-xs text-muted-foreground italic">No recurring gaps detected yet.</p>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold">Individual Student Performance</CardTitle>
+                  </CardHeader>
+                  <Table>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>AI Insights</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId).map((sub) => (
+                        <TableRow key={sub.id}>
+                          <TableCell className="font-bold text-xs">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px]">{getStudentName(sub.submitterId)[0]}</AvatarFallback></Avatar>
+                              {getStudentName(sub.submitterId)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-bold">{sub.evaluation?.totalScore ? `${sub.evaluation.totalScore}%` : 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant={sub.status === 'graded' ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase">
+                              {sub.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground line-clamp-1 max-w-[300px]">
+                            {sub.evaluation?.writtenFeedback || 'No feedback yet.'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            ) : (
+              <div className="space-y-10 animate-in fade-in slide-in-from-left-4">
+                <Button variant="ghost" onClick={() => setSelectedAnalyticsQuizId(null)} className="p-0 text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-widest gap-2">
+                  <ChevronLeft className="h-4 w-4" /> Back to Analytics Overview
+                </Button>
+
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      {quizzes?.find(q => q.id === selectedAnalyticsQuizId)?.title}
+                    </h1>
+                    <p className="text-muted-foreground">Assessment success rates and engagement patterns.</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <Card className="bg-orange-500/5 border-orange-500/10 px-6 py-3">
+                      <div className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Average Score</div>
+                      <div className="text-2xl font-bold">
+                        {Math.round(quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId).reduce((acc, s) => acc + (s.score || 0), 0) / (quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId).length || 1))}%
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+
+                <Card className="p-8">
+                  <CardHeader className="p-0 mb-8">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-500">
+                      <BarChart3 className="h-5 w-5" /> Score Distribution
                     </CardTitle>
-                    <CardDescription>Comparison across all historical tasks.</CardDescription>
                   </CardHeader>
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analyticsData.performance}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <BarChart data={[
+                        { name: 'Low (<50)', value: quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId && s.score < 50).length },
+                        { name: 'Pass (50-75)', value: quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId && s.score >= 50 && s.score < 75).length },
+                        { name: 'Good (75-90)', value: quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId && s.score >= 75 && s.score < 90).length },
+                        { name: 'Expert (90+)', value: quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId && s.score >= 90).length },
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
-                        <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
+                        <YAxis fontSize={10} fontWeight="bold" />
                         <Tooltip />
-                        <Bar dataKey="average" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
+                        <Bar dataKey="value" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </Card>
-              </div>
-            </div>
 
-            <div className="space-y-8">
-              <div className="flex items-center gap-3 border-b border-border pb-4">
-                <HelpCircle className="h-6 w-6 text-orange-500" />
-                <h2 className="text-xl font-bold">AI Quiz Performance</h2>
-              </div>
-              <div className="grid grid-cols-1 gap-8">
-                <Card className="p-8 space-y-6">
-                  <CardHeader className="p-0">
-                    <CardTitle className="text-lg font-bold flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-orange-500" /> Quiz Averages & Engagement
-                    </CardTitle>
-                    <CardDescription>Success rates and participation levels for automated assessments.</CardDescription>
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold">Attempt Logs</CardTitle>
                   </CardHeader>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={analyticsData.quizStats}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
-                        <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
-                        <Tooltip />
-                        <Bar dataKey="average" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex justify-center gap-10">
-                    {analyticsData.quizStats.map((q: any, i: number) => (
-                      <div key={i} className="text-center space-y-1">
-                        <div className="text-xs font-bold">{q.attempts}</div>
-                        <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Attempts</div>
-                      </div>
-                    ))}
-                  </div>
+                  <Table>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Score</TableHead>
+                        <TableHead>Time of Attempt</TableHead>
+                        <TableHead>Outcome</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {quizSubmissions.filter(s => s.quizId === selectedAnalyticsQuizId).map((sub) => (
+                        <TableRow key={sub.id}>
+                          <TableCell className="font-bold text-xs">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-7 w-7"><AvatarFallback className="text-[10px]">{getStudentName(sub.studentId)[0]}</AvatarFallback></Avatar>
+                              {getStudentName(sub.studentId)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-bold text-orange-600">{sub.score}%</TableCell>
+                          <TableCell className="text-[10px] font-bold uppercase text-muted-foreground">
+                            {sub.submittedAt ? new Date(sub.submittedAt.seconds * 1000).toLocaleString() : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={sub.score >= 50 ? 'outline' : 'destructive'} className={cn("text-[10px] font-bold uppercase", sub.score >= 50 && "border-emerald-500/20 text-emerald-600")}>
+                              {sub.score >= 90 ? 'Mastery' : sub.score >= 50 ? 'Passed' : 'Needs Review'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </Card>
               </div>
-            </div>
+            )}
           </div>
         )}
 
