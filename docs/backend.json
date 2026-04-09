@@ -33,37 +33,61 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "title", "message", "type", "read", "createdAt"]
+    },
+    "Course": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "semester": { "type": "string" },
+        "professorId": { "type": "string" },
+        "joinCode": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      }
+    },
+    "CourseContent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CourseContent",
+      "type": "object",
+      "description": "Announcements, files, and links shared within a course.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "contentType": { "type": "string", "enum": ["announcement", "file", "link", "video"] },
+        "body": { "type": "string" },
+        "attachmentUrl": { "type": "string" },
+        "courseId": { "type": "string" },
+        "professorId": { "type": "string" },
+        "postedAt": { "type": "string", "format": "date-time" },
+        "likesCount": { "type": "number" },
+        "isPinned": { "type": "boolean" }
+      },
+      "required": ["title", "contentType", "courseId", "professorId"]
     }
   },
   "auth": {
     "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": { "$ref": "#/backend/entities/User" },
-          "description": "User profiles."
-        }
-      },
-      {
-        "path": "/users/{userId}/notifications/{notificationId}",
-        "definition": {
-          "entityName": "Notification",
-          "schema": { "$ref": "#/backend/entities/Notification" },
-          "description": "Personal notifications for users."
-        }
-      },
-      {
-        "path": "/courses/{courseId}",
-        "definition": {
-          "entityName": "Course",
-          "schema": { "$ref": "#/backend/entities/Course" },
-          "description": "Course details."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/User" },
+      "description": "User profiles."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/backend/entities/Notification" },
+      "description": "Personal notifications for users."
+    },
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/backend/entities/Course" },
+      "description": "Course details."
+    },
+    "/courses/{courseId}/content/{contentId}": {
+      "schema": { "$ref": "#/backend/entities/CourseContent" },
+      "description": "Academic resources and announcements."
+    }
   }
 }

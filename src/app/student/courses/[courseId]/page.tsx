@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -659,7 +660,7 @@ export default function StudentCoursePage() {
                             </div>
                           </div>
                         </div>
-                        <p className="text-muted-foreground text-sm leading-relaxed">{post.content || post.body}</p>
+                        <p className="text-muted-foreground text-sm leading-relaxed">{post.body}</p>
                         {post.attachmentUrl && (
                           <div className="flex items-center gap-4 bg-accent/30 p-4 rounded-2xl border border-border/50">
                             <button onClick={() => handleViewContent(post.attachmentUrl)} className="flex items-center gap-2 text-xs font-bold text-primary hover:underline">

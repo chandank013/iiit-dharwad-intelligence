@@ -142,7 +142,7 @@ export default function CoursePortalPage() {
 
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
   const [isPostingContent, setIsPostingContent] = useState(false);
-  const [contentFormData, setContentFormData] = useState({ title: '', type: 'announcement', body: '', attachmentUrl: '' });
+  const [contentFormData, setContentFormData] = useState({ title: '', contentType: 'announcement', body: '', attachmentUrl: '' });
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
@@ -295,6 +295,12 @@ export default function CoursePortalPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check file size (Firestore limit is 1MB per document)
+    if (file.size > 700000) { // ~700KB limit to account for base64 overhead
+      toast({ title: "File too large", description: "Please upload files smaller than 700KB.", variant: "destructive" });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setContentFormData(prev => ({ ...prev, attachmentUrl: reader.result as string }));
@@ -357,7 +363,7 @@ export default function CoursePortalPage() {
     setIsPostingContent(true);
     try {
       const contentRef = collection(firestore, 'courses', courseId as string, 'content');
-      const docRef = await addDoc(contentRef, {
+      await addDoc(contentRef, {
         ...contentFormData,
         courseId,
         professorId: user.uid,
@@ -375,21 +381,24 @@ export default function CoursePortalPage() {
         const notifRef = collection(firestore, 'users', studentId, 'notifications');
         return addDoc(notifRef, {
           userId: studentId,
-          title: `New Content in ${course?.name}`,
-          message: `${user.displayName} posted: ${contentFormData.title}`,
+          title: `New Content in ${course?.name || 'Course'}`,
+          message: `${user.displayName || 'Professor'} posted: ${contentFormData.title}`,
           type: 'content',
           link: `/student/courses/${courseId}`,
           read: false,
           createdAt: serverTimestamp()
         });
       });
-      await Promise.all(notifyPromises);
+      
+      // We don't block the UI on notification success for every single student
+      Promise.all(notifyPromises).catch(err => console.error("Notification dispatch failed", err));
 
       setIsContentDialogOpen(false);
-      setContentFormData({ title: '', type: 'announcement', body: '', attachmentUrl: '' });
-      toast({ title: "Content Published & Students Notified" });
+      setContentFormData({ title: '', contentType: 'announcement', body: '', attachmentUrl: '' });
+      toast({ title: "Content Published" });
     } catch (e) {
-      toast({ title: "Failed to Post", variant: "destructive" });
+      console.error("Post failed:", e);
+      toast({ title: "Failed to Post", description: "Ensure the content is valid and not too large.", variant: "destructive" });
     } finally {
       setIsPostingContent(false);
     }
@@ -487,20 +496,20 @@ export default function CoursePortalPage() {
     }
   };
 
-  const handleReturnForRevision = async () => {
-    if (!itemToReturn || !firestore || !courseId) return;
+  const handleReturnForRevision = async (submission: any) => {
+    if (!submission || !firestore || !courseId) return;
     try {
-      const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', itemToReturn.assignmentId, 'submissions', itemToReturn.id);
+      const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
       await updateDoc(submissionRef, { status: 'returned', updatedAt: serverTimestamp() });
       
       // Notify student
-      const notifRef = collection(firestore, 'users', itemToReturn.submitterId, 'notifications');
+      const notifRef = collection(firestore, 'users', submission.submitterId, 'notifications');
       await addDoc(notifRef, {
-        userId: itemToReturn.submitterId,
+        userId: submission.submitterId,
         title: "Work Returned",
-        message: `Professor requested revision for: ${itemToReturn.assignmentTitle}`,
+        message: `Professor requested revision for: ${submission.assignmentTitle}`,
         type: 'deadline',
-        link: `/student/courses/${courseId}/submit/${itemToReturn.assignmentId}`,
+        link: `/student/courses/${courseId}/submit/${submission.assignmentId}`,
         read: false,
         createdAt: serverTimestamp()
       });
@@ -508,7 +517,6 @@ export default function CoursePortalPage() {
       toast({ title: "Submission Returned & Student Notified" });
       setLastEvaluatedAt(new Date());
     } catch (error) { toast({ title: "Failed to Return", variant: "destructive" }); }
-    finally { setItemToReturn(null); }
   };
 
   const getStudentName = (uid: string) => {
@@ -891,7 +899,7 @@ export default function CoursePortalPage() {
                                   ) : (
                                     <>
                                       {!deadlinePassed && sub.status === 'submitted' && (
-                                        <Button variant="ghost" size="sm" onClick={() => setItemToReturn(sub)} className="text-rose-500 hover:text-rose-600">
+                                        <Button variant="ghost" size="sm" onClick={() => handleReturnForRevision(sub)} className="text-rose-500 hover:text-rose-600">
                                           <RotateCcw className="h-3 w-3 mr-1" /> Return
                                         </Button>
                                       )}
@@ -1197,10 +1205,10 @@ export default function CoursePortalPage() {
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={[
-                          { range: '0-50', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore < 50).length, fill: '#ef4444' },
-                          { range: '50-75', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore >= 50 && s.evaluation?.totalScore < 75).length, fill: '#f59e0b' },
-                          { range: '75-90', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore >= 75 && s.evaluation?.totalScore < 90).length, fill: '#10b981' },
-                          { range: '90-100', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && s.evaluation?.totalScore >= 90).length, fill: '#3b82f6' },
+                          { range: '0-50', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && (s.evaluation?.totalScore || 0) < 50).length, fill: '#ef4444' },
+                          { range: '50-75', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && (s.evaluation?.totalScore || 0) >= 50 && (s.evaluation?.totalScore || 0) < 75).length, fill: '#f59e0b' },
+                          { range: '75-90', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && (s.evaluation?.totalScore || 0) >= 75 && (s.evaluation?.totalScore || 0) < 90).length, fill: '#10b981' },
+                          { range: '90-100', count: courseSubmissions.filter(s => s.assignmentId === selectedAnalyticsAssignmentId && (s.evaluation?.totalScore || 0) >= 90).length, fill: '#3b82f6' },
                         ]}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
                           <XAxis dataKey="range" fontSize={10} fontWeight="bold" />
@@ -1385,14 +1393,14 @@ export default function CoursePortalPage() {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-                            {post.type === 'link' ? <LinkIcon className="h-5 w-5" /> : 
-                             post.type === 'video' ? <ExternalLink className="h-5 w-5" /> :
-                             post.type === 'file' ? <FileIcon className="h-5 w-5" /> :
+                            {post.contentType === 'link' ? <LinkIcon className="h-5 w-5" /> : 
+                             post.contentType === 'video' ? <ExternalLink className="h-5 w-5" /> :
+                             post.contentType === 'file' ? <FileIcon className="h-5 w-5" /> :
                              <Megaphone className="h-5 w-5" />}
                           </div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-primary border-primary/20">{post.type}</Badge>
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-primary border-primary/20">{post.contentType}</Badge>
                               {post.isPinned && <Badge className="text-[10px] font-bold uppercase">Pinned</Badge>}
                             </div>
                             <h3 className="text-xl font-bold">{post.title}</h3>
@@ -1409,7 +1417,7 @@ export default function CoursePortalPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">{post.body || post.content}</p>
+                      <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">{post.body}</p>
                       
                       {post.attachmentUrl && (
                         <div className="flex items-center gap-4">
@@ -1482,7 +1490,7 @@ export default function CoursePortalPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Content Type</Label>
-                <Select value={contentFormData.type} onValueChange={(v) => setContentFormData({ ...contentFormData, type: v })}>
+                <Select value={contentFormData.contentType} onValueChange={(v) => setContentFormData({ ...contentFormData, contentType: v })}>
                   <SelectTrigger className="rounded-xl h-12 bg-accent/30 border-none"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-xl">
                     <SelectItem value="announcement">Announcement</SelectItem>
@@ -1686,7 +1694,7 @@ export default function CoursePortalPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl font-bold">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReturnForRevision} className="rounded-xl font-bold">Confirm Return</AlertDialogAction>
+            <AlertDialogAction onClick={() => handleReturnForRevision(itemToReturn)} className="rounded-xl font-bold">Confirm Return</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
