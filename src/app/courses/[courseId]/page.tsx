@@ -50,7 +50,8 @@ import {
   ExternalLink,
   HelpCircle,
   Trophy,
-  Activity
+  Activity,
+  Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -144,6 +145,8 @@ export default function CoursePortalPage() {
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [quizTopic, setQuizTopic] = useState('');
   const [quizDeadline, setQuizDeadline] = useState('');
+  const [quizDifficulty, setQuizDifficulty] = useState('intermediate');
+  const [quizNumQuestions, setQuizNumQuestions] = useState('5');
   const [generatedQuiz, setQuizPreview] = useState<any>(null);
 
   useEffect(() => {
@@ -197,7 +200,6 @@ export default function CoursePortalPage() {
 
       setIsSubmissionsLoading(true);
       try {
-        // Fetch Assignment Submissions
         const submissionPromises = assignments.map(async (assignment) => {
           const subsRef = collection(firestore, 'courses', courseId as string, 'assignments', assignment.id, 'submissions');
           const subsSnap = await getDocs(subsRef);
@@ -220,7 +222,6 @@ export default function CoursePortalPage() {
         
         setCourseSubmissions(flattened);
 
-        // Fetch Quiz Submissions
         const qSubsRef = collection(firestore, 'courses', courseId as string, 'quiz_submissions');
         const qSubsSnap = await getDocs(qSubsRef);
         const qFlattened = qSubsSnap.docs.map(d => ({ ...d.data(), id: d.id }))
@@ -245,7 +246,6 @@ export default function CoursePortalPage() {
   const analyticsData = useMemo(() => {
     if (!courseSubmissions || !assignments || !quizSubmissions) return { distribution: [], performance: [], quizStats: [] };
     
-    // Assignment Analytics
     const graded = courseSubmissions.filter(s => s.status === 'graded');
     const distribution = [
       { name: '0-50', value: 0, color: '#ef4444' },
@@ -267,7 +267,6 @@ export default function CoursePortalPage() {
       return { name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title, average: avg };
     }).reverse();
 
-    // Quiz Analytics
     const quizStats = quizzes?.map(q => {
       const subs = quizSubmissions.filter(s => s.quizId === q.id);
       const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.score || 0), 0) / subs.length) : 0;
@@ -363,7 +362,11 @@ export default function CoursePortalPage() {
     if (!quizTopic.trim()) return;
     setIsGeneratingQuiz(true);
     try {
-      const quiz = await aiQuizGenerator({ content: quizTopic });
+      const quiz = await aiQuizGenerator({ 
+        content: quizTopic,
+        numQuestions: parseInt(quizNumQuestions),
+        difficulty: quizDifficulty as any
+      });
       setQuizPreview(quiz);
       toast({ title: "Quiz Generated Successfully" });
     } catch (err) {
@@ -379,6 +382,7 @@ export default function CoursePortalPage() {
       const quizRef = collection(firestore, 'courses', courseId as string, 'quizzes');
       await addDoc(quizRef, {
         ...generatedQuiz,
+        difficulty: quizDifficulty,
         deadline: quizDeadline || null,
         createdAt: serverTimestamp(),
         isActive: true
@@ -734,6 +738,7 @@ export default function CoursePortalPage() {
                         <div className="flex justify-between items-start">
                           <div className="flex flex-col gap-1.5">
                             <Badge variant="secondary" className="w-fit">AI Generated</Badge>
+                            <Badge variant="outline" className="w-fit text-[10px] uppercase font-bold tracking-widest">{quiz.difficulty || 'Intermediate'}</Badge>
                             {quiz.deadline && (
                               <Badge variant={deadlinePassed ? "destructive" : "outline"} className="text-[10px] w-fit uppercase font-bold">
                                 {deadlinePassed ? "Expired" : `Due: ${new Date(quiz.deadline).toLocaleDateString()}`}
@@ -1063,7 +1068,7 @@ export default function CoursePortalPage() {
       </Dialog>
 
       <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
-        <DialogContent className="max-w-2xl rounded-3xl">
+        <DialogContent className="max-w-3xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Sparkles className="h-6 w-6 text-primary" /> AI Quiz Builder
@@ -1071,25 +1076,65 @@ export default function CoursePortalPage() {
           </DialogHeader>
           <div className="space-y-6 py-4">
             {!generatedQuiz ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Context / Topic</Label>
                   <Textarea 
                     placeholder="Paste textbook content or describe the quiz topic here..." 
                     value={quizTopic}
                     onChange={(e) => setQuizTopic(e.target.value)}
-                    className="min-h-[200px] rounded-2xl bg-accent/30 border-none p-6 leading-relaxed"
+                    className="min-h-[150px] rounded-2xl bg-accent/30 border-none p-6 leading-relaxed"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Deadline (Optional)</Label>
-                  <Input 
-                    type="datetime-local" 
-                    value={quizDeadline} 
-                    onChange={(e) => setQuizDeadline(e.target.value)}
-                    className="rounded-xl bg-accent/30 border-none"
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <Layers className="h-3 w-3" /> Difficulty
+                    </Label>
+                    <Select value={quizDifficulty} onValueChange={setQuizDifficulty}>
+                      <SelectTrigger className="rounded-xl h-12 bg-accent/30 border-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="basic">Basic</SelectItem>
+                        <SelectItem value="intermediate">Intermediate</SelectItem>
+                        <SelectItem value="advanced">Advanced</SelectItem>
+                        <SelectItem value="mixed">Mixed Levels</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <HelpCircle className="h-3 w-3" /> Questions
+                    </Label>
+                    <Select value={quizNumQuestions} onValueChange={setQuizNumQuestions}>
+                      <SelectTrigger className="rounded-xl h-12 bg-accent/30 border-none">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="5">5 Questions</SelectItem>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                        <SelectItem value="15">15 Questions</SelectItem>
+                        <SelectItem value="20">20 Questions</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                      <Clock className="h-3 w-3" /> Deadline
+                    </Label>
+                    <Input 
+                      type="datetime-local" 
+                      value={quizDeadline} 
+                      onChange={(e) => setQuizDeadline(e.target.value)}
+                      className="rounded-xl h-12 bg-accent/30 border-none"
+                    />
+                  </div>
                 </div>
+
                 <div className="flex gap-4 pt-4">
                   <Button 
                     variant="outline" 
@@ -1112,12 +1157,22 @@ export default function CoursePortalPage() {
             ) : (
               <div className="space-y-6">
                 <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">
-                  <h3 className="font-bold text-lg mb-4 text-primary">Preview: {generatedQuiz.title}</h3>
-                  <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-lg text-primary">Preview: {generatedQuiz.title}</h3>
+                    <Badge variant="outline" className="font-bold uppercase tracking-widest">{quizDifficulty}</Badge>
+                  </div>
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                     {generatedQuiz.questions.map((q: any, i: number) => (
-                      <div key={i} className="text-sm">
-                        <p className="font-bold mb-1">{i + 1}. {q.question}</p>
-                        <p className="text-muted-foreground italic">Correct: {q.options[q.correctAnswerIndex]}</p>
+                      <div key={i} className="text-sm p-4 bg-background/50 rounded-xl border border-border/50">
+                        <p className="font-bold mb-2">{i + 1}. {q.question}</p>
+                        <ul className="space-y-1 ml-4 list-disc text-muted-foreground">
+                          {q.options.map((opt: string, idx: number) => (
+                            <li key={idx} className={idx === q.correctAnswerIndex ? "text-emerald-600 font-bold" : ""}>
+                              {opt}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-3 text-xs italic text-muted-foreground border-t border-border pt-2">Reason: {q.explanation}</p>
                       </div>
                     ))}
                   </div>
