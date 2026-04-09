@@ -195,7 +195,7 @@ export default function CoursePortalPage() {
         const flattened = results.flat()
           .filter(s => {
             const student = allUsers?.find(u => u.id === s.submitterId);
-            const fullName = (student?.firstName + " " + student?.lastName).toLowerCase();
+            const fullName = (student?.firstName + " " + (student?.lastName || "")).toLowerCase();
             return !fullName.includes("chandan kumar");
           });
         
@@ -379,7 +379,7 @@ export default function CoursePortalPage() {
 
   const getStudentName = (uid: string) => {
     const foundUser = allUsers?.find(u => u.id === uid);
-    return foundUser ? `${foundUser.firstName} ${foundUser.lastName}` : "Unknown Student";
+    return foundUser ? `${foundUser.firstName} ${foundUser.lastName || ""}` : "Unknown Student";
   };
 
   if (isUserLoading || isCourseLoading || !user) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;

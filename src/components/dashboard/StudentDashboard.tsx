@@ -58,6 +58,9 @@ export function StudentDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [allAssignments, setAllAssignments] = useState<any[]>([]);
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
+  
+  const [totalSubmissionsCount, setTotalSubmissionsCount] = useState(0);
+  const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
 
   // Check if user is Chandan to hide specific data
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
@@ -76,50 +79,47 @@ export function StudentDashboard() {
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
 
-  // Fetch all submissions for current user across all courses. 
-  // We remove the 'where' if index is missing, or keep it if it works. 
-  // To avoid the 4 vs 0 issue, we filter strictly on the client side below.
-  const submissionsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // Note: If you encounter an index error here, remove the where and filter client-side.
-    return query(collectionGroup(firestore, "submissions"));
-  }, [firestore, user]);
-
-  const { data: rawSubmissions, isLoading: isSubmissionsLoading } = useCollection(submissionsQuery);
-
-  const totalSubmissionsCount = useMemo(() => {
-    // If the user is Chandan, we strictly return 0 to respect the privacy request
-    if (isChandan) return 0;
-    if (!rawSubmissions || !user) return 0;
-    
-    // Filter strictly by the current user's UID to fix the "Rahul showing 4" bug
-    const userSubmissions = rawSubmissions.filter(s => s.submitterId === user.uid);
-    return userSubmissions.length;
-  }, [rawSubmissions, isChandan, user]);
-
   useEffect(() => {
-    async function fetchAssignments() {
-      if (!firestore || !enrollments || enrollments.length === 0) {
+    async function fetchPortalData() {
+      if (!firestore || !enrollments || enrollments.length === 0 || !user) {
         setAllAssignments([]);
+        setTotalSubmissionsCount(0);
         return;
       }
 
       setIsAssignmentsLoading(true);
+      setIsSubmissionsLoading(true);
+      
       try {
+        let totalS = 0;
         const assignmentsPromises = enrollments.map(async (enrollment) => {
-          const q = query(
+          // Fetch assignments for this course
+          const aq = query(
             collection(firestore, 'courses', enrollment.courseId, 'assignments'),
             orderBy('createdAt', 'desc'),
             limit(5)
           );
-          const snap = await getDocs(q);
+          const aSnap = await getDocs(aq);
           const course = allCourses?.find(c => c.id === enrollment.courseId);
-          return snap.docs.map(doc => ({ 
-            ...doc.data(), 
-            id: doc.id, 
-            courseName: course?.name || 'Unknown Course',
-            courseCode: course?.code || ''
-          }));
+          
+          // For each assignment, check if this user has a submission
+          const subPromises = aSnap.docs.map(async (aDoc) => {
+            const sq = query(
+              collection(firestore, 'courses', enrollment.courseId, 'assignments', aDoc.id, 'submissions'),
+              where('submitterId', '==', user.uid)
+            );
+            const sSnap = await getDocs(sq);
+            if (!isChandan) totalS += sSnap.size;
+            
+            return { 
+              ...aDoc.data(), 
+              id: aDoc.id, 
+              courseName: course?.name || 'Unknown Course',
+              courseCode: course?.code || ''
+            };
+          });
+
+          return Promise.all(subPromises);
         });
 
         const results = await Promise.all(assignmentsPromises);
@@ -129,15 +129,17 @@ export function StudentDashboard() {
           return dateA - dateB;
         });
         setAllAssignments(flattened);
+        setTotalSubmissionsCount(isChandan ? 0 : totalS);
       } catch (err) {
-        console.error("Error fetching assignments:", err);
+        console.error("Error fetching portal data:", err);
       } finally {
         setIsAssignmentsLoading(false);
+        setIsSubmissionsLoading(false);
       }
     }
 
-    fetchAssignments();
-  }, [firestore, enrollments, allCourses]);
+    fetchPortalData();
+  }, [firestore, enrollments, allCourses, user, isChandan]);
 
   const handleJoinCourse = async (e: React.FormEvent) => {
     e.preventDefault();
