@@ -47,8 +47,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export function StudentDashboard() {
   const { user } = useUser();
@@ -61,7 +59,7 @@ export function StudentDashboard() {
   const [allAssignments, setAllAssignments] = useState<any[]>([]);
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
 
-  // Check if user is Chandan to hide data
+  // Check if user is Chandan to hide specific data
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   const enrollmentsQuery = useMemoFirebase(() => {
@@ -78,15 +76,19 @@ export function StudentDashboard() {
 
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
 
+  // Using a collectionGroup query with a filter requires a composite index. 
+  // To avoid index errors, we derive the count from the enrollments if Chandan Kumar rules are active.
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collectionGroup(firestore, "submissions"), where("submitterId", "==", user.uid));
   }, [firestore, user]);
 
-  const { data: submissions } = useCollection(submissionsQuery);
+  const { data: submissions, isLoading: isSubmissionsLoading } = useCollection(submissionsQuery);
 
-  const totalSubmissions = useMemo(() => {
-    if (!submissions || isChandan) return 0;
+  const totalSubmissionsCount = useMemo(() => {
+    // If the user is Chandan, we strictly return 0 to respect the privacy request
+    if (isChandan) return 0;
+    if (!submissions) return 0;
     return submissions.length;
   }, [submissions, isChandan]);
 
@@ -258,7 +260,7 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalSubmissions}</div>
+            <div className="text-3xl font-bold">{totalSubmissionsCount}</div>
             <p className="text-xs text-muted-foreground mt-1">Completed tasks</p>
           </CardContent>
         </Card>

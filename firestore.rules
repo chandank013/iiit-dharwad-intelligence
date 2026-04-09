@@ -25,27 +25,19 @@ service cloud.firestore {
       );
     }
 
-    // Audit Logs rules
-    match /audit_logs/{logId} {
-      allow read: if isProfessor();
-      allow create: if isSignedIn();
-    }
-
-    // Collection Group rules for tracking submissions and assignments across all courses
+    // Collection Group rules - needed at the root for queries across collections
     match /{path=**}/submissions/{submissionId} {
-      allow list, get: if isSignedIn();
-      allow create: if isStudent() && request.resource.data.submitterId == request.auth.uid;
-      allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.professorId || 
-        (request.auth.uid == resource.data.submitterId && resource.data.status != 'graded')
-      );
-      allow delete: if isSignedIn() && (
-        request.auth.uid == resource.data.submitterId && resource.data.status != 'graded'
-      );
+      allow read, list: if isSignedIn();
     }
     
     match /{path=**}/assignments/{assignmentId} {
       allow read, list: if isSignedIn();
+    }
+
+    // Audit Logs rules
+    match /audit_logs/{logId} {
+      allow read: if isProfessor();
+      allow create: if isSignedIn();
     }
 
     match /users/{userId} {
