@@ -18,6 +18,7 @@ import { collection, doc, serverTimestamp, getDocs, updateDoc, deleteDoc } from 
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export default function EditAssignmentPage() {
   const { toast } = useToast();
@@ -149,7 +150,6 @@ export default function EditAssignmentPage() {
 
       await updateDoc(doc(firestore, 'courses', courseId, 'assignments', assignmentId as string), assignmentUpdate);
 
-      // Handle Rubric Sync (Simplistic: Delete old, add new)
       const rubricsRef = collection(firestore, 'courses', courseId, 'assignments', assignmentId as string, 'rubrics');
       const rubricsSnap = await getDocs(rubricsRef);
       let rubricId = rubricsSnap.docs[0]?.id;
@@ -167,14 +167,12 @@ export default function EditAssignmentPage() {
         }, { merge: true });
       }
 
-      // Delete existing criteria
       const criteriaRef = collection(firestore, 'courses', courseId, 'assignments', assignmentId as string, 'rubrics', rubricId, 'criteria');
       const criteriaSnap = await getDocs(criteriaRef);
       for (const d of criteriaSnap.docs) {
         await deleteDoc(d.ref);
       }
 
-      // Add updated criteria
       for (const [i, item] of rubric.entries()) {
         const cRef = doc(criteriaRef);
         await setDocumentNonBlocking(cRef, {
@@ -229,11 +227,11 @@ export default function EditAssignmentPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="title">Title</Label>
-                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={isLocked} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[200px]" />
+                    <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[200px]" disabled={isLocked} />
                   </div>
                 </CardContent>
               </Card>
@@ -241,7 +239,7 @@ export default function EditAssignmentPage() {
               <Card className={cn(isLocked && "opacity-60 pointer-events-none")}>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Rubric</CardTitle>
-                  <Button variant="secondary" size="sm" className="gap-2" onClick={handleGenerateRubric} disabled={loading}>
+                  <Button variant="secondary" size="sm" className="gap-2" onClick={handleGenerateRubric} disabled={loading || isLocked}>
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     Re-generate
                   </Button>
@@ -250,16 +248,16 @@ export default function EditAssignmentPage() {
                   {rubric.map((item, index) => (
                     <div key={index} className="flex gap-4 p-4 border rounded-xl bg-white shadow-sm">
                       <div className="flex-1 space-y-3">
-                        <Input placeholder="Criterion" value={item.criterion} onChange={(e) => updateRubricItem(index, 'criterion', e.target.value)} />
-                        <Textarea placeholder="Guidelines" value={item.description} onChange={(e) => updateRubricItem(index, 'description', e.target.value)} />
+                        <Input placeholder="Criterion" value={item.criterion} onChange={(e) => updateRubricItem(index, 'criterion', e.target.value)} disabled={isLocked} />
+                        <Textarea placeholder="Guidelines" value={item.description} onChange={(e) => updateRubricItem(index, 'description', e.target.value)} disabled={isLocked} />
                       </div>
                       <div className="w-24 space-y-3">
-                        <Input type="number" value={item.maxPoints} onChange={(e) => updateRubricItem(index, 'maxPoints', parseInt(e.target.value) || 0)} />
-                        <Button variant="ghost" size="icon" className="text-destructive w-full" onClick={() => removeRubricItem(index)}><Trash2 className="h-4 w-4" /></Button>
+                        <Input type="number" value={item.maxPoints} onChange={(e) => updateRubricItem(index, 'maxPoints', parseInt(e.target.value) || 0)} disabled={isLocked} />
+                        <Button variant="ghost" size="icon" className="text-destructive w-full" onClick={() => removeRubricItem(index)} disabled={isLocked}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
                   ))}
-                  <Button variant="outline" className="w-full gap-2" onClick={addRubricItem}><Plus className="h-4 w-4" /> Add Manual Criterion</Button>
+                  <Button variant="outline" className="w-full gap-2" onClick={addRubricItem} disabled={isLocked}><Plus className="h-4 w-4" /> Add Manual Criterion</Button>
                 </CardContent>
               </Card>
             </div>
@@ -270,7 +268,7 @@ export default function EditAssignmentPage() {
                 <CardContent className="space-y-6">
                   <div className="space-y-2">
                     <Label>Type</Label>
-                    <Select value={submissionType} onValueChange={setSubmissionType}>
+                    <Select value={submissionType} onValueChange={setSubmissionType} disabled={isLocked}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="github">GitHub</SelectItem>
@@ -282,15 +280,15 @@ export default function EditAssignmentPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Deadline</Label>
-                    <Input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                    <Input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} disabled={isLocked} />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Group Project</Label>
-                    <Switch checked={isGroupProject} onCheckedChange={setIsGroupProject} />
+                    <Switch checked={isGroupProject} onCheckedChange={setIsGroupProject} disabled={isLocked} />
                   </div>
                   <div className="flex items-center justify-between">
                     <Label>Resubmission</Label>
-                    <Switch checked={allowResubmission} onCheckedChange={setAllowResubmission} />
+                    <Switch checked={allowResubmission} onCheckedChange={setAllowResubmission} disabled={isLocked} />
                   </div>
                 </CardContent>
               </Card>

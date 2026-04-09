@@ -380,7 +380,7 @@ export default function StudentCoursePage() {
                           const isSubmitted = submittedAssignmentIds.has(task.id);
                           const deadlinePassed = task.deadline && new Date() > new Date(task.deadline);
                           return (
-                            <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
+                            <div key={i} className="p-5 flex items-center justify-between hover:bg-accent/50 transition-colors group cursor-pointer" onClick={() => !deadlinePassed && router.push(`/student/courses/${courseId}/submit/${task.id}`)}>
                               <div className="space-y-1">
                                 <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
                                   {task.title}
@@ -392,9 +392,15 @@ export default function StudentCoursePage() {
                                 </div>
                                 <div className="text-[10px] text-muted-foreground font-medium">Due: {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'}</div>
                               </div>
-                              <Button size="sm" variant="ghost" className="rounded-full h-8 w-8 p-0">
-                                 <ChevronRight className="h-4 w-4" />
-                              </Button>
+                              {!isSubmitted && !deadlinePassed ? (
+                                <Button size="sm" variant="ghost" className="rounded-full h-8 w-8 p-0">
+                                   <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              ) : isSubmitted ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-rose-500" />
+                              )}
                             </div>
                           );
                         })
@@ -453,8 +459,8 @@ export default function StudentCoursePage() {
                             )}
 
                             {deadlinePassed && !isSubmitted && (
-                              <Badge variant="secondary" className="bg-rose-50 text-rose-600 border-rose-100 font-bold px-4 py-2 uppercase text-[10px]">
-                                Closed
+                              <Badge variant="destructive" className="font-bold px-4 py-2 uppercase text-[10px] gap-2">
+                                <AlertTriangle className="h-4 w-4" /> Missing
                               </Badge>
                             )}
                           </div>
