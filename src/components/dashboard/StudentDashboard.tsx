@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -14,7 +13,8 @@ import {
   Search,
   Calendar,
   FileText,
-  AlertCircle
+  AlertCircle,
+  HelpCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -60,9 +60,9 @@ export function StudentDashboard() {
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
   
   const [totalSubmissionsCount, setTotalSubmissionsCount] = useState(0);
-  const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
+  const [totalQuizzesCount, setTotalQuizzesCount] = useState(0);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
 
-  // Check if user is Chandan to hide specific data
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   const enrollmentsQuery = useMemoFirebase(() => {
@@ -84,42 +84,38 @@ export function StudentDashboard() {
       if (!firestore || !enrollments || enrollments.length === 0 || !user) {
         setAllAssignments([]);
         setTotalSubmissionsCount(0);
+        setTotalQuizzesCount(0);
         return;
       }
 
+      setIsStatsLoading(true);
       setIsAssignmentsLoading(true);
-      setIsSubmissionsLoading(true);
       
       try {
         let totalS = 0;
+        let totalQ = 0;
         const assignmentsPromises = enrollments.map(async (enrollment) => {
-          // Fetch assignments for this course
-          const aq = query(
-            collection(firestore, 'courses', enrollment.courseId, 'assignments'),
-            orderBy('createdAt', 'desc'),
-            limit(5)
-          );
+          // Fetch assignments
+          const aq = query(collection(firestore, 'courses', enrollment.courseId, 'assignments'), orderBy('createdAt', 'desc'), limit(5));
           const aSnap = await getDocs(aq);
           const course = allCourses?.find(c => c.id === enrollment.courseId);
           
-          // For each assignment, check if this user has a submission
-          const subPromises = aSnap.docs.map(async (aDoc) => {
-            const sq = query(
-              collection(firestore, 'courses', enrollment.courseId, 'assignments', aDoc.id, 'submissions'),
-              where('submitterId', '==', user.uid)
-            );
-            const sSnap = await getDocs(sq);
-            if (!isChandan) totalS += sSnap.size;
-            
-            return { 
-              ...aDoc.data(), 
-              id: aDoc.id, 
-              courseName: course?.name || 'Unknown Course',
-              courseCode: course?.code || ''
-            };
-          });
+          // Fetch submissions
+          const sq = query(collection(firestore, 'courses', enrollment.courseId, 'assignments', aDoc.id, 'submissions'), where('submitterId', '==', user.uid));
+          const sSnap = await getDocs(sq);
+          if (!isChandan) totalS += sSnap.size;
 
-          return Promise.all(subPromises);
+          // Fetch quizzes done
+          const qsq = query(collection(firestore, 'courses', enrollment.courseId, 'quiz_submissions'), where('studentId', '==', user.uid));
+          const qsSnap = await getDocs(qsq);
+          if (!isChandan) totalQ += qsSnap.size;
+          
+          return aSnap.docs.map(aDoc => ({ 
+            ...aDoc.data(), 
+            id: aDoc.id, 
+            courseName: course?.name || 'Unknown Course',
+            courseCode: course?.code || ''
+          }));
         });
 
         const results = await Promise.all(assignmentsPromises);
@@ -130,11 +126,12 @@ export function StudentDashboard() {
         });
         setAllAssignments(flattened);
         setTotalSubmissionsCount(isChandan ? 0 : totalS);
+        setTotalQuizzesCount(isChandan ? 0 : totalQ);
       } catch (err) {
         console.error("Error fetching portal data:", err);
       } finally {
         setIsAssignmentsLoading(false);
-        setIsSubmissionsLoading(false);
+        setIsStatsLoading(false);
       }
     }
 
@@ -152,11 +149,7 @@ export function StudentDashboard() {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        toast({
-          title: "Invalid Join Code",
-          description: "No active course found with this code.",
-          variant: "destructive",
-        });
+        toast({ title: "Invalid Join Code", description: "No active course found with this code.", variant: "destructive" });
         setIsJoining(false);
         return;
       }
@@ -198,11 +191,7 @@ export function StudentDashboard() {
   ) || [];
 
   if (isEnrollmentsLoading || isCoursesLoading) {
-    return (
-      <div className="h-96 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="h-96 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   return (
@@ -247,40 +236,52 @@ export function StudentDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="shadow-sm border-none bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Active Assignments
+              <Clock className="h-4 w-4" /> Assignments
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{allAssignments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Pending deadlines</p>
+            <p className="text-xs text-muted-foreground mt-1">Pending tasks</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-none bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 text-primary">
-              <FileText className="h-4 w-4" /> Total Submitted
+              <FileText className="h-4 w-4" /> Submissions
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalSubmissionsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Completed tasks</p>
+            <p className="text-xs text-muted-foreground mt-1">Assignments completed</p>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-none bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-orange-500">
+              <HelpCircle className="h-4 w-4" /> Quizzes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalQuizzesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">AI assessments done</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl border-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2 opacity-90">
-              <Target className="h-4 w-4" /> Academic Standing
+              <Target className="h-4 w-4" /> Status
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold">{myCourses.length > 0 ? 'Good' : 'N/A'}</div>
-            <p className="text-xs opacity-75 mt-1">Based on active enrollments</p>
+            <div className="text-4xl font-bold">{myCourses.length > 0 ? 'Active' : 'N/A'}</div>
+            <p className="text-xs opacity-75 mt-1">Academic standing</p>
           </CardContent>
         </Card>
       </div>

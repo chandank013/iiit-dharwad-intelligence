@@ -6,3 +6,5 @@ import '@/ai/flows/professor-ai-rubric-generator.ts';
 import '@/ai/flows/student-submission-quality-warning.ts';
 import '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection.ts';
 import '@/ai/flows/academic-assistant-chat.ts';
+import '@/ai/flows/ai-quiz-generator.ts';
+import '@/ai/flows/ai-quiz-evaluator.ts';

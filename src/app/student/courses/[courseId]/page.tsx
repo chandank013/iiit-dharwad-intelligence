@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -18,7 +17,8 @@ import {
   where,
   serverTimestamp,
   collectionGroup,
-  increment
+  increment,
+  addDoc
 } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
@@ -42,7 +42,9 @@ import {
   Download,
   FileText,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  HelpCircle,
+  Play
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +60,17 @@ import {
   setDocumentNonBlocking,
   updateDocumentNonBlocking
 } from '@/firebase/non-blocking-updates';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
+import { aiQuizEvaluator } from '@/ai/flows/ai-quiz-evaluator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 export default function StudentCoursePage() {
   const { courseId } = useParams();
@@ -70,7 +82,12 @@ export default function StudentCoursePage() {
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
 
-  // Check if user is Chandan to hide specific data
+  // Quiz State
+  const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
+  const [quizResult, setQuizResult] = useState<any | null>(null);
+
   const isChandan = user?.displayName?.toLowerCase().includes('chandan') || user?.email?.toLowerCase().includes('chandan');
 
   useEffect(() => {
@@ -97,6 +114,12 @@ export default function StudentCoursePage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
+  const quizzesQuery = useMemoFirebase(() => {
+    if (!firestore || !courseId) return null;
+    return query(collection(firestore, 'courses', courseId as string, 'quizzes'), orderBy('createdAt', 'desc'));
+  }, [firestore, courseId]);
+  const { data: quizzes } = useCollection(quizzesQuery);
+
   const submissionsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
@@ -108,13 +131,63 @@ export default function StudentCoursePage() {
 
   const mySubmissions = useMemo(() => {
     if (!rawSubmissions || !courseId) return [];
-    if (isChandan) return []; // Filter out data for Chandan as requested
+    if (isChandan) return [];
     return rawSubmissions.filter(s => s.courseId === courseId);
   }, [rawSubmissions, courseId, isChandan]);
 
   const submittedAssignmentIds = useMemo(() => {
     return new Set(mySubmissions.map(s => s.assignmentId));
   }, [mySubmissions]);
+
+  const quizSubmissionsQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !courseId) return null;
+    return query(collection(firestore, 'courses', courseId as string, 'quiz_submissions'), where('studentId', '==', user.uid));
+  }, [firestore, user, courseId]);
+  const { data: quizSubmissions } = useCollection(quizSubmissionsQuery);
+
+  const completedQuizIds = useMemo(() => {
+    return new Set(quizSubmissions?.map(s => s.quizId));
+  }, [quizSubmissions]);
+
+  const handleStartQuiz = (quiz: any) => {
+    setActiveQuiz(quiz);
+    setQuizAnswers(new Array(quiz.questions.length).fill(-1));
+    setQuizResult(null);
+  };
+
+  const handleSubmitQuiz = async () => {
+    if (!firestore || !user || !courseId || !activeQuiz) return;
+    if (quizAnswers.includes(-1)) {
+      toast({ title: "Incomplete Quiz", description: "Please answer all questions.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmittingQuiz(true);
+    try {
+      const evaluation = await aiQuizEvaluator({
+        quizTitle: activeQuiz.title,
+        questions: activeQuiz.questions,
+        studentAnswers: quizAnswers
+      });
+
+      const submissionData = {
+        quizId: activeQuiz.id,
+        studentId: user.uid,
+        studentName: user.displayName || 'Anonymous',
+        score: evaluation.score,
+        evaluation,
+        submittedAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(firestore, 'courses', courseId as string, 'quiz_submissions'), submissionData);
+      setQuizResult(evaluation);
+      toast({ title: "Quiz Evaluated!" });
+    } catch (e) {
+      toast({ title: "Evaluation Failed", variant: "destructive" });
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
 
   const handleViewContent = (url: string) => {
     if (!url) return;
@@ -161,6 +234,7 @@ export default function StudentCoursePage() {
   const sidebarLinks = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'assignments', label: 'Assignments', icon: BookOpen },
+    { id: 'quizzes', label: 'Quizzes', icon: HelpCircle },
     { id: 'submissions', label: 'My Submissions', icon: FileText },
     { id: 'content', label: 'Content', icon: FolderOpen },
   ];
@@ -227,18 +301,18 @@ export default function StudentCoursePage() {
                     <div className="text-2xl font-bold text-foreground">
                       {assignments?.filter(a => !submittedAssignmentIds.has(a.id)).length || 0}
                     </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Tasks Pending</div>
                   </div>
                 </Card>
                 <Card className="border-border p-6 flex items-center gap-6">
                   <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
-                    <FileText className="h-6 w-6" />
+                    <CheckCircle2 className="h-6 w-6" />
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-foreground">
-                      {mySubmissions.length}
+                      {completedQuizIds.size} / {quizzes?.length || 0}
                     </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Submitted</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Quizzes Done</div>
                   </div>
                 </Card>
                 <Card className="border-border p-6 flex items-center gap-6">
@@ -247,11 +321,11 @@ export default function StudentCoursePage() {
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-foreground">
-                      {mySubmissions.filter(s => s.status === 'graded').length > 0 
-                        ? `${Math.round(mySubmissions.filter(s => s.status === 'graded').reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / mySubmissions.filter(s => s.status === 'graded').length)}%` 
+                      {quizSubmissions && quizSubmissions.length > 0 
+                        ? `${Math.round(quizSubmissions.reduce((acc, s) => acc + (s.score || 0), 0) / quizSubmissions.length)}%` 
                         : '0%'}
                     </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Avg Score</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Quiz Avg</div>
                   </div>
                 </Card>
               </div>
@@ -259,7 +333,7 @@ export default function StudentCoursePage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <Card className="border-border overflow-hidden rounded-2xl">
                   <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border">
-                    <CardTitle className="text-sm font-bold text-foreground">Work List</CardTitle>
+                    <CardTitle className="text-sm font-bold text-foreground">Next Tasks</CardTitle>
                     <button onClick={() => setActiveTab('assignments')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase">
                       View all <ArrowRight className="h-3 w-3" />
                     </button>
@@ -341,6 +415,46 @@ export default function StudentCoursePage() {
                   })
                 ) : (
                   <div className="p-12 text-center text-muted-foreground border-2 border-dashed rounded-3xl">No assignments assigned.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'quizzes' && (
+            <div className="space-y-10 animate-in fade-in duration-500">
+              <h1 className="text-3xl font-bold tracking-tight">AI Assessments</h1>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {quizzes && quizzes.length > 0 ? (
+                  quizzes.map((quiz) => {
+                    const isCompleted = completedQuizIds.has(quiz.id);
+                    const sub = quizSubmissions?.find(s => s.quizId === quiz.id);
+                    return (
+                      <Card key={quiz.id} className="border-border hover:border-primary/20 transition-all flex flex-col">
+                        <CardHeader>
+                          <div className="flex justify-between items-start mb-2">
+                            <Badge variant={isCompleted ? "outline" : "secondary"}>
+                              {isCompleted ? "Completed" : "Available"}
+                            </Badge>
+                            {isCompleted && <div className="text-lg font-bold text-primary">{sub?.score}%</div>}
+                          </div>
+                          <CardTitle className="text-lg font-bold leading-tight line-clamp-2">{quiz.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1">
+                          <p className="text-xs text-muted-foreground mb-4">{quiz.questions.length} AI-generated questions</p>
+                          <Button 
+                            className="w-full rounded-xl font-bold gap-2" 
+                            variant={isCompleted ? "secondary" : "default"}
+                            onClick={() => handleStartQuiz(quiz)}
+                          >
+                            {isCompleted ? <RotateCcw className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                            {isCompleted ? "Review Results" : "Attempt Quiz"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-full p-12 text-center text-muted-foreground border-2 border-dashed rounded-3xl">No quizzes published for this course yet.</div>
                 )}
               </div>
             </div>
@@ -463,6 +577,95 @@ export default function StudentCoursePage() {
           )}
         </div>
       </main>
+
+      <Dialog open={!!activeQuiz} onOpenChange={(open) => !open && setActiveQuiz(null)}>
+        <DialogContent className="max-w-3xl rounded-3xl overflow-hidden p-0 gap-0">
+          <DialogHeader className="p-8 bg-primary text-primary-foreground">
+            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+              <HelpCircle className="h-6 w-6" /> {activeQuiz?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-8 max-h-[70vh] overflow-y-auto bg-background">
+            {!quizResult ? (
+              <div className="space-y-10">
+                {activeQuiz?.questions.map((q: any, i: number) => (
+                  <div key={i} className="space-y-4">
+                    <h3 className="font-bold text-lg flex gap-3">
+                      <span className="text-primary/40">0{i + 1}</span>
+                      {q.question}
+                    </h3>
+                    <RadioGroup 
+                      value={quizAnswers[i].toString()} 
+                      onValueChange={(val) => {
+                        const newAnswers = [...quizAnswers];
+                        newAnswers[i] = parseInt(val);
+                        setQuizAnswers(newAnswers);
+                      }}
+                      className="grid gap-2"
+                    >
+                      {q.options.map((opt: string, optIdx: number) => (
+                        <div key={optIdx} className="flex items-center space-x-3 p-4 rounded-xl border border-border hover:bg-accent/50 transition-colors">
+                          <RadioGroupItem value={optIdx.toString()} id={`q${i}-opt${optIdx}`} />
+                          <Label htmlFor={`q${i}-opt${optIdx}`} className="flex-1 cursor-pointer font-medium">{opt}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="text-center space-y-2 py-6">
+                  <div className="text-6xl font-bold text-primary">{quizResult.score}%</div>
+                  <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Your Score</p>
+                </div>
+                <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">
+                  <h4 className="font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-widest text-xs">
+                    <TrendingUp className="h-4 w-4" /> AI Personalized Feedback
+                  </h4>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{quizResult.feedback}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Strengths</h5>
+                    <ul className="space-y-1.5">
+                      {quizResult.strengths.map((s: string, i: number) => (
+                        <li key={i} className="text-xs flex items-start gap-2 text-muted-foreground">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" /> {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="space-y-3">
+                    <h5 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Growth Areas</h5>
+                    <ul className="space-y-1.5">
+                      {quizResult.improvementAreas.map((s: string, i: number) => (
+                        <li key={i} className="text-xs flex items-start gap-2 text-muted-foreground">
+                          <AlertTriangle className="h-3.5 w-3.5 text-orange-500 shrink-0 mt-0.5" /> {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="p-6 border-t border-border bg-muted/30">
+            {!quizResult ? (
+              <Button 
+                onClick={handleSubmitQuiz} 
+                disabled={isSubmittingQuiz || quizAnswers.includes(-1)}
+                className="w-full h-14 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20"
+              >
+                {isSubmittingQuiz ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Send className="h-5 w-5 mr-2" />}
+                Finalize & Submit Quiz
+              </Button>
+            ) : (
+              <Button onClick={() => setActiveQuiz(null)} className="w-full h-14 rounded-2xl font-bold">Return to Course</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

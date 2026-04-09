@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -48,7 +47,8 @@ import {
   RotateCcw,
   Settings2,
   MoreVertical,
-  ExternalLink
+  ExternalLink,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -100,6 +100,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
+import { aiQuizGenerator } from '@/ai/flows/ai-quiz-generator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   BarChart,
@@ -129,11 +130,17 @@ export default function CoursePortalPage() {
   const [commentText, setCommentText] = useState('');
   const [isEvaluating, setIsEvaluating] = useState<string | null>(null);
   const [isBulkEvaluating, setIsBulkEvaluating] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' | 'assignment' } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'content' | 'assignment' | 'quiz' } | null>(null);
   const [itemToReturn, setItemToReturn] = useState<any | null>(null);
   
   const [courseSubmissions, setCourseSubmissions] = useState<any[]>([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
+
+  // Quiz Generation State
+  const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [quizTopic, setQuizTopic] = useState('');
+  const [generatedQuiz, setQuizPreview] = useState<any>(null);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -171,6 +178,12 @@ export default function CoursePortalPage() {
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
+  const quizzesQuery = useMemoFirebase(() => {
+    if (!firestore || !courseId) return null;
+    return query(collection(firestore, 'courses', courseId as string, 'quizzes'), orderBy('createdAt', 'desc'));
+  }, [firestore, courseId]);
+  const { data: quizzes } = useCollection(quizzesQuery);
+
   useEffect(() => {
     async function fetchSubmissions() {
       if (!firestore || !assignments || assignments.length === 0) {
@@ -194,8 +207,9 @@ export default function CoursePortalPage() {
         const results = await Promise.all(submissionPromises);
         const flattened = results.flat()
           .filter(s => {
-            const student = allUsers?.find(u => u.id === s.submitterId);
-            const fullName = (student?.firstName + " " + (student?.lastName || "")).toLowerCase();
+            if (!allUsers) return true;
+            const student = allUsers.find(u => u.id === s.submitterId);
+            const fullName = `${student?.firstName || ''} ${student?.lastName || ''}`.toLowerCase();
             return !fullName.includes("chandan kumar");
           });
         
@@ -316,6 +330,38 @@ export default function CoursePortalPage() {
     }
   };
 
+  const handleGenerateQuiz = async () => {
+    if (!quizTopic.trim()) return;
+    setIsGeneratingQuiz(true);
+    try {
+      const quiz = await aiQuizGenerator({ content: quizTopic });
+      setQuizPreview(quiz);
+      toast({ title: "Quiz Generated Successfully" });
+    } catch (err) {
+      toast({ title: "AI Generation Failed", variant: "destructive" });
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
+  };
+
+  const handlePublishQuiz = async () => {
+    if (!firestore || !courseId || !generatedQuiz) return;
+    try {
+      const quizRef = collection(firestore, 'courses', courseId as string, 'quizzes');
+      await addDoc(quizRef, {
+        ...generatedQuiz,
+        createdAt: serverTimestamp(),
+        isActive: true
+      });
+      setIsQuizDialogOpen(false);
+      setQuizPreview(null);
+      setQuizTopic('');
+      toast({ title: "Quiz Published to Students" });
+    } catch (e) {
+      toast({ title: "Failed to Publish", variant: "destructive" });
+    }
+  };
+
   const handleViewContent = (url: string) => {
     if (!url) return;
     if (url.startsWith('data:')) {
@@ -358,6 +404,8 @@ export default function CoursePortalPage() {
     try {
       if (itemToDelete.type === 'content') {
         await deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', itemToDelete.id));
+      } else if (itemToDelete.type === 'quiz') {
+        await deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'quizzes', itemToDelete.id));
       }
       toast({ title: "Item Deleted" });
     } catch (e) {
@@ -401,6 +449,7 @@ export default function CoursePortalPage() {
               { id: 'dashboard', icon: LayoutDashboard },
               { id: 'assignments', icon: BookOpen },
               { id: 'submissions', icon: FileText },
+              { id: 'quizzes', icon: HelpCircle },
               { id: 'analytics', icon: TrendingUp },
               { id: 'content', icon: FolderOpen }
             ].map((tab) => (
@@ -434,7 +483,7 @@ export default function CoursePortalPage() {
                 { label: 'Students', value: enrollments?.length || 0, icon: GraduationCap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
                 { label: 'Assignments', value: assignments?.length || 0, icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
                 { label: 'Submissions', value: courseSubmissions.length, icon: FileText, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-                { label: 'Graded', value: courseSubmissions.filter(s => s.status === 'graded').length, icon: CheckCircle2, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                { label: 'Quizzes', value: quizzes?.length || 0, icon: HelpCircle, color: 'text-orange-500', bg: 'bg-orange-500/10' },
               ].map((stat, i) => (
                 <Card key={i} className="border-border">
                   <CardContent className="p-6 flex items-center gap-5">
@@ -581,6 +630,56 @@ export default function CoursePortalPage() {
                 </TableBody>
               </Table>
             </Card>
+          </div>
+        )}
+
+        {activeTab === 'quizzes' && (
+          <div className="p-10 space-y-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tighter">AI Quiz Lab</h1>
+                <p className="text-muted-foreground">Generate and manage automated assessments.</p>
+              </div>
+              <Button onClick={() => setIsQuizDialogOpen(true)} className="gap-2 font-bold shadow-xl shadow-primary/20">
+                <Sparkles className="h-4 w-4" /> Generate with AI
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {quizzes && quizzes.length > 0 ? (
+                quizzes.map((quiz) => (
+                  <Card key={quiz.id} className="border-border hover:border-primary/20 transition-all">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <Badge variant="secondary" className="mb-2">AI Generated</Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="text-rose-500 font-bold" onClick={() => setItemToDelete({ id: quiz.id, type: 'quiz' })}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete Quiz
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <CardTitle className="text-xl font-bold leading-tight">{quiz.title}</CardTitle>
+                      <CardDescription>{quiz.questions.length} Questions • Instant Grading</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        <Clock className="h-3 w-3" /> Created {new Date(quiz.createdAt?.seconds * 1000).toLocaleDateString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl bg-card">
+                  <HelpCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                  <h3 className="text-lg font-bold">No quizzes available</h3>
+                  <p className="text-muted-foreground text-sm">Use AI to generate a challenging quiz for your students.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -827,11 +926,72 @@ export default function CoursePortalPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
+        <DialogContent className="max-w-2xl rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-primary" /> AI Quiz Builder
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {!generatedQuiz ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Context / Topic</Label>
+                  <Textarea 
+                    placeholder="Paste textbook content or describe the quiz topic here..." 
+                    value={quizTopic}
+                    onChange={(e) => setQuizTopic(e.target.value)}
+                    className="min-h-[200px] rounded-2xl bg-accent/30 border-none p-6 leading-relaxed"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 rounded-xl h-12 font-bold gap-2"
+                    onClick={() => document.getElementById('quiz-file-upload')?.click()}
+                  >
+                    <Upload className="h-4 w-4" /> Upload Material
+                  </Button>
+                  <input type="file" id="quiz-file-upload" className="hidden" accept=".pdf" />
+                  <Button 
+                    className="flex-1 rounded-xl h-12 font-bold gap-2 shadow-lg"
+                    onClick={handleGenerateQuiz}
+                    disabled={isGeneratingQuiz || !quizTopic.trim()}
+                  >
+                    {isGeneratingQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    Generate Quiz
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">
+                  <h3 className="font-bold text-lg mb-4 text-primary">Preview: {generatedQuiz.title}</h3>
+                  <div className="space-y-4">
+                    {generatedQuiz.questions.map((q: any, i: number) => (
+                      <div key={i} className="text-sm">
+                        <p className="font-bold mb-1">{i + 1}. {q.question}</p>
+                        <p className="text-muted-foreground italic">Correct: {q.options[q.correctAnswerIndex]}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => setQuizPreview(null)} className="rounded-xl font-bold">Start Over</Button>
+                  <Button onClick={handlePublishQuiz} className="rounded-xl font-bold px-8 shadow-lg">Publish Quiz</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone. This will permanently remove the content.</AlertDialogDescription>
+            <AlertDialogDescription>This action cannot be undone. This will permanently remove the item from the course.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl font-bold">Cancel</AlertDialogCancel>
