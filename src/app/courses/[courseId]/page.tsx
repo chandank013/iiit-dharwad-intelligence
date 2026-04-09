@@ -567,6 +567,84 @@ export default function CoursePortalPage() {
                 </Card>
               ))}
             </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="border-border overflow-hidden rounded-2xl shadow-sm">
+                <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border bg-muted/30">
+                  <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" /> Assignment Queue
+                  </CardTitle>
+                  <button onClick={() => setActiveTab('assignments')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase hover:underline">
+                    Manage <ChevronRight className="h-3 w-3" />
+                  </button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    {assignments && assignments.length > 0 ? (
+                      assignments.slice(0, 5).map((assignment, i) => {
+                        const deadlinePassed = assignment.deadline && new Date() > new Date(assignment.deadline);
+                        return (
+                          <div key={i} className="p-5 flex items-center justify-between group">
+                            <div className="text-sm font-bold text-foreground truncate max-w-[250px]">
+                              {assignment.title}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {deadlinePassed ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold uppercase text-[9px] tracking-widest">Completed</Badge>
+                              ) : (
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                  {assignment.deadline ? new Date(assignment.deadline).toLocaleDateString() : 'No Deadline'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-10 text-center text-xs text-muted-foreground italic">No assignments launched.</div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border overflow-hidden rounded-2xl shadow-sm">
+                <CardHeader className="p-6 flex flex-row items-center justify-between border-b border-border bg-muted/30">
+                  <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4 text-orange-500" /> Quiz Queue
+                  </CardTitle>
+                  <button onClick={() => setActiveTab('quizzes')} className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase hover:underline">
+                    Manage <ChevronRight className="h-3 w-3" />
+                  </button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border">
+                    {quizzes && quizzes.length > 0 ? (
+                      quizzes.slice(0, 5).map((quiz, i) => {
+                        const deadlinePassed = quiz.deadline && new Date() > new Date(quiz.deadline);
+                        return (
+                          <div key={i} className="p-5 flex items-center justify-between group">
+                            <div className="text-sm font-bold text-foreground truncate max-w-[250px]">
+                              {quiz.title}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {deadlinePassed ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold uppercase text-[9px] tracking-widest">Completed</Badge>
+                              ) : (
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                  {quiz.deadline ? new Date(quiz.deadline).toLocaleDateString() : 'No Deadline'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-10 text-center text-xs text-muted-foreground italic">No quizzes published.</div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
@@ -699,13 +777,12 @@ export default function CoursePortalPage() {
               </div>
             ) : selectedAssignmentId ? (
               <div className="space-y-8 animate-in fade-in slide-in-from-left-4">
-                <Button 
-                  variant="ghost" 
+                <button 
                   onClick={() => setSelectedAssignmentId(null)}
-                  className="p-0 hover:bg-transparent text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-widest gap-2"
+                  className="p-0 bg-transparent text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-widest gap-2 flex items-center transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" /> Back to Directory
-                </Button>
+                </button>
                 
                 <div className="flex items-center justify-between">
                   <div>
@@ -815,13 +892,12 @@ export default function CoursePortalPage() {
               </div>
             ) : (
               <div className="space-y-8 animate-in fade-in slide-in-from-left-4">
-                <Button 
-                  variant="ghost" 
+                <button 
                   onClick={() => setSelectedQuizId(null)}
-                  className="p-0 hover:bg-transparent text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-widest gap-2"
+                  className="p-0 bg-transparent text-muted-foreground hover:text-foreground font-bold text-xs uppercase tracking-widest gap-2 flex items-center transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" /> Back to Directory
-                </Button>
+                </button>
 
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">
