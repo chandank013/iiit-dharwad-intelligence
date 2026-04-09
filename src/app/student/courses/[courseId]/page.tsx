@@ -531,14 +531,28 @@ export default function StudentCoursePage() {
                                 <Clock className="h-3.5 w-3.5" /> Submitted: {sub.submittedAt ? new Date(sub.submittedAt.seconds * 1000).toLocaleString() : 'Processing'}
                               </div>
                             </div>
-                            {sub.status === 'graded' ? (
-                              <div className="text-right">
-                                <div className="text-3xl font-bold text-primary">{sub.evaluation?.totalScore}%</div>
-                                <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">AI Evaluated</div>
-                              </div>
-                            ) : (
-                              <Badge variant="outline" className="text-amber-500 border-amber-500/20 font-bold uppercase text-[9px]">Evaluation Pending</Badge>
-                            )}
+                            <div className="flex items-center gap-3">
+                              {sub.status === 'graded' ? (
+                                <div className="text-right">
+                                  <div className="text-3xl font-bold text-primary">{sub.evaluation?.totalScore}%</div>
+                                  <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">AI Evaluated</div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-amber-500 border-amber-500/20 font-bold uppercase text-[9px]">Evaluation Pending</Badge>
+                                  {!deadlinePassed && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="h-7 text-[10px] text-rose-500 hover:text-rose-600 font-bold gap-1 px-2 border border-rose-100 hover:bg-rose-50" 
+                                      onClick={() => handleUnsubmit(sub)}
+                                    >
+                                      <XCircle className="h-3 w-3" /> Unsubmit
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {sub.status === 'graded' && sub.evaluation?.writtenFeedback && (
@@ -549,19 +563,6 @@ export default function StudentCoursePage() {
                               <p className="text-sm leading-relaxed text-muted-foreground">{sub.evaluation.writtenFeedback}</p>
                             </div>
                           )}
-
-                          <div className="pt-4 border-t border-border flex justify-between items-center">
-                             <div className="flex items-center gap-4">
-                               <button className="text-xs font-bold text-primary flex items-center gap-2 hover:underline" onClick={() => router.push(`/student/courses/${courseId}/submit/${sub.assignmentId}`)}>
-                                 <ExternalLink className="h-3.5 w-3.5" /> View Submitted Content
-                               </button>
-                             </div>
-                             {!deadlinePassed && (
-                               <Button variant="ghost" size="sm" className="text-rose-500 hover:text-rose-600 font-bold gap-2" onClick={() => handleUnsubmit(sub)}>
-                                 <XCircle className="h-4 w-4" /> Unsubmit Work
-                               </Button>
-                             )}
-                          </div>
                         </CardContent>
                       </Card>
                     );
@@ -582,7 +583,7 @@ export default function StudentCoursePage() {
             </div>
           )}
 
-          {activeTab === 'content' && ( activeTab === 'content' && (
+          {activeTab === 'content' && (
             <div className="p-10 space-y-10 animate-in fade-in duration-500">
               <h1 className="text-3xl font-bold tracking-tighter">Course Feed</h1>
               <div className="max-w-4xl space-y-8">
@@ -640,7 +641,7 @@ export default function StudentCoursePage() {
                 )}
               </div>
             </div>
-          ))}
+          )}
         </div>
       </main>
 
