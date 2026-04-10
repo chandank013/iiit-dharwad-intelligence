@@ -138,11 +138,17 @@ export function StudentDashboard() {
       try {
         let totalS = 0;
         let totalQ = 0;
+        const submittedAssignmentIds = new Set<string>();
         
         if (!isChandan) {
           const sq = query(collectionGroup(firestore, 'submissions'), where('submitterId', '==', user.uid));
           const sSnap = await getDocs(sq);
-          totalS = sSnap.docs.filter(d => d.data().status !== 'returned').length;
+          const validSubmissions = sSnap.docs.filter(d => d.data().status !== 'returned');
+          totalS = validSubmissions.length;
+          
+          validSubmissions.forEach(doc => {
+            submittedAssignmentIds.add(doc.data().assignmentId);
+          });
 
           const qsq = query(collectionGroup(firestore, 'quiz_submissions'), where('studentId', '==', user.uid));
           const qsSnap = await getDocs(qsq);
@@ -166,11 +172,13 @@ export function StudentDashboard() {
         });
 
         const results = await Promise.all(dataPromises);
-        const flattened = results.flat().sort((a, b) => {
-          const dateA = a.deadline ? new Date(a.deadline).getTime() : 0;
-          const dateB = b.deadline ? new Date(b.deadline).getTime() : 0;
-          return dateA - dateB;
-        });
+        const flattened = results.flat()
+          .filter(a => !submittedAssignmentIds.has(a.id)) // Only show tasks that are NOT submitted
+          .sort((a, b) => {
+            const dateA = a.deadline ? new Date(a.deadline).getTime() : 0;
+            const dateB = b.deadline ? new Date(b.deadline).getTime() : 0;
+            return dateA - dateB;
+          });
 
         setAllAssignments(flattened);
         setTotalSubmissionsCount(totalS);
