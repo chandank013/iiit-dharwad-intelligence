@@ -85,8 +85,29 @@ export default function CreateAssignmentPage() {
       setTitle(result.title);
       setDescription(result.description);
       setRubric(result.rubric);
+
+      // Automatically set the suggested deadline
+      if (result.suggestedDurationDays) {
+        const date = new Date();
+        date.setDate(date.getDate() + result.suggestedDurationDays);
+        date.setHours(23, 59, 0, 0); // End of day
+        
+        // Format for datetime-local input: YYYY-MM-DDThh:mm
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        setDeadline(formattedDate);
+      }
+
       setIsAiMode(false);
-      toast({ title: "Assignment Drafted by AI" });
+      toast({ 
+        title: "Assignment Drafted by AI", 
+        description: `Suggested rubric and a ${result.suggestedDurationDays}-day timeline applied.` 
+      });
     } catch (err) {
       toast({ title: "AI Assistant Busy", description: "Could not generate assignment. Please try again.", variant: "destructive" });
     } finally {
@@ -252,7 +273,7 @@ export default function CreateAssignmentPage() {
                   )}
                 </div>
                 <CardTitle className="text-xl">Content-to-Assignment</CardTitle>
-                <CardDescription>Paste your source material or upload a PDF syllabus/handout.</CardDescription>
+                <CardDescription>Provide context or a PDF. AI will generate the title, instructions, rubric, and estimate the deadline.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">

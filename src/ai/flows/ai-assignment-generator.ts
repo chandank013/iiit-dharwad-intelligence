@@ -21,6 +21,7 @@ const AIAssignmentGeneratorOutputSchema = z.object({
     description: z.string(),
     maxPoints: z.number(),
   })),
+  suggestedDurationDays: z.number().describe('The number of days recommended for students to complete this assignment based on its complexity.'),
 });
 export type AIAssignmentGeneratorOutput = z.infer<typeof AIAssignmentGeneratorOutputSchema>;
 
@@ -47,6 +48,7 @@ const assignmentPrompt = ai.definePrompt({
   1. Title: Catchy but academic.
   2. Description: Detailed tasks, learning objectives, and constraints.
   3. Rubric: 4-5 fair grading criteria totaling 100 points.
+  4. Time Requirement: Estimate how many days (as an integer) students should be given to complete this project from today, considering its complexity and technical depth.
   
   Ensure the tone is professional and suitable for IIIT Dharwad students.`,
 });
