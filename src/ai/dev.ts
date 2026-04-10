@@ -8,3 +8,4 @@ import '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection.ts';
 import '@/ai/flows/academic-assistant-chat.ts';
 import '@/ai/flows/ai-quiz-generator.ts';
 import '@/ai/flows/ai-quiz-evaluator.ts';
+import '@/ai/flows/ai-assignment-generator.ts';

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -12,12 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { professorAIRubricGenerator } from '@/ai/flows/professor-ai-rubric-generator';
-import { Sparkles, Trash2, Plus, Loader2, ArrowLeft } from 'lucide-react';
+import { aiAssignmentGenerator } from '@/ai/flows/ai-assignment-generator';
+import { Sparkles, Trash2, Plus, Loader2, ArrowLeft, BrainCircuit, Upload, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 export default function CreateAssignmentPage() {
   const { toast } = useToast();
@@ -29,6 +30,8 @@ export default function CreateAssignmentPage() {
 
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [aiContext, setAiAiContext] = useState('');
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -39,6 +42,31 @@ export default function CreateAssignmentPage() {
   const [enableLeaderboard, setEnableLeaderboard] = useState(true);
   
   const [rubric, setRubric] = useState<{ criterion: string; description: string; maxPoints: number }[]>([]);
+
+  const handleAiGenerate = async () => {
+    if (!aiContext.trim()) {
+      toast({ title: "Content Required", description: "Please provide source content or a topic for the AI.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await aiAssignmentGenerator({ 
+        context: aiContext,
+        difficulty: 'intermediate'
+      });
+      
+      setTitle(result.title);
+      setDescription(result.description);
+      setRubric(result.rubric);
+      setIsAiMode(false);
+      toast({ title: "Assignment Drafted by AI" });
+    } catch (err) {
+      toast({ title: "AI Assistant Busy", description: "Could not generate assignment. Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenerateRubric = async () => {
     if (!description || description.length < 20) {
@@ -166,167 +194,221 @@ export default function CreateAssignmentPage() {
           <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Back to Course
         </Link>
         <div className="max-w-4xl mx-auto space-y-8">
-          <div>
-            <h1 className="text-3xl font-headline font-bold">Create Assignment</h1>
-            <p className="text-muted-foreground">Configure grading policies, submission types, and AI-assisted rubrics.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-headline font-bold">New Assignment</h1>
+              <p className="text-muted-foreground">Configure grading policies and submission parameters.</p>
+            </div>
+            <Button 
+              variant={isAiMode ? "secondary" : "outline"} 
+              className="gap-2 font-bold"
+              onClick={() => setIsAiMode(!isAiMode)}
+            >
+              <BrainCircuit className={isAiMode ? "text-primary" : "text-muted-foreground"} size={18} />
+              {isAiMode ? "Back to Editor" : "Generate with AI"}
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Assignment Title</Label>
-                    <Input 
-                      id="title" 
-                      placeholder="e.g. Lab 4: Memory Management" 
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
+          {isAiMode ? (
+            <Card className="border-primary/20 bg-primary/5 shadow-xl animate-in zoom-in-95 duration-300">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                    <Sparkles size={20} />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Detailed Description</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Describe the learning objectives, tasks, and constraints..."
-                      className="min-h-[200px]"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Grading Rubric</CardTitle>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleGenerateRubric}
-                    disabled={loading}
+                  <Badge className="font-bold">AI Assistant</Badge>
+                </div>
+                <CardTitle className="text-xl">Content-to-Assignment</CardTitle>
+                <CardDescription>Paste your source material or describe the assignment topic below.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Source Material / Description</Label>
+                  <Textarea 
+                    placeholder="e.g. Paste a textbook chapter about memory management, or describe a lab task involving React hooks..."
+                    className="min-h-[250px] bg-background text-sm leading-relaxed p-6"
+                    value={aiContext}
+                    onChange={(e) => setAiAiContext(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 h-12 gap-2 font-bold"
+                    onClick={() => document.getElementById('ai-file-upload')?.click()}
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    AI Suggest Rubric
+                    <Upload size={18} /> Upload Context (PDF)
                   </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {rubric.length === 0 ? (
-                    <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
-                      No criteria added. Use AI generator or add manually.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {rubric.map((item, index) => (
-                        <div key={index} className="flex gap-4 p-4 border rounded-lg bg-white shadow-sm animate-in fade-in slide-in-from-top-2">
-                          <div className="flex-1 space-y-3">
-                            <Input
-                              placeholder="Criterion Name"
-                              value={item.criterion}
-                              onChange={(e) => updateRubricItem(index, 'criterion', e.target.value)}
-                              className="font-bold"
-                            />
-                            <Textarea
-                              placeholder="Guideline for grading..."
-                              value={item.description}
-                              onChange={(e) => updateRubricItem(index, 'description', e.target.value)}
-                            />
-                          </div>
-                          <div className="w-24 space-y-3">
-                            <Input
-                              type="number"
-                              placeholder="Points"
-                              value={item.maxPoints}
-                              onChange={(e) => updateRubricItem(index, 'maxPoints', parseInt(e.target.value) || 0)}
-                            />
-                            <Button variant="ghost" size="icon" className="text-destructive w-full" onClick={() => removeRubricItem(index)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <Button variant="outline" className="w-full gap-2" onClick={addRubricItem}>
-                    <Plus className="h-4 w-4" /> Add Criterion Manually
+                  <input type="file" id="ai-file-upload" className="hidden" accept=".pdf" />
+                  <Button 
+                    className="flex-1 h-12 gap-2 font-bold shadow-lg"
+                    onClick={handleAiGenerate}
+                    disabled={loading || !aiContext.trim()}
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                    Generate Assignment Draft
                   </Button>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+              <div className="lg:col-span-2 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Basic Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Assignment Title</Label>
+                      <Input 
+                        id="title" 
+                        placeholder="e.g. Lab 4: Memory Management" 
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Detailed Description</Label>
+                      <Textarea
+                        id="description"
+                        placeholder="Describe the learning objectives, tasks, and constraints..."
+                        className="min-h-[200px]"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Submission Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Submission Type</Label>
-                    <Select value={submissionType} onValueChange={setSubmissionType}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="github">GitHub Link</SelectItem>
-                        <SelectItem value="zip">ZIP Archive</SelectItem>
-                        <SelectItem value="text">Raw Text/Draft</SelectItem>
-                        <SelectItem value="file">PDF Document</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="deadline">Deadline</Label>
-                    <Input 
-                      id="deadline" 
-                      type="datetime-local" 
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Group Project</Label>
-                      <p className="text-[10px] text-muted-foreground">Enable peer contribution tracking</p>
-                    </div>
-                    <Switch checked={isGroupProject} onCheckedChange={setIsGroupProject} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Allow Resubmission</Label>
-                    </div>
-                    <Switch checked={allowResubmission} onCheckedChange={setAllowResubmission} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Leaderboard</Label>
-                      <p className="text-[10px] text-muted-foreground">Show anonymous rankings</p>
-                    </div>
-                    <Switch checked={enableLeaderboard} onCheckedChange={setEnableLeaderboard} />
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Grading Rubric</CardTitle>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleGenerateRubric}
+                      disabled={loading}
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      AI Suggest Rubric
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {rubric.length === 0 ? (
+                      <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
+                        No criteria added. Use AI generator or add manually.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {rubric.map((item, index) => (
+                          <div key={index} className="flex gap-4 p-4 border rounded-lg bg-white shadow-sm animate-in fade-in slide-in-from-top-2">
+                            <div className="flex-1 space-y-3">
+                              <Input
+                                placeholder="Criterion Name"
+                                value={item.criterion}
+                                onChange={(e) => updateRubricItem(index, 'criterion', e.target.value)}
+                                className="font-bold"
+                              />
+                              <Textarea
+                                placeholder="Guideline for grading..."
+                                value={item.description}
+                                onChange={(e) => updateRubricItem(index, 'description', e.target.value)}
+                              />
+                            </div>
+                            <div className="w-24 space-y-3">
+                              <Input
+                                type="number"
+                                placeholder="Points"
+                                value={item.maxPoints}
+                                onChange={(e) => updateRubricItem(index, 'maxPoints', parseInt(e.target.value) || 0)}
+                              />
+                              <Button variant="ghost" size="icon" className="text-destructive w-full" onClick={() => removeRubricItem(index)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button variant="outline" className="w-full gap-2" onClick={addRubricItem}>
+                      <Plus className="h-4 w-4" /> Add Criterion Manually
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
 
-              <Button 
-                className="w-full h-12 text-lg font-bold shadow-lg" 
-                onClick={() => handlePublish(false)}
-                disabled={publishing}
-              >
-                {publishing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Publish Assignment'}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                onClick={() => handlePublish(true)}
-                disabled={publishing}
-              >
-                {publishing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save Draft'}
-              </Button>
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Submission Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Submission Type</Label>
+                      <Select value={submissionType} onValueChange={setSubmissionType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="github">GitHub Link</SelectItem>
+                          <SelectItem value="zip">ZIP Archive</SelectItem>
+                          <SelectItem value="text">Raw Text/Draft</SelectItem>
+                          <SelectItem value="file">PDF Document</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="deadline">Deadline</Label>
+                      <Input 
+                        id="deadline" 
+                        type="datetime-local" 
+                        value={deadline}
+                        onChange={(e) => setDeadline(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Group Project</Label>
+                        <p className="text-[10px] text-muted-foreground">Enable peer contribution tracking</p>
+                      </div>
+                      <Switch checked={isGroupProject} onCheckedChange={setIsGroupProject} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Allow Resubmission</Label>
+                      </div>
+                      <Switch checked={allowResubmission} onCheckedChange={setAllowResubmission} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Leaderboard</Label>
+                        <p className="text-[10px] text-muted-foreground">Show anonymous rankings</p>
+                      </div>
+                      <Switch checked={enableLeaderboard} onCheckedChange={setEnableLeaderboard} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button 
+                  className="w-full h-12 text-lg font-bold shadow-lg" 
+                  onClick={() => handlePublish(false)}
+                  disabled={publishing}
+                >
+                  {publishing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Publish Assignment'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={() => handlePublish(true)}
+                  disabled={publishing}
+                >
+                  {publishing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Save Draft'}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>
