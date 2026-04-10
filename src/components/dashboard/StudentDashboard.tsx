@@ -286,42 +286,7 @@ export function StudentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Tasks Pending
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{allAssignments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Current workload</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-emerald-500">
-              <CheckCircle2 className="h-4 w-4" /> Assignments Done
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalSubmissionsCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Work submitted</p>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-orange-500">
-              <HelpCircle className="h-4 w-4" /> AI Quizzes Done
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalQuizzesCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Assessments completed</p>
-          </CardContent>
-        </Card>
-
+        {/* Card 1: Academic Standing */}
         <Card className="bg-primary text-primary-foreground shadow-2xl border-none overflow-hidden relative">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <Trophy className="h-16 w-16" />
@@ -334,6 +299,45 @@ export function StudentDashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{myCourses.length > 0 ? 'Active' : 'N/A'}</div>
             <p className="text-xs opacity-75 mt-1">Enrollment status</p>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Tasks Pending */}
+        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" /> Tasks Pending
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{allAssignments.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Current workload</p>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Assignments Done */}
+        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-emerald-500">
+              <CheckCircle2 className="h-4 w-4" /> Assignments Done
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalSubmissionsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Work submitted</p>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: AI Quizzes Done */}
+        <Card className="shadow-sm border-none bg-card hover:shadow-md transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-orange-500">
+              <HelpCircle className="h-4 w-4" /> AI Quizzes Done
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{isStatsLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalQuizzesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Assessments completed</p>
           </CardContent>
         </Card>
       </div>
