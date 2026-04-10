@@ -46,7 +46,8 @@ import {
   Play,
   RotateCcw,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  FileCheck
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -324,7 +325,7 @@ export default function StudentCoursePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="border-border p-6 flex items-center gap-6 shadow-sm">
                   <div className="h-12 w-12 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
                     <Clock className="h-6 w-6" />
@@ -338,6 +339,17 @@ export default function StudentCoursePage() {
                 </Card>
                 <Card className="border-border p-6 flex items-center gap-6 shadow-sm">
                   <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+                    <FileCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-foreground">
+                      {submittedAssignmentIds.size}
+                    </div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Assignments Done</div>
+                  </div>
+                </Card>
+                <Card className="border-border p-6 flex items-center gap-6 shadow-sm">
+                  <div className="h-12 w-12 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
                     <CheckCircle2 className="h-6 w-6" />
                   </div>
                   <div>
@@ -348,7 +360,7 @@ export default function StudentCoursePage() {
                   </div>
                 </Card>
                 <Card className="border-border p-6 flex items-center gap-6 shadow-sm">
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <div className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center text-muted-foreground border border-border">
                     <TrendingUp className="h-6 w-6" />
                   </div>
                   <div>
@@ -802,9 +814,9 @@ export default function StudentCoursePage() {
               <AlertCircle className="h-8 w-8" />
             </div>
             <DialogTitle className="text-center text-2xl font-bold">Unsubmit Required</DialogTitle>
-            <DialogDescription className="text-center font-medium py-4">
+            <DialogTitle className="text-center font-medium py-4">
               To resubmit this assignment, you must first <span className="font-bold text-foreground">unsubmit</span> your current work from the <span className="font-bold text-primary italic">My Submission History</span> tab.
-            </DialogDescription>
+            </DialogTitle>
           </DialogHeader>
           <div className="bg-muted/30 p-6 rounded-2xl border border-border space-y-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Steps to resubmit:</p>
