@@ -260,39 +260,6 @@ export default function CoursePortalPage() {
     fetchData();
   }, [firestore, assignments, courseId, allUsers, lastEvaluatedAt]);
 
-  const analyticsData = useMemo(() => {
-    if (!courseSubmissions || !assignments || !quizSubmissions) return { distribution: [], performance: [], quizStats: [] };
-    
-    const graded = courseSubmissions.filter(s => s.status === 'graded');
-    const distribution = [
-      { name: '0-50', value: 0, color: '#ef4444' },
-      { name: '50-75', value: 0, color: '#f59e0b' },
-      { name: '75-90', value: 0, color: '#10b981' },
-      { name: '90-100', value: 0, color: '#3b82f6' },
-    ];
-    graded.forEach(s => {
-      const score = s.evaluation?.totalScore || 0;
-      if (score < 50) distribution[0].value++;
-      else if (score < 75) distribution[1].value++;
-      else if (score < 90) distribution[2].value++;
-      else distribution[3].value++;
-    });
-    
-    const performance = assignments.map(a => {
-      const subs = graded.filter(s => s.assignmentId === a.id);
-      const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / subs.length) : 0;
-      return { name: a.title.length > 15 ? a.title.substring(0, 15) + '...' : a.title, average: avg };
-    }).reverse();
-
-    const quizStats = quizzes?.map(q => {
-      const subs = quizSubmissions.filter(s => s.quizId === q.id);
-      const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.score || 0), 0) / subs.length) : 0;
-      return { name: q.title.length > 15 ? q.title.substring(0, 15) + '...' : q.title, average: avg, attempts: subs.length };
-    }).reverse() || [];
-
-    return { distribution: distribution.filter(d => d.value > 0), performance, quizStats };
-  }, [courseSubmissions, assignments, quizSubmissions, quizzes]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1052,69 +1019,10 @@ export default function CoursePortalPage() {
               <>
                 <div className="space-y-2">
                   <h1 className="text-3xl font-bold tracking-tighter">Performance Insights</h1>
-                  <p className="text-muted-foreground">Comprehensive analysis of assignments and automated quizzes.</p>
+                  <p className="text-muted-foreground">Select an individual assignment or quiz to view detailed analytics and AI results.</p>
                 </div>
 
                 <div className="space-y-12">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <Card className="p-8 space-y-6">
-                      <CardHeader className="p-0">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5 text-primary" /> Global Grade Distribution
-                        </CardTitle>
-                        <CardDescription>Aggregate performance across all graded work.</CardDescription>
-                      </CardHeader>
-                      <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={analyticsData.distribution}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={100}
-                              paddingAngle={5}
-                              dataKey="value"
-                            >
-                              {analyticsData.distribution.map((entry: any, index: number) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-6">
-                        {analyticsData.distribution.map((d: any, i: number) => (
-                          <div key={i} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                            {d.name}: {d.value}
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-
-                    <Card className="p-8 space-y-6">
-                      <CardHeader className="p-0">
-                        <CardTitle className="text-lg font-bold flex items-center gap-2">
-                          <BarChart3 className="h-5 w-5 text-primary" /> Task Performance Timeline
-                        </CardTitle>
-                        <CardDescription>Average scores per assignment.</CardDescription>
-                      </CardHeader>
-                      <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={analyticsData.performance}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                            <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
-                            <YAxis domain={[0, 100]} fontSize={10} fontWeight="bold" />
-                            <Tooltip />
-                            <Bar dataKey="average" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={40} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </Card>
-                  </div>
-
                   <div className="space-y-8">
                     <div className="flex items-center gap-3 border-b border-border pb-4">
                       <BookOpen className="h-6 w-6 text-primary" />
