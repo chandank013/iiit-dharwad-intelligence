@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { professorAIRubricGenerator } from '@/ai/flows/professor-ai-rubric-generator';
 import { aiAssignmentGenerator } from '@/ai/flows/ai-assignment-generator';
-import { Sparkles, Trash2, Plus, Loader2, ArrowLeft, BrainCircuit, Upload, Send } from 'lucide-react';
+import { Sparkles, Trash2, Plus, Loader2, ArrowLeft, BrainCircuit, Upload, Send, FileCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
@@ -32,6 +32,8 @@ export default function CreateAssignmentPage() {
   const [publishing, setPublishing] = useState(false);
   const [isAiMode, setIsAiMode] = useState(false);
   const [aiContext, setAiAiContext] = useState('');
+  const [aiFileDataUri, setAiFileDataUri] = useState<string | null>(null);
+  const [aiFileName, setAiFileName] = useState<string | null>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -43,16 +45,40 @@ export default function CreateAssignmentPage() {
   
   const [rubric, setRubric] = useState<{ criterion: string; description: string; maxPoints: number }[]>([]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast({ title: "Invalid Format", description: "Only PDF files are supported for AI context.", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File Too Large", description: "PDF must be under 2MB.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAiFileDataUri(reader.result as string);
+      setAiFileName(file.name);
+      toast({ title: "PDF Attached", description: `${file.name} is ready for processing.` });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAiGenerate = async () => {
-    if (!aiContext.trim()) {
-      toast({ title: "Content Required", description: "Please provide source content or a topic for the AI.", variant: "destructive" });
+    if (!aiContext.trim() && !aiFileDataUri) {
+      toast({ title: "Context Required", description: "Please provide a topic or upload a file for the AI.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
       const result = await aiAssignmentGenerator({ 
-        context: aiContext,
+        context: aiContext || "Generate an assignment based on the provided document.",
+        fileDataUri: aiFileDataUri || undefined,
         difficulty: 'intermediate'
       });
       
@@ -212,38 +238,53 @@ export default function CreateAssignmentPage() {
           {isAiMode ? (
             <Card className="border-primary/20 bg-primary/5 shadow-xl animate-in zoom-in-95 duration-300">
               <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                    <Sparkles size={20} />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                      <Sparkles size={20} />
+                    </div>
+                    <Badge className="font-bold">AI Assistant</Badge>
                   </div>
-                  <Badge className="font-bold">AI Assistant</Badge>
+                  {aiFileName && (
+                    <Badge variant="outline" className="gap-1.5 border-emerald-500/20 text-emerald-600 bg-emerald-50">
+                      <FileCheck className="h-3 w-3" /> {aiFileName}
+                    </Badge>
+                  )}
                 </div>
                 <CardTitle className="text-xl">Content-to-Assignment</CardTitle>
-                <CardDescription>Paste your source material or describe the assignment topic below.</CardDescription>
+                <CardDescription>Paste your source material or upload a PDF syllabus/handout.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
                   <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Source Material / Description</Label>
                   <Textarea 
-                    placeholder="e.g. Paste a textbook chapter about memory management, or describe a lab task involving React hooks..."
-                    className="min-h-[250px] bg-background text-sm leading-relaxed p-6"
+                    placeholder="e.g. Paste a textbook chapter about memory management, or describe a lab task..."
+                    className="min-h-[200px] bg-background text-sm leading-relaxed p-6"
                     value={aiContext}
                     onChange={(e) => setAiAiContext(e.target.value)}
                   />
                 </div>
                 <div className="flex gap-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 h-12 gap-2 font-bold"
-                    onClick={() => document.getElementById('ai-file-upload')?.click()}
-                  >
-                    <Upload size={18} /> Upload Context (PDF)
-                  </Button>
-                  <input type="file" id="ai-file-upload" className="hidden" accept=".pdf" />
+                  <div className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-12 gap-2 font-bold"
+                      onClick={() => document.getElementById('ai-file-upload')?.click()}
+                    >
+                      <Upload size={18} /> {aiFileName ? "Change PDF" : "Upload Context (PDF)"}
+                    </Button>
+                    <input 
+                      type="file" 
+                      id="ai-file-upload" 
+                      className="hidden" 
+                      accept=".pdf" 
+                      onChange={handleFileChange}
+                    />
+                  </div>
                   <Button 
                     className="flex-1 h-12 gap-2 font-bold shadow-lg"
                     onClick={handleAiGenerate}
-                    disabled={loading || !aiContext.trim()}
+                    disabled={loading || (!aiContext.trim() && !aiFileDataUri)}
                   >
                     {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                     Generate Assignment Draft

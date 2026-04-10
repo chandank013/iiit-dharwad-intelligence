@@ -8,6 +8,7 @@ import { z } from 'genkit';
 
 const AIAssignmentGeneratorInputSchema = z.object({
   context: z.string().describe('The source material, topic, or learning objectives for the assignment.'),
+  fileDataUri: z.string().optional().describe("A context file (like a PDF) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   difficulty: z.enum(['introductory', 'intermediate', 'advanced']).default('intermediate'),
 });
 export type AIAssignmentGeneratorInput = z.infer<typeof AIAssignmentGeneratorInputSchema>;
@@ -35,6 +36,10 @@ const assignmentPrompt = ai.definePrompt({
   
   Based on this source context:
   {{{context}}}
+  
+  {{#if fileDataUri}}
+  Additional reference material provided: {{media url=fileDataUri}}
+  {{/if}}
   
   Target Difficulty: {{{difficulty}}}
   
