@@ -699,7 +699,7 @@ export default function StudentCoursePage() {
       </main>
 
       <Dialog open={!!activeQuiz} onOpenChange={(open) => !open && setActiveQuiz(null)}>
-        <DialogContent className="max-w-3xl rounded-[2rem] overflow-hidden p-0 gap-0 shadow-2xl">
+        <DialogContent className="max-w-4xl rounded-[2rem] overflow-hidden p-0 gap-0 shadow-2xl">
           <DialogHeader className="p-10 bg-primary text-primary-foreground border-none">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-2xl font-bold flex items-center gap-3">
@@ -738,16 +738,21 @@ export default function StudentCoursePage() {
               </div>
             ) : (
               <div className="space-y-10 animate-in fade-in duration-700">
-                <div className="text-center space-y-3 py-10 rounded-[3rem] bg-primary/5 border border-primary/10">
-                  <div className="text-7xl font-headline font-bold text-primary tabular-nums tracking-tighter">{quizResult.score}%</div>
-                  <p className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-[10px]">Assessment Outcome</p>
+                {/* Score & Summary Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-1 text-center flex flex-col justify-center space-y-2 p-8 rounded-[2rem] bg-primary/5 border border-primary/10">
+                    <div className="text-6xl font-headline font-bold text-primary tabular-nums tracking-tighter">{quizResult.score}%</div>
+                    <p className="text-muted-foreground font-bold uppercase tracking-[0.2em] text-[9px]">Assessment Outcome</p>
+                  </div>
+                  <div className="lg:col-span-2 p-8 bg-card rounded-[2rem] border border-border shadow-sm flex flex-col justify-center">
+                    <h4 className="font-bold text-primary mb-3 flex items-center gap-2 uppercase tracking-widest text-[10px]">
+                      <TrendingUp className="h-3.5 w-3.5" /> AI Performance Summary
+                    </h4>
+                    <p className="text-sm leading-relaxed text-muted-foreground font-medium">{quizResult.feedback}</p>
+                  </div>
                 </div>
-                <div className="p-8 bg-card rounded-[2rem] border border-border shadow-sm">
-                  <h4 className="font-bold text-primary mb-4 flex items-center gap-2 uppercase tracking-widest text-xs">
-                    <TrendingUp className="h-4 w-4" /> AI Performance Summary
-                  </h4>
-                  <p className="text-sm leading-relaxed text-muted-foreground font-medium">{quizResult.feedback}</p>
-                </div>
+
+                {/* Strengths & Focus Areas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest ml-2">Key Strengths</h5>
