@@ -8,7 +8,8 @@ import {
   Loader2, 
   Clock, 
   CheckCircle2,
-  Megaphone
+  Megaphone,
+  FileText
 } from 'lucide-react';
 import { 
   useUser, 
@@ -139,11 +140,13 @@ export function NotificationBell() {
                     "p-2 rounded-xl shrink-0 mt-0.5 border",
                     notif.type === 'submission' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
                     notif.type === 'deadline' ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                    "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                    notif.type === 'content' ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                    "bg-muted text-muted-foreground border-border"
                   )}>
                     {notif.type === 'submission' ? <CheckCircle2 className="h-4 w-4" /> :
                      notif.type === 'deadline' ? <Clock className="h-4 w-4" /> :
-                     <Megaphone className="h-4 w-4" />}
+                     notif.type === 'content' ? <Megaphone className="h-4 w-4" /> :
+                     <Bell className="h-4 w-4" />}
                   </div>
                   <div className="flex-1 min-w-0 pr-6">
                     <div className="flex items-center justify-between mb-0.5">

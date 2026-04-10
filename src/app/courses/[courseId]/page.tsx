@@ -108,7 +108,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { aiSubmissionEvaluationAndPlagiarismDetection } from '@/ai/flows/ai-submission-evaluation-and-plagiarism-detection';
 import { aiQuizGenerator } from '@/ai/flows/ai-quiz-generator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -126,7 +126,8 @@ import {
 } from 'recharts';
 
 export default function CoursePortalPage() {
-  const { courseId } = useParams();
+  const params = useParams();
+  const courseId = params?.courseId as string;
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -173,13 +174,13 @@ export default function CoursePortalPage() {
 
   const courseRef = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
-    return doc(firestore, 'courses', courseId as string);
+    return doc(firestore, 'courses', courseId);
   }, [firestore, courseId]);
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
   const assignmentsQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
-    return query(collection(firestore, 'courses', courseId as string, 'assignments'), orderBy('createdAt', 'desc'));
+    return query(collection(firestore, 'courses', courseId, 'assignments'), orderBy('createdAt', 'desc'));
   }, [firestore, courseId]);
   const { data: assignments } = useCollection(assignmentsQuery);
 
@@ -197,13 +198,13 @@ export default function CoursePortalPage() {
 
   const contentQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
-    return query(collection(firestore, 'courses', courseId as string, 'content'), orderBy('postedAt', 'desc'));
+    return query(collection(firestore, 'courses', courseId, 'content'), orderBy('postedAt', 'desc'));
   }, [firestore, courseId]);
   const { data: courseContent } = useCollection(contentQuery);
 
   const quizzesQuery = useMemoFirebase(() => {
     if (!firestore || !courseId) return null;
-    return query(collection(firestore, 'courses', courseId as string, 'quizzes'), orderBy('createdAt', 'desc'));
+    return query(collection(firestore, 'courses', courseId, 'quizzes'), orderBy('createdAt', 'desc'));
   }, [firestore, courseId]);
   const { data: quizzes } = useCollection(quizzesQuery);
 
@@ -217,7 +218,7 @@ export default function CoursePortalPage() {
       setIsSubmissionsLoading(true);
       try {
         const submissionPromises = assignments.map(async (assignment) => {
-          const subsRef = collection(firestore, 'courses', courseId as string, 'assignments', assignment.id, 'submissions');
+          const subsRef = collection(firestore, 'courses', courseId, 'assignments', assignment.id, 'submissions');
           const subsSnap = await getDocs(subsRef);
           return subsSnap.docs.map(d => ({
             ...d.data(),
@@ -238,7 +239,7 @@ export default function CoursePortalPage() {
         
         setCourseSubmissions(flattened);
 
-        const qSubsRef = collection(firestore, 'courses', courseId as string, 'quiz_submissions');
+        const qSubsRef = collection(firestore, 'courses', courseId, 'quiz_submissions');
         const qSubsSnap = await getDocs(qSubsRef);
         const qFlattened = qSubsSnap.docs.map(d => ({ ...d.data(), id: d.id }))
           .filter(s => {
@@ -321,7 +322,7 @@ export default function CoursePortalPage() {
         submissionText: submission.content,
         allOtherSubmissionsText: courseSubmissions.filter(s => s.id !== submission.id).map(s => s.content)
       });
-      const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
+      const submissionRef = doc(firestore, 'courses', courseId, 'assignments', submission.assignmentId, 'submissions', submission.id);
       await updateDoc(submissionRef, {
         status: 'graded',
         evaluation: { ...evaluation, evaluatedAt: new Date() },
@@ -362,7 +363,7 @@ export default function CoursePortalPage() {
     if (!firestore || !courseId || !user || !contentFormData.title) return;
     setIsPostingContent(true);
     try {
-      const contentRef = collection(firestore, 'courses', courseId as string, 'content');
+      const contentRef = collection(firestore, 'courses', courseId, 'content');
       await addDoc(contentRef, {
         ...contentFormData,
         courseId,
@@ -374,11 +375,12 @@ export default function CoursePortalPage() {
         isPinned: false
       });
 
+      // Notify all enrolled students
       const enrollmentSnap = await getDocs(query(collection(firestore, 'course_enrollments'), where('courseId', '==', courseId)));
-      const notifyPromises = enrollmentSnap.docs.map(async (enrollmentDoc) => {
+      enrollmentSnap.docs.forEach((enrollmentDoc) => {
         const studentId = enrollmentDoc.data().studentId;
         const notifRef = collection(firestore, 'users', studentId, 'notifications');
-        return addDoc(notifRef, {
+        addDocumentNonBlocking(notifRef, {
           userId: studentId,
           title: `New Content in ${course?.name || 'Course'}`,
           message: `${user.displayName || 'Professor'} posted: ${contentFormData.title}`,
@@ -388,8 +390,6 @@ export default function CoursePortalPage() {
           createdAt: serverTimestamp()
         });
       });
-      
-      Promise.all(notifyPromises).catch(err => console.error("Notification dispatch failed", err));
 
       setIsContentDialogOpen(false);
       setContentFormData({ title: '', contentType: 'announcement', body: '', attachmentUrl: '' });
@@ -423,7 +423,7 @@ export default function CoursePortalPage() {
   const handlePublishQuiz = async () => {
     if (!firestore || !courseId || !generatedQuiz) return;
     try {
-      const quizRef = collection(firestore, 'courses', courseId as string, 'quizzes');
+      const quizRef = collection(firestore, 'courses', courseId, 'quizzes');
       await addDoc(quizRef, {
         ...generatedQuiz,
         difficulty: quizDifficulty,
@@ -467,7 +467,7 @@ export default function CoursePortalPage() {
 
   const handleAddComment = (contentId: string) => {
     if (!firestore || !courseId || !user || !commentText.trim()) return;
-    const commentsRef = collection(firestore, 'courses', courseId as string, 'content', contentId, 'comments');
+    const commentsRef = collection(firestore, 'courses', courseId, 'content', contentId, 'comments');
     addDoc(commentsRef, {
       text: commentText,
       authorId: user.uid,
@@ -482,9 +482,9 @@ export default function CoursePortalPage() {
     if (!itemToDelete || !firestore || !courseId) return;
     try {
       if (itemToDelete.type === 'content') {
-        await deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'content', itemToDelete.id));
+        await deleteDocumentNonBlocking(doc(firestore, 'courses', courseId, 'content', itemToDelete.id));
       } else if (itemToDelete.type === 'quiz') {
-        await deleteDocumentNonBlocking(doc(firestore, 'courses', courseId as string, 'quizzes', itemToDelete.id));
+        await deleteDocumentNonBlocking(doc(firestore, 'courses', courseId, 'quizzes', itemToDelete.id));
       }
       toast({ title: "Item Deleted" });
     } catch (e) {
@@ -497,11 +497,11 @@ export default function CoursePortalPage() {
   const handleReturnForRevision = async (submission: any) => {
     if (!submission || !firestore || !courseId) return;
     try {
-      const submissionRef = doc(firestore, 'courses', courseId as string, 'assignments', submission.assignmentId, 'submissions', submission.id);
+      const submissionRef = doc(firestore, 'courses', courseId, 'assignments', submission.assignmentId, 'submissions', submission.id);
       await updateDoc(submissionRef, { status: 'returned', updatedAt: serverTimestamp() });
       
       const notifRef = collection(firestore, 'users', submission.submitterId, 'notifications');
-      await addDoc(notifRef, {
+      addDocumentNonBlocking(notifRef, {
         userId: submission.submitterId,
         title: "Work Returned",
         message: `Professor requested revision for: ${submission.assignmentTitle}`,
@@ -899,7 +899,7 @@ export default function CoursePortalPage() {
                                   ) : (
                                     <>
                                       {!deadlinePassed && sub.status === 'submitted' && (
-                                        <Button variant="ghost" size="sm" onClick={() => handleReturnForRevision(sub)} className="text-rose-500 hover:text-rose-600">
+                                        <Button variant="ghost" size="sm" onClick={() => setItemToReturn(sub)} className="text-rose-500 hover:text-rose-600">
                                           <RotateCcw className="h-3 w-3 mr-1" /> Return
                                         </Button>
                                       )}
@@ -1460,7 +1460,7 @@ export default function CoursePortalPage() {
                             <Button size="icon" className="rounded-xl" onClick={() => handleAddComment(post.id)}><Send className="h-4 w-4" /></Button>
                           </div>
                           <div className="space-y-4">
-                            <PostComments contentId={post.id} courseId={courseId as string} currentUserId={user.uid} />
+                            <PostComments contentId={post.id} courseId={courseId} currentUserId={user.uid} />
                           </div>
                         </div>
                       )}
