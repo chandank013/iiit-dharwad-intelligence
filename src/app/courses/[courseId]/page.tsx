@@ -57,7 +57,8 @@ import {
   ArrowRight,
   Search,
   Target,
-  AlertTriangle
+  AlertTriangle,
+  FileDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -486,6 +487,50 @@ export default function CoursePortalPage() {
   const getStudentName = (uid: string) => {
     const foundUser = allUsers?.find(u => u.id === uid);
     return foundUser ? `${foundUser.firstName} ${foundUser.lastName || ""}` : "Unknown Student";
+  };
+
+  const handleDownloadGrades = (type: 'assignment' | 'quiz', itemId: string, title: string) => {
+    let data: any[] = [];
+    if (type === 'assignment') {
+      data = courseSubmissions
+        .filter(s => s.assignmentId === itemId && s.status === 'graded')
+        .map(s => {
+          const student = allUsers?.find(u => u.id === s.submitterId);
+          return {
+            Name: `${student?.firstName || ''} ${student?.lastName || ''}`,
+            Email: student?.email || '',
+            Score: s.evaluation?.totalScore || 0
+          };
+        });
+    } else {
+      data = quizSubmissions
+        .filter(s => s.quizId === itemId)
+        .map(s => {
+          const student = allUsers?.find(u => u.id === s.studentId);
+          return {
+            Name: `${student?.firstName || ''} ${student?.lastName || ''}`,
+            Email: student?.email || '',
+            Score: s.score || 0
+          };
+        });
+    }
+
+    if (data.length === 0) {
+      toast({ title: "No Data", description: "No graded submissions available for export.", variant: "destructive" });
+      return;
+    }
+
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(row => Object.values(row).map(v => `"${v}"`).join(',')).join('\n');
+    const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${title.replace(/\s+/g, '_')}_grades.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Download Started", description: "Your grade report is being generated." });
   };
 
   if (isUserLoading || isCourseLoading || !user) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
@@ -1024,25 +1069,39 @@ export default function CoursePortalPage() {
 
                 <div className="space-y-12">
                   <div className="space-y-8">
-                    <div className="flex items-center gap-3 border-b border-border pb-4">
-                      <BookOpen className="h-6 w-6 text-primary" />
-                      <h2 className="text-xl font-bold">Assignment Performance Reports</h2>
+                    <div className="flex items-center justify-between border-b border-border pb-4">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="h-6 w-6 text-primary" />
+                        <h2 className="text-xl font-bold">Assignment Performance Reports</h2>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {assignments?.map((a) => {
                         const subs = courseSubmissions.filter(s => s.assignmentId === a.id && s.status === 'graded');
                         const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.evaluation?.totalScore || 0), 0) / subs.length) : 0;
                         return (
-                          <Card key={a.id} className="border-border hover:border-primary/40 transition-all cursor-pointer group" onClick={() => setSelectedAnalyticsAssignmentId(a.id)}>
+                          <Card key={a.id} className="border-border hover:border-primary/40 transition-all cursor-pointer group relative">
                             <CardContent className="p-6 space-y-4">
                               <div className="flex justify-between items-start">
                                 <Badge variant="outline" className="text-[10px] font-bold uppercase">{subs.length} Graded</Badge>
-                                <div className="text-xl font-bold text-primary">{avg}% Avg</div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-xl font-bold text-primary">{avg}% Avg</div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadGrades('assignment', a.id, a.title); }}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{a.title}</h3>
-                              <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest gap-2">
-                                View Detailed Report <ArrowRight className="h-3 w-3" />
-                              </Button>
+                              <div onClick={() => setSelectedAnalyticsAssignmentId(a.id)}>
+                                <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{a.title}</h3>
+                                <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest gap-2 mt-4">
+                                  View Detailed Report <ArrowRight className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </CardContent>
                           </Card>
                         );
@@ -1051,25 +1110,39 @@ export default function CoursePortalPage() {
                   </div>
 
                   <div className="space-y-8">
-                    <div className="flex items-center gap-3 border-b border-border pb-4">
-                      <HelpCircle className="h-6 w-6 text-orange-500" />
-                      <h2 className="text-xl font-bold">Quiz Performance Reports</h2>
+                    <div className="flex items-center justify-between border-b border-border pb-4">
+                      <div className="flex items-center gap-3">
+                        <HelpCircle className="h-6 w-6 text-orange-500" />
+                        <h2 className="text-xl font-bold">Quiz Performance Reports</h2>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {quizzes?.map((q) => {
                         const subs = quizSubmissions.filter(s => s.quizId === q.id);
                         const avg = subs.length > 0 ? Math.round(subs.reduce((acc, s) => acc + (s.score || 0), 0) / subs.length) : 0;
                         return (
-                          <Card key={q.id} className="border-border hover:border-orange-500/40 transition-all cursor-pointer group" onClick={() => setSelectedAnalyticsQuizId(q.id)}>
+                          <Card key={q.id} className="border-border hover:border-orange-500/40 transition-all cursor-pointer group relative">
                             <CardContent className="p-6 space-y-4">
                               <div className="flex justify-between items-start">
                                 <Badge variant="outline" className="text-[10px] font-bold uppercase border-orange-500/20 text-orange-500">{subs.length} Attempts</Badge>
-                                <div className="text-xl font-bold text-orange-500">{avg}% Avg</div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-xl font-bold text-orange-500">{avg}% Avg</div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-muted-foreground hover:text-orange-500"
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadGrades('quiz', q.id, q.title); }}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <h3 className="font-bold text-lg leading-tight group-hover:text-orange-500 transition-colors">{q.title}</h3>
-                              <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest gap-2">
-                                View Detailed Report <ArrowRight className="h-3 w-3" />
-                              </Button>
+                              <div onClick={() => setSelectedAnalyticsQuizId(q.id)}>
+                                <h3 className="font-bold text-lg leading-tight group-hover:text-orange-500 transition-colors">{q.title}</h3>
+                                <Button variant="ghost" size="sm" className="w-full text-[10px] font-bold uppercase tracking-widest gap-2 mt-4">
+                                  View Detailed Report <ArrowRight className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </CardContent>
                           </Card>
                         );
@@ -1092,6 +1165,13 @@ export default function CoursePortalPage() {
                     <p className="text-muted-foreground">In-depth performance analysis and AI-detected learning gaps.</p>
                   </div>
                   <div className="flex gap-4">
+                    <Button 
+                      variant="outline" 
+                      className="font-bold gap-2"
+                      onClick={() => handleDownloadGrades('assignment', selectedAnalyticsAssignmentId, assignments?.find(a => a.id === selectedAnalyticsAssignmentId)?.title || 'report')}
+                    >
+                      <FileDown className="h-4 w-4" /> Export CSV
+                    </Button>
                     <Card className="bg-primary/5 border-primary/10 px-6 py-3">
                       <div className="text-[10px] font-bold text-primary uppercase tracking-widest">Class Average</div>
                       <div className="text-2xl font-bold">
@@ -1206,6 +1286,13 @@ export default function CoursePortalPage() {
                     <p className="text-muted-foreground">Assessment success rates and engagement patterns.</p>
                   </div>
                   <div className="flex gap-4">
+                    <Button 
+                      variant="outline" 
+                      className="font-bold gap-2"
+                      onClick={() => handleDownloadGrades('quiz', selectedAnalyticsQuizId, quizzes?.find(q => q.id === selectedAnalyticsQuizId)?.title || 'quiz_report')}
+                    >
+                      <FileDown className="h-4 w-4" /> Export CSV
+                    </Button>
                     <Card className="bg-orange-500/5 border-orange-500/10 px-6 py-3">
                       <div className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Average Score</div>
                       <div className="text-2xl font-bold">
