@@ -37,10 +37,19 @@ const evaluationPrompt = ai.definePrompt({
   
   Quiz Data:
   {{#each questions}}
-  Q: {{{question}}} | Correct: {{{correctAnswerIndex}}} | Student: {{#with (lookup ../studentAnswers @index)}}{{{this}}}{{/with}}
+  Question: {{{question}}}
+  Correct Option Index: {{{correctAnswerIndex}}}
+  Explanation: {{{explanation}}}
+  Student Selected Index: {{#with (lookup ../studentAnswers @index)}}{{{this}}}{{/with}}
+  ---
   {{/each}}
   
-  Provide a detailed assessment including a score, overall feedback, strengths, and areas for improvement.`,
+  Task:
+  1. Calculate the final score based on the number of correct answers.
+  2. Provide encouraging but professional feedback.
+  3. Identify specific conceptual strengths and improvement areas.
+  
+  Ensure the response is strictly valid JSON.`,
 });
 
 const aiQuizEvaluatorFlow = ai.defineFlow(
@@ -50,7 +59,27 @@ const aiQuizEvaluatorFlow = ai.defineFlow(
     outputSchema: AIQuizEvaluatorOutputSchema,
   },
   async (input) => {
-    const { output } = await evaluationPrompt(input);
-    return output!;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      try {
+        const { output } = await evaluationPrompt(input);
+        if (output) return output;
+        throw new Error('Empty AI response');
+      } catch (error: any) {
+        attempts++;
+        const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+        const isServiceError = error.message?.includes('503') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
+        
+        if (attempts >= maxAttempts || (!isQuotaError && !isServiceError)) {
+          throw error;
+        }
+        
+        const delay = isQuotaError ? 5000 * attempts : 2000 * attempts;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('AI Evaluation Service busy. Please try again in a moment.');
   }
 );

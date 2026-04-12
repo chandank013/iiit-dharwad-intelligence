@@ -55,17 +55,26 @@ const aiQuizGeneratorFlow = ai.defineFlow(
   },
   async (input) => {
     let attempts = 0;
-    while (attempts < 3) {
+    const maxAttempts = 4;
+
+    while (attempts < maxAttempts) {
       try {
         const { output } = await quizGeneratorPrompt(input);
         if (output) return output;
         throw new Error('Empty AI response');
-      } catch (error) {
+      } catch (error: any) {
         attempts++;
-        if (attempts >= 3) throw error;
-        await new Promise(r => setTimeout(r, 2000));
+        const isQuotaError = error.message?.includes('429') || error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED');
+        const isServiceError = error.message?.includes('503') || error.message?.includes('UNAVAILABLE') || error.message?.includes('overloaded');
+        
+        if (attempts >= maxAttempts || (!isQuotaError && !isServiceError)) {
+          throw error;
+        }
+        
+        const delay = isQuotaError ? 6000 * attempts : 2500 * attempts;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    throw new Error('Failed to generate quiz');
+    throw new Error('Failed to generate quiz due to service demand. Please try again.');
   }
 );
