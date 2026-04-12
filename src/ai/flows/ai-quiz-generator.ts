@@ -8,6 +8,7 @@ import { z } from 'genkit';
 
 const AIQuizGeneratorInputSchema = z.object({
   content: z.string().describe('The source material or topic for the quiz.'),
+  fileDataUri: z.string().optional().describe("A context file (like a PDF) as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   numQuestions: z.number().min(1).max(20).default(5),
   difficulty: z.enum(['basic', 'intermediate', 'advanced', 'mixed']).default('intermediate'),
 });
@@ -37,6 +38,11 @@ const quizGeneratorPrompt = ai.definePrompt({
   prompt: `You are an expert educator. Create a multiple-choice quiz based on this content:
   
   Content: {{{content}}}
+  
+  {{#if fileDataUri}}
+  Additional reference material provided: {{media url=fileDataUri}}
+  {{/if}}
+  
   Requested Difficulty: {{{difficulty}}}
   
   Requirements:

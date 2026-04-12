@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -59,7 +58,8 @@ import {
   Target,
   AlertTriangle,
   FileDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -124,6 +124,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { AIChatbot } from '@/components/ai-chatbot';
 
 export default function CoursePortalPage() {
   const params = useParams();
@@ -134,11 +135,8 @@ export default function CoursePortalPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Drill-down states for Submissions
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
-
-  // Drill-down states for Analytics
   const [selectedAnalyticsAssignmentId, setSelectedAnalyticsAssignmentId] = useState<string | null>(null);
   const [selectedAnalyticsQuizId, setSelectedAnalyticsQuizId] = useState<string | null>(null);
 
@@ -157,7 +155,6 @@ export default function CoursePortalPage() {
   const [quizSubmissions, setQuizSubmissions] = useState<any[]>([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
 
-  // Quiz Generation State
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [quizTopic, setQuizTopic] = useState('');
@@ -165,6 +162,8 @@ export default function CoursePortalPage() {
   const [quizDifficulty, setQuizDifficulty] = useState('intermediate');
   const [quizNumQuestions, setQuizNumQuestions] = useState('5');
   const [generatedQuiz, setQuizPreview] = useState<any>(null);
+  const [quizFileDataUri, setQuizFileDataUri] = useState<string | null>(null);
+  const [quizFileName, setQuizFileName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && user && user.email?.startsWith('24bds')) {
@@ -277,6 +276,29 @@ export default function CoursePortalPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleQuizFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast({ title: "Invalid Format", description: "Only PDF files are supported for AI context.", variant: "destructive" });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File Too Large", description: "PDF must be under 2MB.", variant: "destructive" });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setQuizFileDataUri(reader.result as string);
+      setQuizFileName(file.name);
+      toast({ title: "PDF Attached", description: `${file.name} is ready for analysis.` });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAIEvaluate = async (submission: any) => {
     if (!firestore || !courseId) return;
     const assignment = assignments?.find(a => a.id === submission.assignmentId);
@@ -342,7 +364,6 @@ export default function CoursePortalPage() {
         isPinned: false
       });
 
-      // Notify all enrolled students
       const enrollmentSnap = await getDocs(query(collection(firestore, 'course_enrollments'), where('courseId', '==', courseId)));
       enrollmentSnap.docs.forEach((enrollmentDoc) => {
         const studentId = enrollmentDoc.data().studentId;
@@ -370,11 +391,15 @@ export default function CoursePortalPage() {
   };
 
   const handleGenerateQuiz = async () => {
-    if (!quizTopic.trim()) return;
+    if (!quizTopic.trim() && !quizFileDataUri) {
+      toast({ title: "Input Required", description: "Please provide a topic or upload a PDF.", variant: "destructive" });
+      return;
+    }
     setIsGeneratingQuiz(true);
     try {
       const quiz = await aiQuizGenerator({ 
-        content: quizTopic,
+        content: quizTopic || "Generate a quiz based on the provided material.",
+        fileDataUri: quizFileDataUri || undefined,
         numQuestions: parseInt(quizNumQuestions),
         difficulty: quizDifficulty as any
       });
@@ -402,6 +427,8 @@ export default function CoursePortalPage() {
       setQuizPreview(null);
       setQuizTopic('');
       setQuizDeadline('');
+      setQuizFileDataUri(null);
+      setQuizFileName(null);
       toast({ title: "Quiz Published to Students" });
     } catch (e) {
       toast({ title: "Failed to Publish", variant: "destructive" });
@@ -499,12 +526,10 @@ export default function CoursePortalPage() {
       return;
     }
 
-    // Headers
     const assignmentHeaders = assignments.map(a => `Assign: ${a.title}`);
     const quizHeaders = quizzes.map(q => `Quiz: ${q.title}`);
     const headers = ['Name', 'Email', ...assignmentHeaders, ...quizHeaders].join(',');
 
-    // Rows
     const rows = targetStudents.map(student => {
       const fullName = `${student.firstName} ${student.lastName || ''}`;
       const name = `"${fullName}"`;
@@ -534,6 +559,11 @@ export default function CoursePortalPage() {
     document.body.removeChild(link);
     toast({ title: "Master Gradebook Exported", description: `Downloaded ${fileName}` });
   };
+
+  const contentContextString = useMemo(() => {
+    if (!courseContent || courseContent.length === 0) return "No content posted yet.";
+    return courseContent.map(c => `Title: ${c.title}. Type: ${c.contentType}. Body: ${c.body}`).join(' | ');
+  }, [courseContent]);
 
   if (isUserLoading || isCourseLoading || !user) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   if (!course) return <div className="min-h-screen flex items-center justify-center">Course not found.</div>;
@@ -1335,8 +1365,8 @@ export default function CoursePortalPage() {
           </div>
         )}
 
-        {activeTab === 'content' && (activeTab === 'content' && (
-          <div className="p-10 space-y-8 max-w-5xl">
+        {activeTab === 'content' && (
+          <div className="p-10 space-y-8 max-w-5xl relative">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tighter">Resources & Feed</h1>
@@ -1438,8 +1468,9 @@ export default function CoursePortalPage() {
                 </div>
               )}
             </div>
+            <AIChatbot customContext={contentContextString} placeholder="Ask about course resources..." />
           </div>
-        ))}
+        )}
       </main>
 
       <Dialog open={isContentDialogOpen} onOpenChange={setIsContentDialogOpen}>
@@ -1514,7 +1545,13 @@ export default function CoursePortalPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
+      <Dialog open={isQuizDialogOpen} onOpenChange={(open) => {
+        setIsQuizDialogOpen(open);
+        if (!open) {
+          setQuizFileDataUri(null);
+          setQuizFileName(null);
+        }
+      }}>
         <DialogContent className="max-w-3xl rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -1582,21 +1619,39 @@ export default function CoursePortalPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reference Document (Optional)</Label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="file" 
+                      id="quiz-file-upload" 
+                      className="hidden" 
+                      accept=".pdf" 
+                      onChange={handleQuizFileChange}
+                    />
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-12 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 rounded-xl font-bold"
+                      onClick={() => document.getElementById('quiz-file-upload')?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" /> 
+                      {quizFileName ? `Change: ${quizFileName}` : "Upload Context PDF"}
+                    </Button>
+                  </div>
+                  {quizFileName && (
+                    <p className="text-[10px] text-primary font-bold flex items-center gap-1.5 ml-1">
+                      <FileCheck className="h-3.5 w-3.5" /> PDF attached and ready for analysis.
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex gap-4 pt-4">
                   <Button 
-                    variant="outline" 
-                    className="flex-1 rounded-xl h-12 font-bold gap-2"
-                    onClick={() => document.getElementById('quiz-file-upload')?.click()}
-                  >
-                    <Upload className="h-4 w-4" /> Upload Material
-                  </Button>
-                  <input type="file" id="quiz-file-upload" className="hidden" accept=".pdf" />
-                  <Button 
-                    className="flex-1 rounded-xl h-12 font-bold gap-2 shadow-lg"
+                    className="flex-1 rounded-xl h-14 font-bold gap-2 shadow-lg text-lg"
                     onClick={handleGenerateQuiz}
-                    disabled={isGeneratingQuiz || !quizTopic.trim()}
+                    disabled={isGeneratingQuiz || (!quizTopic.trim() && !quizFileDataUri)}
                   >
-                    {isGeneratingQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {isGeneratingQuiz ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                     Generate Quiz
                   </Button>
                 </div>
@@ -1625,7 +1680,11 @@ export default function CoursePortalPage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" onClick={() => setQuizPreview(null)} className="rounded-xl font-bold">Start Over</Button>
+                  <Button variant="ghost" onClick={() => {
+                    setQuizPreview(null);
+                    setQuizFileDataUri(null);
+                    setQuizFileName(null);
+                  }} className="rounded-xl font-bold">Start Over</Button>
                   <Button onClick={handlePublishQuiz} className="rounded-xl font-bold px-8 shadow-lg">Publish Quiz</Button>
                 </div>
               </div>

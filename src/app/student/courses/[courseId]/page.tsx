@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from 'react';
@@ -76,6 +75,7 @@ import { useToast } from '@/hooks/use-toast';
 import { aiQuizEvaluator } from '@/ai/flows/ai-quiz-evaluator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { AIChatbot } from '@/components/ai-chatbot';
 
 export default function StudentCoursePage() {
   const { courseId } = useParams();
@@ -257,6 +257,11 @@ export default function StudentCoursePage() {
     setCommentText('');
   };
 
+  const contentContextString = useMemo(() => {
+    if (!courseContent || courseContent.length === 0) return "No content posted yet.";
+    return courseContent.map(c => `Title: ${c.title}. Type: ${c.contentType}. Body: ${c.body}`).join(' | ');
+  }, [courseContent]);
+
   if (isUserLoading || isCourseLoading || !user) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -288,7 +293,10 @@ export default function StudentCoursePage() {
             {sidebarLinks.map((link) => (
               <button
                 key={link.id}
-                onClick={() => setActiveTab(link.id)}
+                onClick={() => {
+                  setActiveTab(link.id);
+                  setExpandedPostId(null);
+                }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs transition-all font-semibold",
                   activeTab === link.id 
@@ -649,7 +657,7 @@ export default function StudentCoursePage() {
           )}
 
           {activeTab === 'content' && (
-            <div className="p-10 space-y-10 animate-in fade-in duration-500">
+            <div className="p-10 space-y-10 animate-in fade-in duration-500 relative">
               <h1 className="text-3xl font-bold tracking-tighter">Course Feed</h1>
               <div className="max-w-4xl space-y-8">
                 {courseContent && courseContent.length > 0 ? (
@@ -705,6 +713,7 @@ export default function StudentCoursePage() {
                   <div className="p-12 text-center text-muted-foreground italic border-2 border-dashed rounded-3xl bg-card/30">The academic feed is currently silent.</div>
                 )}
               </div>
+              <AIChatbot customContext={contentContextString} placeholder="Ask about these course resources..." />
             </div>
           )}
         </div>
@@ -750,7 +759,6 @@ export default function StudentCoursePage() {
               </div>
             ) : (
               <div className="space-y-10 animate-in fade-in duration-700">
-                {/* Score & Summary Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-1 text-center flex flex-col justify-center space-y-2 p-8 rounded-[2rem] bg-primary/5 border border-primary/10">
                     <div className="text-6xl font-headline font-bold text-primary tabular-nums tracking-tighter">{quizResult.score}%</div>
@@ -764,7 +772,6 @@ export default function StudentCoursePage() {
                   </div>
                 </div>
 
-                {/* Strengths & Focus Areas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h5 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest ml-2">Key Strengths</h5>

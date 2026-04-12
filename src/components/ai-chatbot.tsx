@@ -16,31 +16,27 @@ type ChatMessage = {
   content: string;
 };
 
-export function AIChatbot() {
+interface AIChatbotProps {
+  customContext?: string;
+  placeholder?: string;
+}
+
+export function AIChatbot({ customContext, placeholder }: AIChatbotProps) {
   const pathname = usePathname();
   const { user } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', content: 'Hello! I am your IIIT Dharwad Assistant. How can I help you today?' }
+    { role: 'model', content: 'Hello! I am your Course Content Assistant. Ask me anything about the resources uploaded here!' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading]);
-
-  // Context awareness: Reset or notify AI when page changes
-  useEffect(() => {
-    if (isOpen && messages.length > 1) {
-      // Optional: We could add a system message or clear history here if needed
-      // For now, we just ensure the next send has the updated context
-    }
-  }, [pathname, isOpen]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -58,11 +54,16 @@ export function AIChatbot() {
         content: m.content
       }));
 
-      // Generate page context string
       const isStudent = user?.email?.startsWith('24bds');
       const role = isStudent ? 'Student' : 'Professor';
       const pageTitle = typeof document !== 'undefined' ? document.title : 'IIIT Dharwad Portal';
-      const context = `User Role: ${role}. Current Page Path: ${pathname}. Page Title: ${pageTitle}.`;
+      
+      const context = `
+        User Role: ${role}. 
+        Current Page Path: ${pathname}. 
+        Page Title: ${pageTitle}.
+        Specific Course/Content Context: ${customContext || 'No additional resource context provided.'}
+      `;
 
       const { response } = await academicAssistantChat({
         query: currentInput,
@@ -100,7 +101,7 @@ export function AIChatbot() {
         <Card className="w-[350px] sm:w-[400px] h-[500px] shadow-2xl flex flex-col animate-in slide-in-from-bottom-5 border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between py-4 bg-primary text-primary-foreground rounded-t-lg shrink-0 border-none">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <Bot className="h-4 w-4" /> Academic Assistant
+              <Bot className="h-4 w-4" /> Content Assistant
             </CardTitle>
             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8 hover:bg-white/10 text-white rounded-full">
               <X className="h-4 w-4" />
@@ -137,7 +138,7 @@ export function AIChatbot() {
           <CardFooter className="p-3 border-t border-border bg-card shrink-0">
             <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex w-full gap-2">
               <Input
-                placeholder="Ask anything..."
+                placeholder={placeholder || "Ask about this content..."}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isLoading}
@@ -150,7 +151,7 @@ export function AIChatbot() {
           </CardFooter>
           
           <div className="bg-muted/50 px-4 py-2 text-[10px] text-muted-foreground font-medium flex items-center justify-center gap-1.5 rounded-b-lg shrink-0 border-t border-border">
-            <Sparkles className="h-3 w-3 text-primary" /> Personalized for IIIT Dharwad
+            <Sparkles className="h-3 w-3 text-primary" /> Resource Context Active
           </div>
         </Card>
       )}
