@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Search, Plus, Loader2, BookOpen, GraduationCap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function CoursesPage() {
@@ -19,12 +20,36 @@ export default function CoursesPage() {
 
   const isStudent = user?.email?.startsWith('24bds');
 
+  // Fetch courses based on role
   const coursesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
+    
+    // For professors, only fetch their own courses
+    if (!isStudent) {
+      return query(collection(firestore, "courses"), where("professorId", "==", user.uid));
+    }
+    
+    // For students, fetch all (to filter by enrollment)
     return query(collection(firestore, "courses"));
-  }, [firestore, user]);
+  }, [firestore, user, isStudent]);
+  
+  const { data: allCourses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
 
-  const { data: courses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
+  // Fetch student enrollments if applicable
+  const enrollmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !isStudent) return null;
+    return query(collection(firestore, "course_enrollments"), where("studentId", "==", user.uid));
+  }, [firestore, user, isStudent]);
+  const { data: enrollments, isLoading: isEnrollmentsLoading } = useCollection(enrollmentsQuery);
+
+  // Filter courses for students: only show what they joined
+  const visibleCourses = useMemo(() => {
+    if (!allCourses) return [];
+    if (!isStudent) return allCourses; // Professors already filtered by query
+    
+    const joinedCourseIds = new Set(enrollments?.map(e => e.courseId) || []);
+    return allCourses.filter(c => joinedCourseIds.has(c.id));
+  }, [allCourses, isStudent, enrollments]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -32,7 +57,7 @@ export default function CoursesPage() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || (isCoursesLoading && user) || !user) {
+  if (isUserLoading || ((isCoursesLoading || (isStudent && isEnrollmentsLoading)) && user) || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -47,7 +72,9 @@ export default function CoursesPage() {
         <div className="space-y-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
-              <h1 className="text-4xl font-bold tracking-tighter">Course Catalog</h1>
+              <h1 className="text-4xl font-bold tracking-tighter">
+                {isStudent ? 'My Course Portals' : 'My Managed Courses'}
+              </h1>
               <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest flex items-center gap-2">
                 <GraduationCap className="h-4 w-4" /> Academic Offerings
               </p>
@@ -55,7 +82,7 @@ export default function CoursesPage() {
             <div className="flex items-center gap-3">
               <div className="relative group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input placeholder="Search catalog..." className="pl-10 w-64 bg-card/50 border-white/5 focus:ring-primary/20" />
+                <Input placeholder="Search courses..." className="pl-10 w-64 bg-card/50 border-white/5 focus:ring-primary/20" />
               </div>
               {!isStudent && (
                 <Link href="/courses/create">
@@ -68,8 +95,8 @@ export default function CoursesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {courses && courses.length > 0 ? (
-              courses.map((course) => (
+            {visibleCourses.length > 0 ? (
+              visibleCourses.map((course) => (
                 <Card key={course.id} className="group hover:border-primary/40 transition-all border-white/5 bg-card/50 backdrop-blur-sm overflow-hidden flex flex-col">
                   <div className="h-1.5 bg-primary/20 group-hover:bg-primary transition-colors" />
                   <CardHeader className="flex-1">
@@ -117,14 +144,19 @@ export default function CoursesPage() {
                 <div className="text-center space-y-2">
                   <h3 className="text-2xl font-bold tracking-tight">No courses found</h3>
                   <p className="text-muted-foreground max-w-sm mx-auto text-sm leading-relaxed">
-                    {isStudent 
-                      ? "You are not enrolled in any courses yet. Use a join code provided by your professor to get started."
-                      : "The academic catalog is empty. Start by launching your first course for students."}
+                    {!isStudent 
+                      ? "You haven't launched any course portals yet. Start by creating your first academic environment."
+                      : "You are not enrolled in any courses yet. Use a join code provided by your professor on your dashboard to get started."}
                   </p>
                 </div>
                 {!isStudent && (
                   <Link href="/courses/create">
                     <Button className="font-bold px-8 shadow-xl shadow-primary/20">Create Course Now</Button>
+                  </Link>
+                )}
+                {isStudent && (
+                  <Link href="/">
+                    <Button variant="outline" className="font-bold px-8">Go to Dashboard to Join</Button>
                   </Link>
                 )}
               </div>

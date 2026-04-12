@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -20,9 +19,6 @@ import {
   addDoc
 } from 'firebase/firestore';
 import { 
-  addDocumentNonBlocking 
-} from '@/firebase/non-blocking-updates';
-import { 
   studentSubmissionQualityWarning,
   type StudentSubmissionQualityWarningOutput 
 } from '@/ai/flows/student-submission-quality-warning';
@@ -40,13 +36,13 @@ import {
   Lock,
   Info,
   ChevronRight,
-  TextQuote,
   Upload,
   Link as LinkIcon,
-  FileArchive
+  FileArchive,
+  Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -100,24 +96,40 @@ export default function SubmitAssignmentPage() {
   }, [user, isUserLoading, router, currentSubmission]);
 
   const handleQualityCheck = async () => {
-    if (!content.trim() || !assignment) return;
+    const trimmedContent = content.trim();
+    if (!trimmedContent || !assignment) {
+      toast({ title: "Content Required", description: "Please enter your submission text to run a quality scan.", variant: "destructive" });
+      return;
+    }
+
     setIsCheckingQuality(true);
+    setQualityFeedback(null); // Clear previous feedback
+
     try {
       const result = await studentSubmissionQualityWarning({
         assignmentDescription: assignment.description,
-        submissionContent: content,
+        submissionContent: trimmedContent,
       });
-      setQualityFeedback(result);
-      toast({ title: result.hasWarnings ? "Review AI Suggestions" : "Looking Good!" });
-    } catch (error) {
-      toast({ title: "Analysis Failed", variant: "destructive" });
+      
+      if (result) {
+        setQualityFeedback(result);
+        toast({ 
+          title: result.hasWarnings ? "Strategic Analysis Ready" : "Exceptional Work!", 
+          description: result.hasWarnings ? "Review the suggestions to improve your grade." : "Your submission meets high academic standards."
+        });
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Assistant Busy", 
+        description: error.message || "Could not complete analysis. Please try again in a moment.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsCheckingQuality(false);
     }
   };
 
   const handleFileSelect = () => {
-    // Simulated file selection
     toast({ title: "File Selected", description: "Your document is ready for submission." });
     setContent("file_uploaded_simulated_path_123.zip");
   };
@@ -192,7 +204,6 @@ export default function SubmitAssignmentPage() {
           </div>
         </div>
 
-        {/* Global Alert for Returned Work */}
         {isReturned && (
           <Alert className="mb-6 border-rose-200 bg-rose-50 text-rose-700 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top-2">
             <RotateCcw className="h-5 w-5 mt-0.5 text-rose-600" />
@@ -206,7 +217,6 @@ export default function SubmitAssignmentPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Main Column: Left (Workspace) */}
           <div className="lg:col-span-8 flex flex-col">
             <Card className="flex-1 border-border shadow-xl rounded-[2rem] overflow-hidden bg-card/50 flex flex-col h-[650px]">
               <CardHeader className="bg-muted/20 border-b border-border p-6 shrink-0">
@@ -266,7 +276,6 @@ export default function SubmitAssignmentPage() {
                               className="h-14 rounded-xl bg-accent/30 border-none focus-visible:ring-primary/20 p-4 font-mono text-sm shadow-inner"
                               required
                             />
-                            <p className="text-[10px] text-muted-foreground italic px-1">Ensure your link is public or shared with your professor.</p>
                           </div>
                         ) : submissionType === 'zip' || submissionType === 'file' ? (
                           <div 
@@ -277,7 +286,6 @@ export default function SubmitAssignmentPage() {
                               <Upload className="h-8 w-8 text-primary" />
                             </div>
                             <h4 className="font-bold text-sm">Select files from device</h4>
-                            <p className="text-xs text-muted-foreground mt-1">Upload your {submissionType.toUpperCase()} archive here</p>
                             {content && (
                               <Badge className="mt-4 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold">
                                 ✓ {content}
@@ -322,10 +330,8 @@ export default function SubmitAssignmentPage() {
             </Card>
           </div>
 
-          {/* Right Column: Sidebar (Resources & Feedback) */}
           <div className="lg:col-span-4 flex flex-col gap-6">
-            {/* Top Sidebar Card: Instructions */}
-            <Card className="flex-1 border-border shadow-lg rounded-[2rem] overflow-hidden bg-card/50 flex flex-col h-[313px]">
+            <Card className="flex-1 border-border shadow-lg rounded-[2rem] overflow-hidden bg-card/50 flex flex-col h-[250px]">
               <CardHeader className="bg-primary/5 border-b border-border p-5 shrink-0">
                 <CardTitle className="text-xs font-bold flex items-center gap-2 uppercase tracking-widest text-foreground/80">
                   <Info className="h-4 w-4 text-primary" /> Assignment Requirements
@@ -340,9 +346,8 @@ export default function SubmitAssignmentPage() {
               </CardContent>
             </Card>
 
-            {/* Bottom Sidebar Card: AI Feedback */}
             <Card className={cn(
-              "flex-1 border-border shadow-lg rounded-[2rem] overflow-hidden flex flex-col h-[313px] transition-colors duration-500",
+              "flex-1 border-border shadow-lg rounded-[2rem] overflow-hidden flex flex-col h-[376px] transition-colors duration-500",
               qualityFeedback 
                 ? (qualityFeedback.hasWarnings ? "bg-orange-500/5 border-orange-500/20" : "bg-emerald-500/5 border-emerald-500/20")
                 : "bg-card/50 border-dashed border-2"
@@ -359,23 +364,17 @@ export default function SubmitAssignmentPage() {
                     {qualityFeedback ? (qualityFeedback.hasWarnings ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />) : <Sparkles className="h-4 w-4" />}
                     AI Quality Assistant
                   </CardTitle>
-                  {qualityFeedback && (
-                    <div className={cn(
-                      "h-2 w-2 rounded-full animate-pulse",
-                      qualityFeedback.hasWarnings ? "bg-orange-500" : "bg-emerald-500"
-                    )} />
-                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-0 flex-1">
                 {qualityFeedback ? (
                   <ScrollArea className="h-full p-6">
-                    <div className="space-y-5">
+                    <div className="space-y-6">
                       <p className="text-xs font-bold leading-tight text-foreground/80">{qualityFeedback.summaryFeedback}</p>
                       
                       {qualityFeedback.potentialIssues && qualityFeedback.potentialIssues.length > 0 && (
                         <div className="space-y-2">
-                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Spotted Weaknesses</h5>
+                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Critical Gaps</h5>
                           <div className="space-y-1.5">
                             {qualityFeedback.potentialIssues.map((issue, i) => (
                               <div key={i} className="flex gap-2 text-xs font-medium text-muted-foreground leading-snug">
@@ -387,9 +386,24 @@ export default function SubmitAssignmentPage() {
                         </div>
                       )}
 
+                      {qualityFeedback.improvementIdeas && qualityFeedback.improvementIdeas.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-dashed border-current/10">
+                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 flex items-center gap-1.5">
+                            <Lightbulb className="h-3 w-3" /> Pro Ideas for Excellence
+                          </h5>
+                          <div className="space-y-2">
+                            {qualityFeedback.improvementIdeas.map((idea, i) => (
+                              <div key={i} className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-xs font-medium text-emerald-700 leading-normal">
+                                {idea}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {qualityFeedback.detailedSuggestions && qualityFeedback.detailedSuggestions.length > 0 && (
-                        <div className="space-y-2 pt-1">
-                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">How to Improve</h5>
+                        <div className="space-y-2">
+                          <h5 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Quick Fixes</h5>
                           <div className="space-y-1.5">
                             {qualityFeedback.detailedSuggestions.map((suggestion, i) => (
                               <div key={i} className="flex gap-2 text-xs font-medium text-muted-foreground leading-snug">
@@ -409,7 +423,7 @@ export default function SubmitAssignmentPage() {
                     </div>
                     <h4 className="font-bold text-xs text-muted-foreground">Ready to Scan</h4>
                     <p className="text-[10px] text-muted-foreground/60 mt-2 leading-relaxed max-w-[180px]">
-                      Click the <strong>AI Quality Scan</strong> button to get instant feedback on your draft.
+                      Get instant coaching and creative ideas to boost your submission quality.
                     </p>
                   </div>
                 )}
