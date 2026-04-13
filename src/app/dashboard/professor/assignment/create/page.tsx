@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,13 +20,12 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
-export default function CreateAssignmentPage() {
+export default function CreateAssignmentPage({searchParams}) {
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const firestore = useFirestore();
   const { user } = useUser();
-  const courseId = searchParams.get('courseId');
+  const courseId = searchParams?.courseId;
 
   const [loading, setLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
